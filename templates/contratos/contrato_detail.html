@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}Contrato #{{ contrato.pk }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-file-earmark-text me-2"></i>Contrato #{{ contrato.pk }}{% endblock %}
+{% block nav_contratos %}active{% endblock %}
+
+{% block content %}
+<div class="mb-3 d-flex gap-2">
+  <a href="{% url 'contrato_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a>
+  <a href="{% url 'contrato_edit' contrato.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i> Editar</a>
+  {% if contrato.arquivo %}
+  <a href="{{ contrato.arquivo.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Ver Contrato PDF</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="section-card mb-3">
+      <div class="section-card-header">
+        <i class="bi bi-info-circle me-1"></i> Informações do Contrato
+        <span class="ms-auto status-badge badge-{{ contrato.status }}">{{ contrato.get_status_display }}</span>
+      </div>
+      <div class="section-card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-muted">Inquilino</dt><dd class="col-7">{{ contrato.inquilino.nome }}</dd>
+          <dt class="col-5 text-muted">Imóvel</dt><dd class="col-7">{{ contrato.imovel.endereco }}</dd>
+          <dt class="col-5 text-muted">Início</dt><dd class="col-7">{{ contrato.data_inicio|date:"d/m/Y" }}</dd>
+          <dt class="col-5 text-muted">Término</dt><dd class="col-7">{{ contrato.data_fim|date:"d/m/Y" }}</dd>
+          <dt class="col-5 text-muted">Valor Mensal</dt><dd class="col-7"><strong>R$ {{ contrato.valor_mensal|floatformat:2 }}</strong></dd>
+          <dt class="col-5 text-muted">Vencimento</dt><dd class="col-7">Dia {{ contrato.dia_vencimento }}</dd>
+          {% if contrato.observacoes %}
+          <dt class="col-5 text-muted">Observações</dt><dd class="col-7">{{ contrato.observacoes }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-7">
+    <div class="section-card">
+      <div class="section-card-header">
+        <i class="bi bi-cash-coin me-1"></i> Lançamentos Financeiros
+        <a href="{% url 'lancamento_create' %}" class="btn btn-outline-primary btn-sm ms-auto">+ Novo</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0 small">
+          <thead>
+            <tr><th>Tipo</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Comprovante</th></tr>
+          </thead>
+          <tbody>
+            {% for l in lancamentos %}
+            <tr>
+              <td>{{ l.get_tipo_display }}</td>
+              <td>{{ l.data_vencimento|date:"d/m/Y" }}</td>
+              <td>R$ {{ l.valor|floatformat:2 }}</td>
+              <td><span class="status-badge badge-{{ l.status }}">{{ l.get_status_display }}</span></td>
+              <td>
+                {% if l.comprovante %}<a href="{{ l.comprovante.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark"></i></a>{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-2">Nenhum lançamento.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-speedometer2 me-2"></i>Dashboard{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+  .chart-wrapper { position: relative; height: 260px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-icon"><i class="bi bi-house-door-fill"></i></div>
+      <div>
+        <div class="kpi-value">{{ total_imoveis }}</div>
+        <div class="kpi-label">Total de Imóveis</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card kpi-green">
+      <div class="kpi-icon"><i class="bi bi-house-check-fill"></i></div>
+      <div>
+        <div class="kpi-value">{{ ocupados }}</div>
+        <div class="kpi-label">Ocupados</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card kpi-red">
+      <div class="kpi-icon"><i class="bi bi-house-x-fill"></i></div>
+      <div>
+        <div class="kpi-value">{{ vagos }}</div>
+        <div class="kpi-label">Vagos &mdash; {{ taxa_vacancia }}%</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card kpi-amber">
+      <div class="kpi-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
+      <div>
+        <div class="kpi-value">{{ contratos_ativos }}</div>
+        <div class="kpi-label">Contratos Ativos</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <div>
+        <div class="kpi-value">{{ inadimplentes }}</div>
+        <div class="kpi-label">Inadimplentes</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row g-3 mb-4">
+
+  <!-- Pizza: Ocupação -->
+  <div class="col-md-4">
+    <div class="section-card h-100">
+      <div class="section-card-header">
+        <i class="bi bi-pie-chart-fill text-primary"></i> Ocupação dos Imóveis
+      </div>
+      <div class="section-card-body">
+        <div class="chart-wrapper">
+          <canvas id="chartPizza"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barras: Recebimentos -->
+  <div class="col-md-8">
+    <div class="section-card h-100">
+      <div class="section-card-header">
+        <i class="bi bi-bar-chart-fill text-success"></i> Recebimentos vs. Pendências (6 meses)
+      </div>
+      <div class="section-card-body">
+        <div class="chart-wrapper">
+          <canvas id="chartBarras"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Últimos Lançamentos -->
+<div class="section-card">
+  <div class="section-card-header">
+    <i class="bi bi-clock-history text-secondary"></i> Últimos Lançamentos Financeiros
+    <a href="{% url 'lancamento_list' %}" class="btn btn-outline-primary btn-sm ms-auto">Ver todos</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>Inquilino</th>
+          <th>Imóvel</th>
+          <th>Tipo</th>
+          <th>Vencimento</th>
+          <th>Valor</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in ultimos_lancamentos %}
+        <tr>
+          <td>{{ l.contrato.inquilino.nome }}</td>
+          <td class="text-muted small">{{ l.contrato.imovel.endereco|truncatechars:35 }}</td>
+          <td>{{ l.get_tipo_display }}</td>
+          <td>{{ l.data_vencimento|date:"d/m/Y" }}</td>
+          <td><strong>R$ {{ l.valor|floatformat:2 }}</strong></td>
+          <td>
+            <span class="status-badge badge-{{ l.status }}">{{ l.get_status_display }}</span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-3">Nenhum lançamento registrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+// Gráfico de pizza
+new Chart(document.getElementById('chartPizza'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ pizza_labels|safe }},
+    datasets: [{
+      data: {{ pizza_data|safe }},
+      backgroundColor: ['#16a34a', '#dc2626', '#d97706'],
+      borderWidth: 2,
+      borderColor: '#fff',
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 12 } } }
+    }
+  }
+});
+
+// Gráfico de barras
+new Chart(document.getElementById('chartBarras'), {
+  type: 'bar',
+  data: {
+    labels: {{ meses_labels|safe }},
+    datasets: [
+      {
+        label: 'Recebido (R$)',
+        data: {{ meses_pagos|safe }},
+        backgroundColor: 'rgba(22,163,74,.75)',
+        borderRadius: 5,
+      },
+      {
+        label: 'Pendente/Atrasado (R$)',
+        data: {{ meses_pendentes|safe }},
+        backgroundColor: 'rgba(220,38,38,.65)',
+        borderRadius: 5,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' }
+    },
+    scales: {
+      y: { beginAtZero: true, ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } }
+    }
+  }
+});
+</script>
+{% endblock %}

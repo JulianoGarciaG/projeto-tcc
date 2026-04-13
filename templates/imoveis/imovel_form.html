@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-house-door me-2"></i>{{ titulo }}{% endblock %}
+{% block nav_imoveis %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+
+    <div class="mb-3">
+      <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Voltar para Imóveis
+      </a>
+    </div>
+
+    <div class="section-card">
+      <div class="section-card-header">
+        <i class="bi bi-house-door me-1"></i> {{ titulo }}
+      </div>
+      <div class="section-card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Proprietário *</label>
+              {{ form.proprietario }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Tipo *</label>
+              {{ form.tipo }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Status *</label>
+              {{ form.status }}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Endereço *</label>
+              {{ form.endereco }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Área (m²)</label>
+              {{ form.area_m2 }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Bairro</label>
+              {{ form.bairro }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Cidade *</label>
+              {{ form.cidade }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Valor do Aluguel (R$) *</label>
+              {{ form.valor_aluguel }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Descrição</label>
+              {{ form.descricao }}
+            </div>
+          </div>
+
+          {% if form.errors %}
+          <div class="alert alert-danger mt-3 small">
+            {% for field in form %}{% for error in field.errors %}<div><strong>{{ field.label }}:</strong> {{ error }}</div>{% endfor %}{% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="d-flex gap-2 justify-content-end mt-4">
+            <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i> Salvar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}GED — Documentos{% endblock %}
+{% block page_title %}<i class="bi bi-folder2-open me-2"></i>GED — Gestão Eletrônica de Documentos{% endblock %}
+{% block nav_documentos %}active{% endblock %}
+
+{% block content %}
+
+<div class="row g-4">
+
+  <!-- Contratos -->
+  <div class="col-12">
+    <div class="section-card">
+      <div class="section-card-header">
+        <i class="bi bi-file-earmark-text-fill text-primary me-1"></i> Contratos com Arquivo
+        <span class="badge bg-primary ms-2">{{ contratos.count }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0 small">
+          <thead><tr><th>Inquilino</th><th>Imóvel</th><th>Período</th><th>Status</th><th>Arquivo</th></tr></thead>
+          <tbody>
+            {% for c in contratos %}
+            <tr>
+              <td>{{ c.inquilino.nome }}</td>
+              <td>{{ c.imovel.endereco|truncatechars:35 }}</td>
+              <td>{{ c.data_inicio|date:"d/m/Y" }} → {{ c.data_fim|date:"d/m/Y" }}</td>
+              <td><span class="status-badge badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
+              <td>
+                <a href="{{ c.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-file-earmark-pdf me-1"></i> Abrir PDF
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3">Nenhum contrato com arquivo anexado.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Laudos -->
+  <div class="col-md-6">
+    <div class="section-card h-100">
+      <div class="section-card-header">
+        <i class="bi bi-clipboard-check-fill text-success me-1"></i> Laudos de Vistoria
+        <span class="badge bg-success ms-2">{{ laudos.count }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0 small">
+          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Data</th><th>Arquivo</th></tr></thead>
+          <tbody>
+            {% for l in laudos %}
+            <tr>
+              <td>{{ l.imovel.endereco|truncatechars:25 }}</td>
+              <td>{{ l.get_tipo_display }}</td>
+              <td>{{ l.data|date:"d/m/Y" }}</td>
+              <td><a href="{{ l.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Nenhum laudo com arquivo.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comprovantes -->
+  <div class="col-md-6">
+    <div class="section-card h-100">
+      <div class="section-card-header">
+        <i class="bi bi-receipt text-warning me-1"></i> Comprovantes de Pagamento
+        <span class="badge bg-warning text-dark ms-2">{{ comprovantes.count }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0 small">
+          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Data Pgto</th><th>Arquivo</th></tr></thead>
+          <tbody>
+            {% for l in comprovantes %}
+            <tr>
+              <td>{{ l.contrato.imovel.endereco|truncatechars:25 }}</td>
+              <td>{{ l.get_tipo_display }}</td>
+              <td>{{ l.data_pagamento|date:"d/m/Y"|default:"—" }}</td>
+              <td><a href="{{ l.comprovante.url }}" target="_blank" class="btn btn-sm btn-outline-warning"><i class="bi bi-file-earmark me-1"></i> Abrir</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Nenhum comprovante.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

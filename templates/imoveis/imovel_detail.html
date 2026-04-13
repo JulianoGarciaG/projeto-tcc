@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}{{ imovel }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-house-door me-2"></i>Detalhe do Imóvel{% endblock %}
+{% block nav_imoveis %}active{% endblock %}
+
+{% block content %}
+<div class="mb-3 d-flex gap-2">
+  <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Voltar
+  </a>
+  <a href="{% url 'imovel_edit' imovel.pk %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-pencil me-1"></i> Editar
+  </a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="section-card mb-3">
+      <div class="section-card-header">
+        <i class="bi bi-info-circle me-1"></i> Informações do Imóvel
+        <span class="ms-auto status-badge badge-{{ imovel.status }}">{{ imovel.get_status_display }}</span>
+      </div>
+      <div class="section-card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-muted">Tipo</dt>
+          <dd class="col-7">{{ imovel.get_tipo_display }}</dd>
+          <dt class="col-5 text-muted">Endereço</dt>
+          <dd class="col-7">{{ imovel.endereco }}</dd>
+          {% if imovel.bairro %}
+          <dt class="col-5 text-muted">Bairro</dt>
+          <dd class="col-7">{{ imovel.bairro }}</dd>
+          {% endif %}
+          <dt class="col-5 text-muted">Cidade</dt>
+          <dd class="col-7">{{ imovel.cidade }}</dd>
+          {% if imovel.area_m2 %}
+          <dt class="col-5 text-muted">Área</dt>
+          <dd class="col-7">{{ imovel.area_m2 }} m²</dd>
+          {% endif %}
+          <dt class="col-5 text-muted">Aluguel</dt>
+          <dd class="col-7"><strong>R$ {{ imovel.valor_aluguel|floatformat:2 }}</strong></dd>
+          <dt class="col-5 text-muted">Proprietário</dt>
+          <dd class="col-7">{{ imovel.proprietario.nome }}</dd>
+          {% if imovel.descricao %}
+          <dt class="col-5 text-muted">Descrição</dt>
+          <dd class="col-7">{{ imovel.descricao }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <!-- Contratos recentes -->
+    <div class="section-card mb-3">
+      <div class="section-card-header">
+        <i class="bi bi-file-earmark-text me-1"></i> Contratos
+        <a href="{% url 'contrato_create' %}" class="btn btn-outline-primary btn-sm ms-auto">+ Novo</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0 small">
+          <thead>
+            <tr><th>Inquilino</th><th>Período</th><th>Valor</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            {% for c in contratos %}
+            <tr>
+              <td><a href="{% url 'contrato_detail' c.pk %}">{{ c.inquilino.nome }}</a></td>
+              <td>{{ c.data_inicio|date:"d/m/Y" }} → {{ c.data_fim|date:"d/m/Y" }}</td>
+              <td>R$ {{ c.valor_mensal|floatformat:2 }}</td>
+              <td><span class="status-badge badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-2">Nenhum contrato.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Laudos recentes -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <i class="bi bi-clipboard-check me-1"></i> Laudos de Vistoria
+        <a href="{% url 'laudo_create' %}" class="btn btn-outline-primary btn-sm ms-auto">+ Novo</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0 small">
+          <thead>
+            <tr><th>Tipo</th><th>Data</th><th>Responsável</th><th>Arquivo</th></tr>
+          </thead>
+          <tbody>
+            {% for l in laudos %}
+            <tr>
+              <td>{{ l.get_tipo_display }}</td>
+              <td>{{ l.data|date:"d/m/Y" }}</td>
+              <td>{{ l.responsavel }}</td>
+              <td>
+                {% if l.arquivo %}
+                <a href="{{ l.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-file-earmark-pdf"></i>
+                </a>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-2">Nenhum laudo.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

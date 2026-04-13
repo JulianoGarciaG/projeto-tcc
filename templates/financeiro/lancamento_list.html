@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Financeiro — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-cash-coin me-2"></i>Financeiro — Lançamentos{% endblock %}
+{% block nav_financeiro %}active{% endblock %}
+
+{% block content %}
+
+<!-- Totalizadores -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="kpi-card kpi-green">
+      <div class="kpi-icon"><i class="bi bi-check-circle-fill"></i></div>
+      <div><div class="kpi-value">R$ {{ total_pago|floatformat:2 }}</div><div class="kpi-label">Total Recebido (filtro)</div></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="kpi-card kpi-red">
+      <div class="kpi-icon"><i class="bi bi-exclamation-circle-fill"></i></div>
+      <div><div class="kpi-value">R$ {{ total_pendente|floatformat:2 }}</div><div class="kpi-label">Pendente / Atrasado (filtro)</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="section-card mb-4">
+  <div class="section-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4"><label class="form-label">Buscar</label><input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Inquilino ou imóvel..."></div>
+      <div class="col-md-3"><label class="form-label">Status</label>
+        <select name="status" class="form-select"><option value="">Todos</option>{% for val, label in status_choices %}<option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      </div>
+      <div class="col-md-3"><label class="form-label">Tipo</label>
+        <select name="tipo" class="form-select"><option value="">Todos</option>{% for val, label in tipo_choices %}<option value="{{ val }}" {% if tipo == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i></button>
+        <a href="{% url 'lancamento_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="text-muted small">{{ lancamentos.count }} lançamento(s)</span>
+  <a href="{% url 'lancamento_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Novo Lançamento</a>
+</div>
+
+<div class="section-card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr><th>Inquilino</th><th>Imóvel</th><th>Tipo</th><th>Vencimento</th><th>Pagamento</th><th>Valor</th><th>Status</th><th>Comprovante</th><th class="text-end">Ações</th></tr>
+      </thead>
+      <tbody>
+        {% for l in lancamentos %}
+        <tr>
+          <td class="fw-semibold">{{ l.contrato.inquilino.nome }}</td>
+          <td class="small text-muted">{{ l.contrato.imovel.endereco|truncatechars:25 }}</td>
+          <td>{{ l.get_tipo_display }}</td>
+          <td>{{ l.data_vencimento|date:"d/m/Y" }}</td>
+          <td>{% if l.data_pagamento %}{{ l.data_pagamento|date:"d/m/Y" }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td><strong>R$ {{ l.valor|floatformat:2 }}</strong></td>
+          <td><span class="status-badge badge-{{ l.status }}">{{ l.get_status_display }}</span></td>
+          <td>{% if l.comprovante %}<a href="{{ l.comprovante.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark"></i></a>{% else %}—{% endif %}</td>
+          <td class="text-end">
+            <a href="{% url 'lancamento_edit' l.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#del{{ l.pk }}"><i class="bi bi-trash"></i></button>
+            <div class="modal fade" id="del{{ l.pk }}" tabindex="-1">
+              <div class="modal-dialog modal-sm"><div class="modal-content">
+                <div class="modal-header border-0"><h6 class="modal-title text-danger">Confirmar exclusão</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body small">Excluir lançamento de <strong>R$ {{ l.valor|floatformat:2 }}</strong>?</div>
+                <div class="modal-footer border-0"><button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><form method="post" action="{% url 'lancamento_delete' l.pk %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-danger">Excluir</button></form></div>
+              </div></div>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="text-center text-muted py-4">Nenhum lançamento encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
