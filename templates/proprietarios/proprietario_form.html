@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-person-badge me-2"></i>{{ titulo }}{% endblock %}
+{% block nav_proprietarios %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="mb-3"><a href="{% url 'proprietario_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a></div>
+    <div class="section-card">
+      <div class="section-card-header"><i class="bi bi-person-badge me-1"></i> {{ titulo }}</div>
+      <div class="section-card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-12"><label class="form-label">Nome completo *</label>{{ form.nome }}</div>
+            <div class="col-md-6"><label class="form-label">CPF/CNPJ *</label>{{ form.cpf_cnpj }}</div>
+            <div class="col-md-6"><label class="form-label">Telefone</label>{{ form.telefone }}</div>
+            <div class="col-12"><label class="form-label">Email</label>{{ form.email }}</div>
+            <div class="col-12"><label class="form-label">Endereço</label>{{ form.endereco }}</div>
+          </div>
+          {% if form.errors %}<div class="alert alert-danger mt-3 small">{% for f in form %}{% for e in f.errors %}<div>{{ f.label }}: {{ e }}</div>{% endfor %}{% endfor %}</div>{% endif %}
+          <div class="d-flex gap-2 justify-content-end mt-4">
+            <a href="{% url 'proprietario_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

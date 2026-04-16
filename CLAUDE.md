@@ -3,7 +3,7 @@
 ## 1. Visão Geral do Projeto
 Este projeto consiste no desenvolvimento de um sistema interno de acompanhamento e armazenamento de documentação e integração, com análise de dados, voltado para uma administradora de bens imóveis. O objetivo principal é solucionar barreiras técnicas relacionadas ao fluxo e armazenamento de dados provenientes de processos manuais, gerando maior eficácia no arquivamento e na análise geral dos dados.
 
-A solução será um website voltado para funcionários e gestores, com integração a um banco de dados. O foco está na automação de fluxos de trabalho, redução de erros inerentes ao trabalho manual e priorização da governança de dados.
+A solução será um único website voltado para funcionários e gestores, com integração a um banco de dados. O foco está na automação de fluxos de trabalho, redução de erros inerentes ao trabalho manual e priorização da governança de dados.
 
 ---
 

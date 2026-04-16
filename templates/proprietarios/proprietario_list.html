@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Proprietários — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-person-badge me-2"></i>Proprietários{% endblock %}
+{% block nav_proprietarios %}active{% endblock %}
+
+{% block content %}
+<div class="section-card mb-4">
+  <div class="section-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-12 col-md-8">
+        <label class="form-label">Buscar</label>
+        <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Nome ou CPF/CNPJ...">
+      </div>
+      <div class="col-12 col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Filtrar</button>
+        <a href="{% url 'proprietario_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="text-muted small">{{ proprietarios.count }} proprietário(s)</span>
+  <a href="{% url 'proprietario_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Novo Proprietário
+  </a>
+</div>
+
+<div class="section-card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>Email</th><th>Imóveis</th><th class="text-end">Ações</th></tr>
+      </thead>
+      <tbody>
+        {% for p in proprietarios %}
+        <tr>
+          <td class="fw-semibold">{{ p.nome }}</td>
+          <td>{{ p.cpf_cnpj }}</td>
+          <td>{{ p.telefone|default:"—" }}</td>
+          <td>{{ p.email|default:"—" }}</td>
+          <td>{{ p.imoveis.count }}</td>
+          <td class="text-end">
+            <a href="{% url 'proprietario_edit' p.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#del{{ p.pk }}"><i class="bi bi-trash"></i></button>
+            <div class="modal fade" id="del{{ p.pk }}" tabindex="-1">
+              <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                  <div class="modal-header border-0"><h6 class="modal-title text-danger">Confirmar exclusão</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                  <div class="modal-body small">Excluir <strong>{{ p.nome }}</strong>?</div>
+                  <div class="modal-footer border-0">
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form method="post" action="{% url 'proprietario_delete' p.pk %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-danger">Excluir</button></form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Nenhum proprietário cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

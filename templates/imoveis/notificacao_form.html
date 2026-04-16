@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-bell me-2"></i>{{ titulo }}{% endblock %}
+{% block nav_imoveis %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="mb-3">
+      <a href="{% url 'imovel_detail' imovel.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Voltar ao Imóvel
+      </a>
+    </div>
+
+    <div class="section-card">
+      <div class="section-card-header"><i class="bi bi-bell me-1"></i> {{ titulo }} — {{ imovel.endereco }}</div>
+      <div class="section-card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="imovel" value="{{ imovel.pk }}">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipo *</label>
+              {{ form.tipo }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Status *</label>
+              {{ form.status }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Título *</label>
+              {{ form.titulo }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Data de Recebimento *</label>
+              {{ form.data_recebimento }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Data de Resposta</label>
+              {{ form.data_resposta }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Documento Anexo</label>
+              {{ form.arquivo }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Observações</label>
+              {{ form.observacoes }}
+            </div>
+          </div>
+          {% if form.errors %}
+          <div class="alert alert-danger small mt-3">
+            {% for field in form %}{% for error in field.errors %}<div>{{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}
+          </div>
+          {% endif %}
+          <div class="d-flex gap-2 justify-content-end mt-4">
+            <a href="{% url 'imovel_detail' imovel.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
