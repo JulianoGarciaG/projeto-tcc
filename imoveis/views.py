@@ -1,14 +1,17 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Count, Sum, Q
-from django.utils import timezone
-from datetime import date
+from django.db.models import Sum, Q
+from datetime import date, timedelta
 
-from .models import Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento
+from .models import (
+    Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
+    FotoImovel, Notificacao, RenovacaoContrato, Distrato, Saida, Entrada,
+)
 from .forms import (
-    ImovelForm, ProprietarioForm, InquilinoForm,
-    ContratoForm, LaudoVistoriaForm, LancamentoForm,
+    ImovelForm, FotoImovelFormSet, ProprietarioForm, InquilinoForm,
+    ContratoForm, FiadorFormSet, LaudoVistoriaForm, LancamentoForm,
+    NotificacaoForm, RenovacaoContratoForm, DistratoForm, SaidaForm, EntradaForm,
 )
 
 
@@ -20,45 +23,56 @@ from .forms import (
 def dashboard(request):
     hoje = date.today()
 
-    total_imoveis = Imovel.objects.count()
-    vagos = Imovel.objects.filter(status='vago').count()
-    ocupados = Imovel.objects.filter(status='ocupado').count()
+    # Filtros
+    imovel_id = request.GET.get('imovel_id', '')
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+    status_filtro = request.GET.get('status', '')
+
+    lancamentos_qs = Lancamento.objects.select_related('contrato__inquilino', 'contrato__imovel')
+    imoveis_qs = Imovel.objects.all()
+
+    if imovel_id:
+        lancamentos_qs = lancamentos_qs.filter(contrato__imovel_id=imovel_id)
+        imoveis_qs = imoveis_qs.filter(pk=imovel_id)
+    if data_inicio:
+        lancamentos_qs = lancamentos_qs.filter(data_vencimento__gte=data_inicio)
+    if data_fim:
+        lancamentos_qs = lancamentos_qs.filter(data_vencimento__lte=data_fim)
+    if status_filtro:
+        lancamentos_qs = lancamentos_qs.filter(status=status_filtro)
+
+    total_imoveis = imoveis_qs.count()
+    vagos = imoveis_qs.filter(status='vago').count()
+    ocupados = imoveis_qs.filter(status='ocupado').count()
     contratos_ativos = Contrato.objects.filter(status='ativo').count()
-    inadimplentes = Lancamento.objects.filter(status='atrasado').count()
+    inadimplentes = lancamentos_qs.filter(status='atrasado').count()
 
     taxa_vacancia = round((vagos / total_imoveis * 100), 1) if total_imoveis else 0
 
-    # Últimos lançamentos
-    ultimos_lancamentos = Lancamento.objects.select_related('contrato__inquilino', 'contrato__imovel').order_by('-criado_em')[:8]
+    ultimos_lancamentos = lancamentos_qs.order_by('-criado_em')[:8]
 
-    # Dados para gráfico de pizza (ocupado/vago)
+    # Gráfico de pizza
     pizza_labels = ['Ocupados', 'Vagos', 'Em Manutenção']
     pizza_data = [
-        Imovel.objects.filter(status='ocupado').count(),
-        Imovel.objects.filter(status='vago').count(),
-        Imovel.objects.filter(status='manutencao').count(),
+        imoveis_qs.filter(status='ocupado').count(),
+        imoveis_qs.filter(status='vago').count(),
+        imoveis_qs.filter(status='manutencao').count(),
     ]
 
-    # Dados para gráfico de barras (pagamentos últimos 6 meses)
-    from datetime import timedelta
-    import calendar
+    # Gráfico de barras — últimos 6 meses
     meses_labels = []
     meses_pagos = []
     meses_pendentes = []
     for i in range(5, -1, -1):
         mes_ref = hoje.replace(day=1) - timedelta(days=i * 30)
-        label = mes_ref.strftime('%b/%Y')
-        meses_labels.append(label)
-        pagos = Lancamento.objects.filter(
+        meses_labels.append(mes_ref.strftime('%b/%Y'))
+        base = lancamentos_qs.filter(
             data_vencimento__year=mes_ref.year,
             data_vencimento__month=mes_ref.month,
-            status='pago'
-        ).aggregate(total=Sum('valor'))['total'] or 0
-        pendentes = Lancamento.objects.filter(
-            data_vencimento__year=mes_ref.year,
-            data_vencimento__month=mes_ref.month,
-            status__in=['pendente', 'atrasado']
-        ).aggregate(total=Sum('valor'))['total'] or 0
+        )
+        pagos = base.filter(status='pago').aggregate(total=Sum('valor'))['total'] or 0
+        pendentes = base.filter(status__in=['pendente', 'atrasado']).aggregate(total=Sum('valor'))['total'] or 0
         meses_pagos.append(float(pagos))
         meses_pendentes.append(float(pendentes))
 
@@ -75,6 +89,13 @@ def dashboard(request):
         'meses_labels': meses_labels,
         'meses_pagos': meses_pagos,
         'meses_pendentes': meses_pendentes,
+        # Filtros
+        'imoveis_lista': Imovel.objects.all(),
+        'filtro_imovel_id': imovel_id,
+        'filtro_data_inicio': data_inicio,
+        'filtro_data_fim': data_fim,
+        'filtro_status': status_filtro,
+        'status_choices': Lancamento.STATUS_CHOICES,
     }
     return render(request, 'dashboard.html', context)
 
@@ -89,7 +110,7 @@ def imovel_list(request):
     status = request.GET.get('status', '')
     tipo = request.GET.get('tipo', '')
 
-    imoveis = Imovel.objects.select_related('proprietario')
+    imoveis = Imovel.objects.select_related('proprietario').prefetch_related('fotos')
     if q:
         imoveis = imoveis.filter(Q(endereco__icontains=q) | Q(bairro__icontains=q) | Q(cidade__icontains=q))
     if status:
@@ -108,32 +129,55 @@ def imovel_list(request):
 @login_required
 def imovel_detail(request, pk):
     imovel = get_object_or_404(Imovel, pk=pk)
-    contratos = imovel.contratos.select_related('inquilino').order_by('-data_inicio')[:5]
-    laudos = imovel.laudos.order_by('-data')[:5]
+    contratos = imovel.contratos.select_related('inquilino').order_by('-data_inicio')
+    laudos = imovel.laudos.order_by('-data')
+    fotos = imovel.fotos.all()
+    notificacoes = imovel.notificacoes.order_by('-data_recebimento')
+    saidas = imovel.saidas.order_by('-data')
+    entradas = imovel.entradas.order_by('-data')
+    total_saidas = saidas.aggregate(t=Sum('valor'))['t'] or 0
+    total_entradas = entradas.aggregate(t=Sum('valor'))['t'] or 0
     return render(request, 'imoveis/imovel_detail.html', {
-        'imovel': imovel, 'contratos': contratos, 'laudos': laudos
+        'imovel': imovel,
+        'contratos': contratos,
+        'laudos': laudos,
+        'fotos': fotos,
+        'notificacoes': notificacoes,
+        'saidas': saidas,
+        'entradas': entradas,
+        'total_saidas': total_saidas,
+        'total_entradas': total_entradas,
     })
 
 
 @login_required
 def imovel_create(request):
-    form = ImovelForm(request.POST or None)
-    if form.is_valid():
-        form.save()
+    form = ImovelForm(request.POST or None, request.FILES or None)
+    foto_formset = FotoImovelFormSet(request.POST or None, request.FILES or None)
+    if form.is_valid() and foto_formset.is_valid():
+        imovel = form.save()
+        foto_formset.instance = imovel
+        foto_formset.save()
         messages.success(request, 'Imóvel cadastrado com sucesso.')
         return redirect('imovel_list')
-    return render(request, 'imoveis/imovel_form.html', {'form': form, 'titulo': 'Novo Imóvel'})
+    return render(request, 'imoveis/imovel_form.html', {
+        'form': form, 'foto_formset': foto_formset, 'titulo': 'Novo Imóvel'
+    })
 
 
 @login_required
 def imovel_edit(request, pk):
     imovel = get_object_or_404(Imovel, pk=pk)
-    form = ImovelForm(request.POST or None, instance=imovel)
-    if form.is_valid():
+    form = ImovelForm(request.POST or None, request.FILES or None, instance=imovel)
+    foto_formset = FotoImovelFormSet(request.POST or None, request.FILES or None, instance=imovel)
+    if form.is_valid() and foto_formset.is_valid():
         form.save()
+        foto_formset.save()
         messages.success(request, 'Imóvel atualizado.')
         return redirect('imovel_detail', pk=pk)
-    return render(request, 'imoveis/imovel_form.html', {'form': form, 'titulo': 'Editar Imóvel', 'obj': imovel})
+    return render(request, 'imoveis/imovel_form.html', {
+        'form': form, 'foto_formset': foto_formset, 'titulo': 'Editar Imóvel', 'obj': imovel
+    })
 
 
 @login_required
@@ -256,30 +300,53 @@ def contrato_detail(request, pk):
     contrato = get_object_or_404(Contrato.objects.select_related('imovel', 'inquilino'), pk=pk)
     lancamentos = contrato.lancamentos.order_by('-data_vencimento')
     laudos = contrato.laudos.order_by('-data')
+    fiadores = contrato.fiadores.all()
+    try:
+        renovacao = contrato.renovacao
+    except RenovacaoContrato.DoesNotExist:
+        renovacao = None
+    try:
+        distrato = contrato.distrato
+    except Distrato.DoesNotExist:
+        distrato = None
     return render(request, 'contratos/contrato_detail.html', {
-        'contrato': contrato, 'lancamentos': lancamentos, 'laudos': laudos
+        'contrato': contrato,
+        'lancamentos': lancamentos,
+        'laudos': laudos,
+        'fiadores': fiadores,
+        'renovacao': renovacao,
+        'distrato': distrato,
     })
 
 
 @login_required
 def contrato_create(request):
     form = ContratoForm(request.POST or None, request.FILES or None)
-    if form.is_valid():
-        form.save()
+    fiador_formset = FiadorFormSet(request.POST or None, request.FILES or None)
+    if form.is_valid() and fiador_formset.is_valid():
+        contrato = form.save()
+        fiador_formset.instance = contrato
+        fiador_formset.save()
         messages.success(request, 'Contrato cadastrado com sucesso.')
         return redirect('contrato_list')
-    return render(request, 'contratos/contrato_form.html', {'form': form, 'titulo': 'Novo Contrato'})
+    return render(request, 'contratos/contrato_form.html', {
+        'form': form, 'fiador_formset': fiador_formset, 'titulo': 'Novo Contrato'
+    })
 
 
 @login_required
 def contrato_edit(request, pk):
     obj = get_object_or_404(Contrato, pk=pk)
     form = ContratoForm(request.POST or None, request.FILES or None, instance=obj)
-    if form.is_valid():
+    fiador_formset = FiadorFormSet(request.POST or None, request.FILES or None, instance=obj)
+    if form.is_valid() and fiador_formset.is_valid():
         form.save()
+        fiador_formset.save()
         messages.success(request, 'Contrato atualizado.')
         return redirect('contrato_detail', pk=pk)
-    return render(request, 'contratos/contrato_form.html', {'form': form, 'titulo': 'Editar Contrato', 'obj': obj})
+    return render(request, 'contratos/contrato_form.html', {
+        'form': form, 'fiador_formset': fiador_formset, 'titulo': 'Editar Contrato', 'obj': obj
+    })
 
 
 @login_required
@@ -289,6 +356,52 @@ def contrato_delete(request, pk):
         obj.delete()
         messages.success(request, 'Contrato removido.')
     return redirect('contrato_list')
+
+
+# ============================================================
+# Renovação de Contrato
+# ============================================================
+
+@login_required
+def renovacao_create(request, contrato_pk):
+    contrato = get_object_or_404(Contrato, pk=contrato_pk)
+    if hasattr(contrato, 'renovacao'):
+        messages.warning(request, 'Este contrato já possui uma renovação registrada.')
+        return redirect('contrato_detail', pk=contrato_pk)
+    form = RenovacaoContratoForm(request.POST or None)
+    if form.is_valid():
+        renovacao = form.save(commit=False)
+        renovacao.contrato = contrato
+        renovacao.save()
+        messages.success(request, 'Renovação registrada com sucesso.')
+        return redirect('contrato_detail', pk=contrato_pk)
+    return render(request, 'contratos/renovacao_form.html', {
+        'form': form, 'contrato': contrato, 'titulo': 'Registrar Renovação'
+    })
+
+
+# ============================================================
+# Distrato de Contrato
+# ============================================================
+
+@login_required
+def distrato_create(request, contrato_pk):
+    contrato = get_object_or_404(Contrato, pk=contrato_pk)
+    if hasattr(contrato, 'distrato'):
+        messages.warning(request, 'Este contrato já possui um distrato registrado.')
+        return redirect('contrato_detail', pk=contrato_pk)
+    form = DistratoForm(request.POST or None, request.FILES or None)
+    # Limitar laudo_saida aos laudos do imóvel
+    form.fields['laudo_saida'].queryset = LaudoVistoria.objects.filter(imovel=contrato.imovel)
+    if form.is_valid():
+        distrato = form.save(commit=False)
+        distrato.contrato = contrato
+        distrato.save()
+        messages.success(request, 'Distrato registrado. Contrato marcado como encerrado.')
+        return redirect('contrato_detail', pk=contrato_pk)
+    return render(request, 'contratos/distrato_form.html', {
+        'form': form, 'contrato': contrato, 'titulo': 'Registrar Distrato'
+    })
 
 
 # ============================================================
@@ -401,6 +514,128 @@ def lancamento_delete(request, pk):
 
 
 # ============================================================
+# Notificações
+# ============================================================
+
+@login_required
+def notificacao_create(request, imovel_pk):
+    imovel = get_object_or_404(Imovel, pk=imovel_pk)
+    form = NotificacaoForm(request.POST or None, request.FILES or None,
+                           initial={'imovel': imovel})
+    form.fields['imovel'].initial = imovel
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Notificação registrada.')
+        return redirect('imovel_detail', pk=imovel_pk)
+    return render(request, 'imoveis/notificacao_form.html', {
+        'form': form, 'imovel': imovel, 'titulo': 'Nova Notificação'
+    })
+
+
+@login_required
+def notificacao_edit(request, pk):
+    obj = get_object_or_404(Notificacao, pk=pk)
+    form = NotificacaoForm(request.POST or None, request.FILES or None, instance=obj)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Notificação atualizada.')
+        return redirect('imovel_detail', pk=obj.imovel_id)
+    return render(request, 'imoveis/notificacao_form.html', {
+        'form': form, 'imovel': obj.imovel, 'titulo': 'Editar Notificação'
+    })
+
+
+@login_required
+def notificacao_delete(request, pk):
+    obj = get_object_or_404(Notificacao, pk=pk)
+    imovel_pk = obj.imovel_id
+    if request.method == 'POST':
+        obj.delete()
+        messages.success(request, 'Notificação removida.')
+    return redirect('imovel_detail', pk=imovel_pk)
+
+
+# ============================================================
+# Saídas por Imóvel
+# ============================================================
+
+@login_required
+def saida_create(request, imovel_pk):
+    imovel = get_object_or_404(Imovel, pk=imovel_pk)
+    form = SaidaForm(request.POST or None, request.FILES or None, initial={'imovel': imovel})
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Saída registrada.')
+        return redirect('imovel_detail', pk=imovel_pk)
+    return render(request, 'imoveis/saida_form.html', {
+        'form': form, 'imovel': imovel, 'titulo': 'Nova Saída'
+    })
+
+
+@login_required
+def saida_edit(request, pk):
+    obj = get_object_or_404(Saida, pk=pk)
+    form = SaidaForm(request.POST or None, request.FILES or None, instance=obj)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Saída atualizada.')
+        return redirect('imovel_detail', pk=obj.imovel_id)
+    return render(request, 'imoveis/saida_form.html', {
+        'form': form, 'imovel': obj.imovel, 'titulo': 'Editar Saída'
+    })
+
+
+@login_required
+def saida_delete(request, pk):
+    obj = get_object_or_404(Saida, pk=pk)
+    imovel_pk = obj.imovel_id
+    if request.method == 'POST':
+        obj.delete()
+        messages.success(request, 'Saída removida.')
+    return redirect('imovel_detail', pk=imovel_pk)
+
+
+# ============================================================
+# Entradas por Imóvel
+# ============================================================
+
+@login_required
+def entrada_create(request, imovel_pk):
+    imovel = get_object_or_404(Imovel, pk=imovel_pk)
+    form = EntradaForm(request.POST or None, request.FILES or None, initial={'imovel': imovel})
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Entrada registrada.')
+        return redirect('imovel_detail', pk=imovel_pk)
+    return render(request, 'imoveis/entrada_form.html', {
+        'form': form, 'imovel': imovel, 'titulo': 'Nova Entrada'
+    })
+
+
+@login_required
+def entrada_edit(request, pk):
+    obj = get_object_or_404(Entrada, pk=pk)
+    form = EntradaForm(request.POST or None, request.FILES or None, instance=obj)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Entrada atualizada.')
+        return redirect('imovel_detail', pk=obj.imovel_id)
+    return render(request, 'imoveis/entrada_form.html', {
+        'form': form, 'imovel': obj.imovel, 'titulo': 'Editar Entrada'
+    })
+
+
+@login_required
+def entrada_delete(request, pk):
+    obj = get_object_or_404(Entrada, pk=pk)
+    imovel_pk = obj.imovel_id
+    if request.method == 'POST':
+        obj.delete()
+        messages.success(request, 'Entrada removida.')
+    return redirect('imovel_detail', pk=imovel_pk)
+
+
+# ============================================================
 # GED — Documentos centralizados
 # ============================================================
 
@@ -409,8 +644,12 @@ def documentos(request):
     contratos = Contrato.objects.exclude(arquivo='').select_related('imovel', 'inquilino')
     laudos = LaudoVistoria.objects.exclude(arquivo='').select_related('imovel')
     comprovantes = Lancamento.objects.exclude(comprovante='').select_related('contrato__imovel')
+    contratos_recibo = Contrato.objects.exclude(recibo_chaves='').select_related('imovel', 'inquilino')
+    contratos_anual = Contrato.objects.exclude(comprovante_anual='').select_related('imovel', 'inquilino')
     return render(request, 'ged/documentos.html', {
         'contratos': contratos,
         'laudos': laudos,
         'comprovantes': comprovantes,
+        'contratos_recibo': contratos_recibo,
+        'contratos_anual': contratos_anual,
     })

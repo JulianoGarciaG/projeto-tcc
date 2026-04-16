@@ -5,32 +5,116 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-8">
+  <div class="col-lg-10">
     <div class="mb-3"><a href="{% url 'contrato_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a></div>
-    <div class="section-card">
-      <div class="section-card-header"><i class="bi bi-file-earmark-text me-1"></i> {{ titulo }}</div>
-      <div class="section-card-body">
-        <form method="post" enctype="multipart/form-data" novalidate>
-          {% csrf_token %}
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <!-- Dados do Contrato -->
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-file-earmark-text me-1"></i> Dados do Contrato</div>
+        <div class="section-card-body">
           <div class="row g-3">
             <div class="col-md-6"><label class="form-label">Imóvel *</label>{{ form.imovel }}</div>
-            <div class="col-md-6"><label class="form-label">Inquilino *</label>{{ form.inquilino }}</div>
+            <div class="col-md-6"><label class="form-label">Inquilino / Locatário *</label>{{ form.inquilino }}</div>
+            <div class="col-md-4"><label class="form-label">Tipo de Contrato *</label>{{ form.tipo_contrato }}</div>
             <div class="col-md-4"><label class="form-label">Status *</label>{{ form.status }}</div>
+            <div class="col-md-4"><label class="form-label">Dia de Vencimento *</label>{{ form.dia_vencimento }}</div>
             <div class="col-md-4"><label class="form-label">Data de Início *</label>{{ form.data_inicio }}</div>
             <div class="col-md-4"><label class="form-label">Data de Término *</label>{{ form.data_fim }}</div>
-            <div class="col-md-5"><label class="form-label">Valor Mensal (R$) *</label>{{ form.valor_mensal }}</div>
-            <div class="col-md-3"><label class="form-label">Dia de Vencimento *</label>{{ form.dia_vencimento }}</div>
-            <div class="col-md-4"><label class="form-label">Arquivo do Contrato (PDF)</label>{{ form.arquivo }}</div>
+            <div class="col-md-4"><label class="form-label">Valor Mensal (R$) *</label>{{ form.valor_mensal }}</div>
             <div class="col-12"><label class="form-label">Observações</label>{{ form.observacoes }}</div>
           </div>
-          {% if form.errors %}<div class="alert alert-danger mt-3 small">{% for f in form %}{% for e in f.errors %}<div>{{ f.label }}: {{ e }}</div>{% endfor %}{% endfor %}</div>{% endif %}
-          <div class="d-flex gap-2 justify-content-end mt-4">
-            <a href="{% url 'contrato_list' %}" class="btn btn-outline-secondary">Cancelar</a>
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Salvar</button>
-          </div>
-        </form>
+        </div>
       </div>
-    </div>
+
+      <!-- Documentos GED -->
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-folder2-open me-1"></i> Documentos (GED)</div>
+        <div class="section-card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Arquivo do Contrato (PDF)</label>
+              {{ form.arquivo }}
+            </div>
+            <div class="col-md-6 campo-pf">
+              <label class="form-label">Comprovante de Renda <span class="badge bg-info text-dark small">PF</span></label>
+              {{ form.comprovante_renda }}
+            </div>
+            <div class="col-md-6 campo-pj" style="display:none;">
+              <label class="form-label">Contrato Social <span class="badge bg-warning text-dark small">PJ</span></label>
+              {{ form.contrato_social }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Recibo de Entrega de Chaves</label>
+              {{ form.recibo_chaves }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Comprovante Anual de Pagamento</label>
+              {{ form.comprovante_anual }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fiadores -->
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-person-check me-1"></i> Fiador(es)</div>
+        <div class="section-card-body">
+          {{ fiador_formset.management_form }}
+          {% for ff in fiador_formset %}
+          <div class="row g-2 mb-3 pb-3 border-bottom fiador-row">
+            <div class="col-md-4"><label class="form-label small">Nome *</label>{{ ff.nome }}</div>
+            <div class="col-md-4"><label class="form-label small">Qualificação</label>{{ ff.qualificacao }}</div>
+            <div class="col-md-3"><label class="form-label small">RG/CPF *</label>{{ ff.rg_cpf }}</div>
+            <div class="col-md-4"><label class="form-label small">Certidão de Ônus</label>{{ ff.certidao_onus }}</div>
+            <div class="col-md-4"><label class="form-label small">Garantia</label>{{ ff.garantia }}</div>
+            <div class="col-md-1 d-flex align-items-end">
+              {% if ff.instance.pk %}
+              <div class="form-check">
+                {{ ff.DELETE }}
+                <label class="form-check-label small text-danger" for="{{ ff.DELETE.id_for_label }}">Del</label>
+              </div>
+              {% endif %}
+              {{ ff.id }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if form.errors or fiador_formset.errors %}
+      <div class="alert alert-danger small">
+        {% for field in form %}{% for error in field.errors %}<div>{{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}
+        {% for ff in fiador_formset %}{% for field in ff %}{% for error in field.errors %}<div>Fiador – {{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2 justify-content-end mb-4">
+        <a href="{% url 'contrato_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Salvar</button>
+      </div>
+    </form>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const tipoSelect = document.getElementById('{{ form.tipo_contrato.id_for_label }}');
+  const camposPF = document.querySelectorAll('.campo-pf');
+  const camposPJ = document.querySelectorAll('.campo-pj');
+
+  function toggleTipo() {
+    const isPJ = tipoSelect.value === 'PJ';
+    camposPF.forEach(el => el.style.display = isPJ ? 'none' : '');
+    camposPJ.forEach(el => el.style.display = isPJ ? '' : 'none');
+  }
+
+  toggleTipo();
+  tipoSelect.addEventListener('change', toggleTipo);
+})();
+</script>
 {% endblock %}

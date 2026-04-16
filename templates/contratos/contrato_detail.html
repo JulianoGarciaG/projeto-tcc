@@ -4,24 +4,37 @@
 {% block nav_contratos %}active{% endblock %}
 
 {% block content %}
-<div class="mb-3 d-flex gap-2">
+<div class="mb-3 d-flex gap-2 flex-wrap">
   <a href="{% url 'contrato_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a>
   <a href="{% url 'contrato_edit' contrato.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i> Editar</a>
   {% if contrato.arquivo %}
-  <a href="{{ contrato.arquivo.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Ver Contrato PDF</a>
+  <a href="{{ contrato.arquivo.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Contrato PDF</a>
+  {% endif %}
+  {% if contrato.status == 'ativo' %}
+  {% if not renovacao %}
+  <a href="{% url 'renovacao_create' contrato.pk %}" class="btn btn-outline-info btn-sm"><i class="bi bi-arrow-repeat me-1"></i> Renovar</a>
+  {% endif %}
+  {% if not distrato %}
+  <a href="{% url 'distrato_create' contrato.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-circle me-1"></i> Distrato</a>
+  {% endif %}
   {% endif %}
 </div>
 
 <div class="row g-3">
+  <!-- Info do Contrato -->
   <div class="col-md-5">
     <div class="section-card mb-3">
       <div class="section-card-header">
-        <i class="bi bi-info-circle me-1"></i> Informações do Contrato
+        <i class="bi bi-info-circle me-1"></i> Informações
         <span class="ms-auto status-badge badge-{{ contrato.status }}">{{ contrato.get_status_display }}</span>
       </div>
       <div class="section-card-body">
         <dl class="row mb-0 small">
+          <dt class="col-5 text-muted">Tipo</dt><dd class="col-7">{{ contrato.get_tipo_contrato_display }}</dd>
           <dt class="col-5 text-muted">Inquilino</dt><dd class="col-7">{{ contrato.inquilino.nome }}</dd>
+          {% if contrato.inquilino.qualificacao %}
+          <dt class="col-5 text-muted">Qualificação</dt><dd class="col-7">{{ contrato.inquilino.qualificacao }}</dd>
+          {% endif %}
           <dt class="col-5 text-muted">Imóvel</dt><dd class="col-7">{{ contrato.imovel.endereco }}</dd>
           <dt class="col-5 text-muted">Início</dt><dd class="col-7">{{ contrato.data_inicio|date:"d/m/Y" }}</dd>
           <dt class="col-5 text-muted">Término</dt><dd class="col-7">{{ contrato.data_fim|date:"d/m/Y" }}</dd>
@@ -33,10 +46,86 @@
         </dl>
       </div>
     </div>
+
+    <!-- Documentos GED -->
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-folder2-open me-1"></i> Documentos</div>
+      <div class="section-card-body">
+        <ul class="list-unstyled small mb-0">
+          {% if contrato.arquivo %}<li><a href="{{ contrato.arquivo.url }}" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i> Contrato PDF</a></li>{% endif %}
+          {% if contrato.comprovante_renda %}<li><a href="{{ contrato.comprovante_renda.url }}" target="_blank"><i class="bi bi-file-earmark me-1"></i> Comprovante de Renda</a></li>{% endif %}
+          {% if contrato.contrato_social %}<li><a href="{{ contrato.contrato_social.url }}" target="_blank"><i class="bi bi-file-earmark me-1"></i> Contrato Social</a></li>{% endif %}
+          {% if contrato.recibo_chaves %}<li><a href="{{ contrato.recibo_chaves.url }}" target="_blank"><i class="bi bi-key me-1"></i> Recibo de Chaves</a></li>{% endif %}
+          {% if contrato.comprovante_anual %}<li><a href="{{ contrato.comprovante_anual.url }}" target="_blank"><i class="bi bi-calendar-check me-1"></i> Comprovante Anual</a></li>{% endif %}
+          {% if not contrato.arquivo and not contrato.comprovante_renda and not contrato.contrato_social and not contrato.recibo_chaves and not contrato.comprovante_anual %}
+          <li class="text-muted">Nenhum documento anexado.</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Fiadores -->
+    {% if fiadores %}
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-person-check me-1"></i> Fiador(es)</div>
+      <div class="section-card-body">
+        {% for f in fiadores %}
+        <div class="small {% if not forloop.last %}border-bottom pb-2 mb-2{% endif %}">
+          <strong>{{ f.nome }}</strong>{% if f.qualificacao %} — {{ f.qualificacao }}{% endif %}<br>
+          RG/CPF: {{ f.rg_cpf }}
+          {% if f.garantia %}<br>Garantia: {{ f.garantia }}{% endif %}
+          {% if f.certidao_onus %}<br><a href="{{ f.certidao_onus.url }}" target="_blank"><i class="bi bi-file-earmark me-1"></i>Certidão de Ônus</a>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Renovação -->
+    {% if renovacao %}
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-arrow-repeat me-1 text-info"></i> Renovação</div>
+      <div class="section-card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-muted">Tipo</dt><dd class="col-7">{{ renovacao.get_tipo_display }}</dd>
+          <dt class="col-5 text-muted">Data</dt><dd class="col-7">{{ renovacao.data_renovacao|date:"d/m/Y" }}</dd>
+          {% if renovacao.novo_valor_mensal %}
+          <dt class="col-5 text-muted">Novo Valor</dt><dd class="col-7">R$ {{ renovacao.novo_valor_mensal|floatformat:2 }}</dd>
+          {% endif %}
+          {% if renovacao.observacoes %}
+          <dt class="col-5 text-muted">Obs.</dt><dd class="col-7">{{ renovacao.observacoes }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Distrato -->
+    {% if distrato %}
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-x-circle me-1 text-danger"></i> Distrato</div>
+      <div class="section-card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-muted">Tipo</dt><dd class="col-7">{{ distrato.get_tipo_display }}</dd>
+          <dt class="col-5 text-muted">Data</dt><dd class="col-7">{{ distrato.data_distrato|date:"d/m/Y" }}</dd>
+          {% if distrato.recibo_chaves %}
+          <dt class="col-5 text-muted">Recibo Chaves</dt><dd class="col-7"><a href="{{ distrato.recibo_chaves.url }}" target="_blank">Ver arquivo</a></dd>
+          {% endif %}
+          {% if distrato.laudo_saida %}
+          <dt class="col-5 text-muted">Laudo Saída</dt><dd class="col-7">{{ distrato.laudo_saida }}</dd>
+          {% endif %}
+          {% if distrato.observacoes %}
+          <dt class="col-5 text-muted">Obs.</dt><dd class="col-7">{{ distrato.observacoes }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+    {% endif %}
   </div>
 
+  <!-- Lançamentos e Laudos -->
   <div class="col-md-7">
-    <div class="section-card">
+    <div class="section-card mb-3">
       <div class="section-card-header">
         <i class="bi bi-cash-coin me-1"></i> Lançamentos Financeiros
         <a href="{% url 'lancamento_create' %}" class="btn btn-outline-primary btn-sm ms-auto">+ Novo</a>
@@ -53,12 +142,36 @@
               <td>{{ l.data_vencimento|date:"d/m/Y" }}</td>
               <td>R$ {{ l.valor|floatformat:2 }}</td>
               <td><span class="status-badge badge-{{ l.status }}">{{ l.get_status_display }}</span></td>
-              <td>
-                {% if l.comprovante %}<a href="{{ l.comprovante.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark"></i></a>{% else %}—{% endif %}
-              </td>
+              <td>{% if l.comprovante %}<a href="{{ l.comprovante.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark"></i></a>{% else %}—{% endif %}</td>
             </tr>
             {% empty %}
             <tr><td colspan="5" class="text-center text-muted py-2">Nenhum lançamento.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-card-header">
+        <i class="bi bi-clipboard-check me-1"></i> Laudos de Vistoria
+        <a href="{% url 'laudo_create' %}" class="btn btn-outline-primary btn-sm ms-auto">+ Novo</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0 small">
+          <thead>
+            <tr><th>Tipo</th><th>Data</th><th>Responsável</th><th>Arquivo</th></tr>
+          </thead>
+          <tbody>
+            {% for l in laudos %}
+            <tr>
+              <td>{{ l.get_tipo_display }}</td>
+              <td>{{ l.data|date:"d/m/Y" }}</td>
+              <td>{{ l.responsavel }}</td>
+              <td>{% if l.arquivo %}<a href="{{ l.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i></a>{% else %}—{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-2">Nenhum laudo.</td></tr>
             {% endfor %}
           </tbody>
         </table>

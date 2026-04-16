@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-x-circle me-2"></i>{{ titulo }}{% endblock %}
+{% block nav_contratos %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="mb-3">
+      <a href="{% url 'contrato_detail' contrato.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Voltar ao Contrato
+      </a>
+    </div>
+
+    <div class="section-card mb-3">
+      <div class="section-card-header bg-danger bg-opacity-10">
+        <i class="bi bi-exclamation-triangle me-1 text-danger"></i>
+        <span class="small">O contrato será marcado como <strong>Encerrado</strong> ao confirmar o distrato.</span>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-card-header"><i class="bi bi-x-circle me-1 text-danger"></i> {{ titulo }}</div>
+      <div class="section-card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Tipo de Distrato *</label>
+              {{ form.tipo }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Data do Distrato *</label>
+              {{ form.data_distrato }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Recibo de Devolução de Chaves</label>
+              {{ form.recibo_chaves }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Laudo de Vistoria de Saída</label>
+              {{ form.laudo_saida }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Observações</label>
+              {{ form.observacoes }}
+            </div>
+          </div>
+          {% if form.errors %}
+          <div class="alert alert-danger small mt-3">
+            {% for field in form %}{% for error in field.errors %}<div>{{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}
+          </div>
+          {% endif %}
+          <div class="d-flex gap-2 justify-content-end mt-4">
+            <a href="{% url 'contrato_detail' contrato.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-danger"><i class="bi bi-check-lg me-1"></i> Confirmar Distrato</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

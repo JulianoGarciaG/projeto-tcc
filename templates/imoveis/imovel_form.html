@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-8">
+  <div class="col-lg-10">
 
     <div class="mb-3">
       <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary btn-sm">
@@ -13,14 +13,13 @@
       </a>
     </div>
 
-    <div class="section-card">
-      <div class="section-card-header">
-        <i class="bi bi-house-door me-1"></i> {{ titulo }}
-      </div>
-      <div class="section-card-body">
-        <form method="post" novalidate>
-          {% csrf_token %}
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
 
+      <!-- Dados Básicos -->
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-house-door me-1"></i> Dados Básicos</div>
+        <div class="section-card-body">
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Proprietário *</label>
@@ -31,22 +30,26 @@
               {{ form.tipo }}
             </div>
             <div class="col-md-3">
+              <label class="form-label">Categoria *</label>
+              {{ form.categoria }}
+            </div>
+            <div class="col-md-3">
               <label class="form-label">Status *</label>
               {{ form.status }}
             </div>
-            <div class="col-md-8">
+            <div class="col-md-6">
               <label class="form-label">Endereço *</label>
               {{ form.endereco }}
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label">Área (m²)</label>
               {{ form.area_m2 }}
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
               <label class="form-label">Bairro</label>
               {{ form.bairro }}
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
               <label class="form-label">Cidade *</label>
               {{ form.cidade }}
             </div>
@@ -59,23 +62,138 @@
               {{ form.descricao }}
             </div>
           </div>
-
-          {% if form.errors %}
-          <div class="alert alert-danger mt-3 small">
-            {% for field in form %}{% for error in field.errors %}<div><strong>{{ field.label }}:</strong> {{ error }}</div>{% endfor %}{% endfor %}
-          </div>
-          {% endif %}
-
-          <div class="d-flex gap-2 justify-content-end mt-4">
-            <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary">Cancelar</a>
-            <button type="submit" class="btn btn-primary">
-              <i class="bi bi-check-lg me-1"></i> Salvar
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
-    </div>
+
+      <!-- Dados de Aquisição (comuns) -->
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-clipboard-data me-1"></i> Dados de Aquisição</div>
+        <div class="section-card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Matrícula</label>
+              {{ form.matricula }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Data de Aquisição</label>
+              {{ form.data_aquisicao }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Valor de Aquisição (R$)</label>
+              {{ form.valor_aquisicao }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campos Urbano -->
+      <div class="section-card mb-4" id="campos-urbano">
+        <div class="section-card-header"><i class="bi bi-building me-1"></i> Dados do Imóvel Urbano</div>
+        <div class="section-card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Cadastro Prefeitura</label>
+              {{ form.cadastro_prefeitura }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Planta / Projeto</label>
+              {{ form.planta_projeto }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campos Rural -->
+      <div class="section-card mb-4" id="campos-rural" style="display:none;">
+        <div class="section-card-header"><i class="bi bi-tree me-1"></i> Dados do Imóvel Rural</div>
+        <div class="section-card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">NIRF</label>
+              {{ form.nirf }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">INCRA</label>
+              {{ form.incra }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">CAR</label>
+              {{ form.car }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fotos -->
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-images me-1"></i> Fotos do Imóvel</div>
+        <div class="section-card-body">
+          {{ foto_formset.management_form }}
+          {% for foto_form in foto_formset %}
+          <div class="row g-2 align-items-center mb-2 foto-formset-row">
+            <div class="col-md-6">
+              <label class="form-label small">Imagem</label>
+              {{ foto_form.imagem }}
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small">Legenda</label>
+              {{ foto_form.legenda }}
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+              {% if foto_form.instance.pk %}
+              <div class="form-check ms-1">
+                {{ foto_form.DELETE }}
+                <label class="form-check-label small text-danger" for="{{ foto_form.DELETE.id_for_label }}">Del</label>
+              </div>
+              {% endif %}
+              {{ foto_form.id }}
+            </div>
+          </div>
+          {% endfor %}
+          <p class="text-muted small mt-2 mb-0">
+            <i class="bi bi-info-circle me-1"></i>Você pode adicionar até {{ foto_formset.max_num|default:"várias" }} fotos.
+          </p>
+        </div>
+      </div>
+
+      {% if form.errors or foto_formset.errors %}
+      <div class="alert alert-danger small">
+        {% for field in form %}{% for error in field.errors %}<div><strong>{{ field.label }}:</strong> {{ error }}</div>{% endfor %}{% endfor %}
+        {% for f in foto_formset %}{% for field in f %}{% for error in field.errors %}<div><strong>Foto – {{ field.label }}:</strong> {{ error }}</div>{% endfor %}{% endfor %}{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2 justify-content-end mb-4">
+        <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i> Salvar
+        </button>
+      </div>
+    </form>
 
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const categoriaSelect = document.getElementById('{{ form.categoria.id_for_label }}');
+  const camposUrbano = document.getElementById('campos-urbano');
+  const camposRural = document.getElementById('campos-rural');
+
+  function toggleCampos() {
+    if (categoriaSelect.value === 'rural') {
+      camposUrbano.style.display = 'none';
+      camposRural.style.display = '';
+    } else {
+      camposUrbano.style.display = '';
+      camposRural.style.display = 'none';
+    }
+  }
+
+  toggleCampos();
+  categoriaSelect.addEventListener('change', toggleCampos);
+})();
+</script>
 {% endblock %}

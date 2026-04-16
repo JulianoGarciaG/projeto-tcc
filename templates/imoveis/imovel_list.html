@@ -35,7 +35,7 @@
         <button type="submit" class="btn btn-primary flex-fill">
           <i class="bi bi-search"></i> Filtrar
         </button>
-        <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary" title="Limpar filtros">
+        <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary" title="Limpar">
           <i class="bi bi-x-lg"></i>
         </a>
       </div>
@@ -50,73 +50,85 @@
   </a>
 </div>
 
-<!-- Tabela -->
-<div class="section-card">
-  <div class="table-responsive">
-    <table class="table mb-0">
-      <thead>
-        <tr>
-          <th>Endereço</th>
-          <th>Tipo</th>
-          <th>Proprietário</th>
-          <th>Valor Aluguel</th>
-          <th>Status</th>
-          <th class="text-end">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for im in imoveis %}
-        <tr>
-          <td>
-            <a href="{% url 'imovel_detail' im.pk %}" class="fw-semibold text-primary">
-              {{ im.endereco }}
+<!-- Cards de Imóveis com Fotos -->
+<div class="row g-3">
+  {% for im in imoveis %}
+  <div class="col-sm-6 col-lg-4">
+    <div class="card h-100 shadow-sm">
+      {% with im.fotos.first as foto %}
+      {% if foto %}
+      <img src="{{ foto.imagem.url }}" class="card-img-top" alt="{{ foto.legenda|default:im.endereco }}"
+           style="height:180px; object-fit:cover;">
+      {% else %}
+      <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;">
+        <i class="bi bi-house-door text-muted" style="font-size:3rem;"></i>
+      </div>
+      {% endif %}
+      {% endwith %}
+      <div class="card-body pb-2">
+        <div class="d-flex justify-content-between align-items-start">
+          <h6 class="card-title mb-1">
+            <a href="{% url 'imovel_detail' im.pk %}" class="text-decoration-none text-primary">
+              {{ im.endereco|truncatechars:45 }}
             </a>
-            {% if im.bairro %}<br><small class="text-muted">{{ im.bairro }}, {{ im.cidade }}</small>{% endif %}
-          </td>
-          <td>{{ im.get_tipo_display }}</td>
-          <td>{{ im.proprietario.nome }}</td>
-          <td><strong>R$ {{ im.valor_aluguel|floatformat:2 }}</strong></td>
-          <td><span class="status-badge badge-{{ im.status }}">{{ im.get_status_display }}</span></td>
-          <td class="text-end">
-            <a href="{% url 'imovel_detail' im.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver">
-              <i class="bi bi-eye"></i>
-            </a>
-            <a href="{% url 'imovel_edit' im.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">
-              <i class="bi bi-pencil"></i>
-            </a>
-            <button class="btn btn-sm btn-outline-danger" title="Excluir"
-              data-bs-toggle="modal" data-bs-target="#modalExcluir{{ im.pk }}">
-              <i class="bi bi-trash"></i>
-            </button>
+          </h6>
+          <span class="status-badge badge-{{ im.status }} ms-2 flex-shrink-0">{{ im.get_status_display }}</span>
+        </div>
+        <p class="text-muted small mb-1">
+          <i class="bi bi-geo-alt me-1"></i>{{ im.bairro|default:"" }}{% if im.bairro %}, {% endif %}{{ im.cidade }}
+        </p>
+        <p class="small mb-0">
+          <span class="text-muted">{{ im.get_tipo_display }}</span>
+          <span class="text-muted mx-1">·</span>
+          <span class="text-muted">{{ im.get_categoria_display }}</span>
+          <span class="text-muted mx-1">·</span>
+          <strong class="text-success">R$ {{ im.valor_aluguel|floatformat:2 }}</strong>
+        </p>
+        <p class="text-muted small mb-0 mt-1">
+          <i class="bi bi-person me-1"></i>{{ im.proprietario.nome }}
+        </p>
+      </div>
+      <div class="card-footer bg-transparent border-top-0 pt-0 pb-2 d-flex gap-1 justify-content-end">
+        <a href="{% url 'imovel_detail' im.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver">
+          <i class="bi bi-eye"></i>
+        </a>
+        <a href="{% url 'imovel_edit' im.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">
+          <i class="bi bi-pencil"></i>
+        </a>
+        <button class="btn btn-sm btn-outline-danger" title="Excluir"
+          data-bs-toggle="modal" data-bs-target="#modalExcluir{{ im.pk }}">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    </div>
 
-            <!-- Modal de confirmação de exclusão -->
-            <div class="modal fade" id="modalExcluir{{ im.pk }}" tabindex="-1">
-              <div class="modal-dialog modal-sm">
-                <div class="modal-content">
-                  <div class="modal-header border-0 pb-0">
-                    <h6 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Confirmar exclusão</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                  </div>
-                  <div class="modal-body small">
-                    Deseja excluir o imóvel <strong>{{ im.endereco }}</strong>?
-                  </div>
-                  <div class="modal-footer border-0 pt-0">
-                    <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <form method="post" action="{% url 'imovel_delete' im.pk %}" class="d-inline">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="6" class="text-center text-muted py-4">Nenhum imóvel encontrado.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <!-- Modal exclusão -->
+    <div class="modal fade" id="modalExcluir{{ im.pk }}" tabindex="-1">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header border-0 pb-0">
+            <h6 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Confirmar exclusão</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body small">
+            Deseja excluir o imóvel <strong>{{ im.endereco }}</strong>?
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <form method="post" action="{% url 'imovel_delete' im.pk %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
+  {% empty %}
+  <div class="col-12 text-center text-muted py-5">
+    <i class="bi bi-house-door" style="font-size:3rem;"></i>
+    <p class="mt-2">Nenhum imóvel encontrado.</p>
+  </div>
+  {% endfor %}
 </div>
 {% endblock %}

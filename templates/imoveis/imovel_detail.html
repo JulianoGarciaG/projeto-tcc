@@ -4,17 +4,47 @@
 {% block nav_imoveis %}active{% endblock %}
 
 {% block content %}
-<div class="mb-3 d-flex gap-2">
+<div class="mb-3 d-flex gap-2 flex-wrap">
   <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary btn-sm">
     <i class="bi bi-arrow-left me-1"></i> Voltar
   </a>
   <a href="{% url 'imovel_edit' imovel.pk %}" class="btn btn-primary btn-sm">
     <i class="bi bi-pencil me-1"></i> Editar
   </a>
+  <a href="{% url 'notificacao_create' imovel.pk %}" class="btn btn-outline-warning btn-sm">
+    <i class="bi bi-bell-fill me-1"></i> Nova Notificação
+  </a>
+  <a href="{% url 'saida_create' imovel.pk %}" class="btn btn-outline-danger btn-sm">
+    <i class="bi bi-arrow-up-circle me-1"></i> Nova Saída
+  </a>
+  <a href="{% url 'entrada_create' imovel.pk %}" class="btn btn-outline-success btn-sm">
+    <i class="bi bi-arrow-down-circle me-1"></i> Nova Entrada
+  </a>
 </div>
 
+<!-- Galeria de Fotos -->
+{% if fotos %}
+<div class="section-card mb-4">
+  <div class="section-card-header"><i class="bi bi-images me-1"></i> Fotos do Imóvel</div>
+  <div class="section-card-body">
+    <div class="row g-2">
+      {% for foto in fotos %}
+      <div class="col-6 col-md-3 col-lg-2">
+        <a href="{{ foto.imagem.url }}" target="_blank">
+          <img src="{{ foto.imagem.url }}" class="img-fluid rounded" alt="{{ foto.legenda|default:'' }}"
+               style="height:100px; width:100%; object-fit:cover;">
+        </a>
+        {% if foto.legenda %}<p class="text-muted small mt-1 mb-0">{{ foto.legenda }}</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="row g-3">
-  <div class="col-lg-5">
+  <!-- Info do Imóvel -->
+  <div class="col-lg-4">
     <div class="section-card mb-3">
       <div class="section-card-header">
         <i class="bi bi-info-circle me-1"></i> Informações do Imóvel
@@ -24,6 +54,8 @@
         <dl class="row mb-0 small">
           <dt class="col-5 text-muted">Tipo</dt>
           <dd class="col-7">{{ imovel.get_tipo_display }}</dd>
+          <dt class="col-5 text-muted">Categoria</dt>
+          <dd class="col-7">{{ imovel.get_categoria_display }}</dd>
           <dt class="col-5 text-muted">Endereço</dt>
           <dd class="col-7">{{ imovel.endereco }}</dd>
           {% if imovel.bairro %}
@@ -40,6 +72,37 @@
           <dd class="col-7"><strong>R$ {{ imovel.valor_aluguel|floatformat:2 }}</strong></dd>
           <dt class="col-5 text-muted">Proprietário</dt>
           <dd class="col-7">{{ imovel.proprietario.nome }}</dd>
+          {% if imovel.matricula %}
+          <dt class="col-5 text-muted">Matrícula</dt>
+          <dd class="col-7">{{ imovel.matricula }}</dd>
+          {% endif %}
+          {% if imovel.data_aquisicao %}
+          <dt class="col-5 text-muted">Dt. Aquisição</dt>
+          <dd class="col-7">{{ imovel.data_aquisicao|date:"d/m/Y" }}</dd>
+          {% endif %}
+          {% if imovel.valor_aquisicao %}
+          <dt class="col-5 text-muted">Vl. Aquisição</dt>
+          <dd class="col-7">R$ {{ imovel.valor_aquisicao|floatformat:2 }}</dd>
+          {% endif %}
+          {% if imovel.categoria == 'urbano' %}
+            {% if imovel.cadastro_prefeitura %}
+            <dt class="col-5 text-muted">Cad. Prefeitura</dt>
+            <dd class="col-7">{{ imovel.cadastro_prefeitura }}</dd>
+            {% endif %}
+          {% else %}
+            {% if imovel.nirf %}
+            <dt class="col-5 text-muted">NIRF</dt>
+            <dd class="col-7">{{ imovel.nirf }}</dd>
+            {% endif %}
+            {% if imovel.incra %}
+            <dt class="col-5 text-muted">INCRA</dt>
+            <dd class="col-7">{{ imovel.incra }}</dd>
+            {% endif %}
+            {% if imovel.car %}
+            <dt class="col-5 text-muted">CAR</dt>
+            <dd class="col-7">{{ imovel.car }}</dd>
+            {% endif %}
+          {% endif %}
           {% if imovel.descricao %}
           <dt class="col-5 text-muted">Descrição</dt>
           <dd class="col-7">{{ imovel.descricao }}</dd>
@@ -47,10 +110,57 @@
         </dl>
       </div>
     </div>
+
+    <!-- Notificações -->
+    <div class="section-card mb-3">
+      <div class="section-card-header">
+        <i class="bi bi-bell me-1"></i> Notificações
+        <a href="{% url 'notificacao_create' imovel.pk %}" class="btn btn-outline-primary btn-sm ms-auto">+ Nova</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0 small">
+          <thead>
+            <tr><th>Tipo</th><th>Título</th><th>Recebida</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for n in notificacoes %}
+            <tr>
+              <td>{{ n.get_tipo_display }}</td>
+              <td>{{ n.titulo|truncatechars:25 }}</td>
+              <td>{{ n.data_recebimento|date:"d/m/Y" }}</td>
+              <td><span class="status-badge badge-{{ n.status }}">{{ n.get_status_display }}</span></td>
+              <td class="text-end">
+                <a href="{% url 'notificacao_edit' n.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delNotif{{ n.pk }}">
+                  <i class="bi bi-trash"></i>
+                </button>
+                <div class="modal fade" id="delNotif{{ n.pk }}" tabindex="-1">
+                  <div class="modal-dialog modal-sm">
+                    <div class="modal-content">
+                      <div class="modal-header border-0"><h6 class="modal-title text-danger">Excluir notificação?</h6>
+                        <button class="btn-close" data-bs-dismiss="modal"></button></div>
+                      <div class="modal-footer border-0">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <form method="post" action="{% url 'notificacao_delete' n.pk %}">
+                          {% csrf_token %}<button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-2">Nenhuma notificação.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
-  <div class="col-lg-7">
-    <!-- Contratos recentes -->
+  <div class="col-lg-8">
+    <!-- Contratos -->
     <div class="section-card mb-3">
       <div class="section-card-header">
         <i class="bi bi-file-earmark-text me-1"></i> Contratos
@@ -59,26 +169,27 @@
       <div class="table-responsive">
         <table class="table mb-0 small">
           <thead>
-            <tr><th>Inquilino</th><th>Período</th><th>Valor</th><th>Status</th></tr>
+            <tr><th>Inquilino</th><th>Tipo</th><th>Período</th><th>Valor</th><th>Status</th></tr>
           </thead>
           <tbody>
             {% for c in contratos %}
             <tr>
               <td><a href="{% url 'contrato_detail' c.pk %}">{{ c.inquilino.nome }}</a></td>
+              <td>{{ c.get_tipo_contrato_display }}</td>
               <td>{{ c.data_inicio|date:"d/m/Y" }} → {{ c.data_fim|date:"d/m/Y" }}</td>
               <td>R$ {{ c.valor_mensal|floatformat:2 }}</td>
               <td><span class="status-badge badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-2">Nenhum contrato.</td></tr>
+            <tr><td colspan="5" class="text-center text-muted py-2">Nenhum contrato.</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Laudos recentes -->
-    <div class="section-card">
+    <!-- Laudos -->
+    <div class="section-card mb-3">
       <div class="section-card-header">
         <i class="bi bi-clipboard-check me-1"></i> Laudos de Vistoria
         <a href="{% url 'laudo_create' %}" class="btn btn-outline-primary btn-sm ms-auto">+ Novo</a>
@@ -109,6 +220,109 @@
         </table>
       </div>
     </div>
+
+    <!-- Entradas e Saídas lado a lado -->
+    <div class="row g-3">
+      <!-- Entradas -->
+      <div class="col-md-6">
+        <div class="section-card h-100">
+          <div class="section-card-header">
+            <i class="bi bi-arrow-down-circle-fill text-success me-1"></i> Entradas
+            <span class="ms-auto small fw-bold text-success">R$ {{ total_entradas|floatformat:2 }}</span>
+            <a href="{% url 'entrada_create' imovel.pk %}" class="btn btn-outline-success btn-sm ms-2">+ Nova</a>
+          </div>
+          <div class="table-responsive">
+            <table class="table mb-0 small">
+              <thead>
+                <tr><th>Tipo</th><th>Data</th><th>Valor</th><th></th></tr>
+              </thead>
+              <tbody>
+                {% for e in entradas %}
+                <tr>
+                  <td>{{ e.get_tipo_display }}</td>
+                  <td>{{ e.data|date:"d/m/Y" }}</td>
+                  <td>R$ {{ e.valor|floatformat:2 }}</td>
+                  <td class="text-end">
+                    <a href="{% url 'entrada_edit' e.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delEnt{{ e.pk }}">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                    <div class="modal fade" id="delEnt{{ e.pk }}" tabindex="-1">
+                      <div class="modal-dialog modal-sm">
+                        <div class="modal-content">
+                          <div class="modal-header border-0"><h6 class="modal-title text-danger">Excluir entrada?</h6>
+                            <button class="btn-close" data-bs-dismiss="modal"></button></div>
+                          <div class="modal-footer border-0">
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <form method="post" action="{% url 'entrada_delete' e.pk %}">
+                              {% csrf_token %}<button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-2">Nenhuma entrada.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Saídas -->
+      <div class="col-md-6">
+        <div class="section-card h-100">
+          <div class="section-card-header">
+            <i class="bi bi-arrow-up-circle-fill text-danger me-1"></i> Saídas
+            <span class="ms-auto small fw-bold text-danger">R$ {{ total_saidas|floatformat:2 }}</span>
+            <a href="{% url 'saida_create' imovel.pk %}" class="btn btn-outline-danger btn-sm ms-2">+ Nova</a>
+          </div>
+          <div class="table-responsive">
+            <table class="table mb-0 small">
+              <thead>
+                <tr><th>Tipo</th><th>Data</th><th>Valor</th><th>Pago por</th><th></th></tr>
+              </thead>
+              <tbody>
+                {% for s in saidas %}
+                <tr>
+                  <td>{{ s.get_tipo_display }}</td>
+                  <td>{{ s.data|date:"d/m/Y" }}</td>
+                  <td>R$ {{ s.valor|floatformat:2 }}</td>
+                  <td><span class="badge bg-secondary">{{ s.get_pago_por_display }}</span></td>
+                  <td class="text-end">
+                    <a href="{% url 'saida_edit' s.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delSaida{{ s.pk }}">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                    <div class="modal fade" id="delSaida{{ s.pk }}" tabindex="-1">
+                      <div class="modal-dialog modal-sm">
+                        <div class="modal-content">
+                          <div class="modal-header border-0"><h6 class="modal-title text-danger">Excluir saída?</h6>
+                            <button class="btn-close" data-bs-dismiss="modal"></button></div>
+                          <div class="modal-footer border-0">
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <form method="post" action="{% url 'saida_delete' s.pk %}">
+                              {% csrf_token %}<button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-2">Nenhuma saída.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 {% endblock %}

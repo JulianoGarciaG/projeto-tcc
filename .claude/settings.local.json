@@ -3,7 +3,8 @@
     "allow": [
       "Bash(venv/Scripts/python manage.py makemigrations)",
       "Bash(venv/Scripts/python manage.py migrate)",
-      "Bash(venv/Scripts/python manage.py check)"
+      "Bash(venv/Scripts/python manage.py check)",
+      "Bash(python -m venv venv)"
     ]
   }
 }

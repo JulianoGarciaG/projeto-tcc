@@ -11,6 +11,50 @@
 
 {% block content %}
 
+<!-- Filtros do Dashboard -->
+<div class="section-card mb-4">
+  <div class="section-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-12 col-md-3">
+        <label class="form-label">Imóvel</label>
+        <select name="imovel_id" class="form-select">
+          <option value="">Todos os imóveis</option>
+          {% for im in imoveis_lista %}
+          <option value="{{ im.pk }}" {% if filtro_imovel_id == im.pk|stringformat:"s" %}selected{% endif %}>
+            {{ im.endereco|truncatechars:40 }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label">Data início</label>
+        <input type="date" name="data_inicio" value="{{ filtro_data_inicio }}" class="form-control">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label">Data fim</label>
+        <input type="date" name="data_fim" value="{{ filtro_data_fim }}" class="form-control">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="">Todos</option>
+          {% for val, label in status_choices %}
+          <option value="{{ val }}" {% if filtro_status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill">
+          <i class="bi bi-funnel me-1"></i> Filtrar
+        </button>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary" title="Limpar filtros">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- KPI Cards -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-4 col-lg">
@@ -62,8 +106,6 @@
 
 <!-- Gráficos -->
 <div class="row g-3 mb-4">
-
-  <!-- Pizza: Ocupação -->
   <div class="col-md-4">
     <div class="section-card h-100">
       <div class="section-card-header">
@@ -76,8 +118,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Barras: Recebimentos -->
   <div class="col-md-8">
     <div class="section-card h-100">
       <div class="section-card-header">
@@ -90,7 +130,6 @@
       </div>
     </div>
   </div>
-
 </div>
 
 <!-- Últimos Lançamentos -->
@@ -119,9 +158,7 @@
           <td>{{ l.get_tipo_display }}</td>
           <td>{{ l.data_vencimento|date:"d/m/Y" }}</td>
           <td><strong>R$ {{ l.valor|floatformat:2 }}</strong></td>
-          <td>
-            <span class="status-badge badge-{{ l.status }}">{{ l.get_status_display }}</span>
-          </td>
+          <td><span class="status-badge badge-{{ l.status }}">{{ l.get_status_display }}</span></td>
         </tr>
         {% empty %}
         <tr><td colspan="6" class="text-center text-muted py-3">Nenhum lançamento registrado.</td></tr>
@@ -136,7 +173,6 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
-// Gráfico de pizza
 new Chart(document.getElementById('chartPizza'), {
   type: 'doughnut',
   data: {
@@ -151,13 +187,10 @@ new Chart(document.getElementById('chartPizza'), {
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'bottom', labels: { font: { size: 12 } } }
-    }
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } }
   }
 });
 
-// Gráfico de barras
 new Chart(document.getElementById('chartBarras'), {
   type: 'bar',
   data: {
@@ -180,9 +213,7 @@ new Chart(document.getElementById('chartBarras'), {
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'bottom' }
-    },
+    plugins: { legend: { position: 'bottom' } },
     scales: {
       y: { beginAtZero: true, ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } }
     }
