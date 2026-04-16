@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load imoveis_tags %}
 {% block title %}Contrato #{{ contrato.pk }} — GestImóveis{% endblock %}
 {% block page_title %}<i class="bi bi-file-earmark-text me-2"></i>Contrato #{{ contrato.pk }}{% endblock %}
 {% block nav_contratos %}active{% endblock %}
@@ -38,7 +39,7 @@
           <dt class="col-5 text-muted">Imóvel</dt><dd class="col-7">{{ contrato.imovel.endereco }}</dd>
           <dt class="col-5 text-muted">Início</dt><dd class="col-7">{{ contrato.data_inicio|date:"d/m/Y" }}</dd>
           <dt class="col-5 text-muted">Término</dt><dd class="col-7">{{ contrato.data_fim|date:"d/m/Y" }}</dd>
-          <dt class="col-5 text-muted">Valor Mensal</dt><dd class="col-7"><strong>R$ {{ contrato.valor_mensal|floatformat:2 }}</strong></dd>
+          <dt class="col-5 text-muted">Valor Mensal</dt><dd class="col-7"><strong>R$ {{ contrato.valor_mensal|brl }}</strong></dd>
           <dt class="col-5 text-muted">Vencimento</dt><dd class="col-7">Dia {{ contrato.dia_vencimento }}</dd>
           {% if contrato.observacoes %}
           <dt class="col-5 text-muted">Observações</dt><dd class="col-7">{{ contrato.observacoes }}</dd>
@@ -90,7 +91,7 @@
           <dt class="col-5 text-muted">Tipo</dt><dd class="col-7">{{ renovacao.get_tipo_display }}</dd>
           <dt class="col-5 text-muted">Data</dt><dd class="col-7">{{ renovacao.data_renovacao|date:"d/m/Y" }}</dd>
           {% if renovacao.novo_valor_mensal %}
-          <dt class="col-5 text-muted">Novo Valor</dt><dd class="col-7">R$ {{ renovacao.novo_valor_mensal|floatformat:2 }}</dd>
+          <dt class="col-5 text-muted">Novo Valor</dt><dd class="col-7">R$ {{ renovacao.novo_valor_mensal|brl }}</dd>
           {% endif %}
           {% if renovacao.observacoes %}
           <dt class="col-5 text-muted">Obs.</dt><dd class="col-7">{{ renovacao.observacoes }}</dd>
@@ -140,7 +141,7 @@
             <tr>
               <td>{{ l.get_tipo_display }}</td>
               <td>{{ l.data_vencimento|date:"d/m/Y" }}</td>
-              <td>R$ {{ l.valor|floatformat:2 }}</td>
+              <td>R$ {{ l.valor|brl }}</td>
               <td><span class="status-badge badge-{{ l.status }}">{{ l.get_status_display }}</span></td>
               <td>{% if l.comprovante %}<a href="{{ l.comprovante.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark"></i></a>{% else %}—{% endif %}</td>
             </tr>

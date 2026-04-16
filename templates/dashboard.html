@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load imoveis_tags %}
 {% block title %}Dashboard — GestImóveis{% endblock %}
 {% block page_title %}<i class="bi bi-speedometer2 me-2"></i>Dashboard{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
@@ -157,7 +158,7 @@
           <td class="text-muted small">{{ l.contrato.imovel.endereco|truncatechars:35 }}</td>
           <td>{{ l.get_tipo_display }}</td>
           <td>{{ l.data_vencimento|date:"d/m/Y" }}</td>
-          <td><strong>R$ {{ l.valor|floatformat:2 }}</strong></td>
+          <td><strong>R$ {{ l.valor|brl }}</strong></td>
           <td><span class="status-badge badge-{{ l.status }}">{{ l.get_status_display }}</span></td>
         </tr>
         {% empty %}

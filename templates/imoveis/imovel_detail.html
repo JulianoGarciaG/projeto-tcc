@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load imoveis_tags %}
 {% block title %}{{ imovel }} — GestImóveis{% endblock %}
 {% block page_title %}<i class="bi bi-house-door me-2"></i>Detalhe do Imóvel{% endblock %}
 {% block nav_imoveis %}active{% endblock %}
@@ -69,7 +70,7 @@
           <dd class="col-7">{{ imovel.area_m2 }} m²</dd>
           {% endif %}
           <dt class="col-5 text-muted">Aluguel</dt>
-          <dd class="col-7"><strong>R$ {{ imovel.valor_aluguel|floatformat:2 }}</strong></dd>
+          <dd class="col-7"><strong>R$ {{ imovel.valor_aluguel|brl }}</strong></dd>
           <dt class="col-5 text-muted">Proprietário</dt>
           <dd class="col-7">{{ imovel.proprietario.nome }}</dd>
           {% if imovel.matricula %}
@@ -82,7 +83,7 @@
           {% endif %}
           {% if imovel.valor_aquisicao %}
           <dt class="col-5 text-muted">Vl. Aquisição</dt>
-          <dd class="col-7">R$ {{ imovel.valor_aquisicao|floatformat:2 }}</dd>
+          <dd class="col-7">R$ {{ imovel.valor_aquisicao|brl }}</dd>
           {% endif %}
           {% if imovel.categoria == 'urbano' %}
             {% if imovel.cadastro_prefeitura %}
@@ -177,7 +178,7 @@
               <td><a href="{% url 'contrato_detail' c.pk %}">{{ c.inquilino.nome }}</a></td>
               <td>{{ c.get_tipo_contrato_display }}</td>
               <td>{{ c.data_inicio|date:"d/m/Y" }} → {{ c.data_fim|date:"d/m/Y" }}</td>
-              <td>R$ {{ c.valor_mensal|floatformat:2 }}</td>
+              <td>R$ {{ c.valor_mensal|brl }}</td>
               <td><span class="status-badge badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
             </tr>
             {% empty %}
@@ -228,7 +229,7 @@
         <div class="section-card h-100">
           <div class="section-card-header">
             <i class="bi bi-arrow-down-circle-fill text-success me-1"></i> Entradas
-            <span class="ms-auto small fw-bold text-success">R$ {{ total_entradas|floatformat:2 }}</span>
+            <span class="ms-auto small fw-bold text-success">R$ {{ total_entradas|brl }}</span>
             <a href="{% url 'entrada_create' imovel.pk %}" class="btn btn-outline-success btn-sm ms-2">+ Nova</a>
           </div>
           <div class="table-responsive">
@@ -241,7 +242,7 @@
                 <tr>
                   <td>{{ e.get_tipo_display }}</td>
                   <td>{{ e.data|date:"d/m/Y" }}</td>
-                  <td>R$ {{ e.valor|floatformat:2 }}</td>
+                  <td>R$ {{ e.valor|brl }}</td>
                   <td class="text-end">
                     <a href="{% url 'entrada_edit' e.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
                     <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delEnt{{ e.pk }}">
@@ -277,7 +278,7 @@
         <div class="section-card h-100">
           <div class="section-card-header">
             <i class="bi bi-arrow-up-circle-fill text-danger me-1"></i> Saídas
-            <span class="ms-auto small fw-bold text-danger">R$ {{ total_saidas|floatformat:2 }}</span>
+            <span class="ms-auto small fw-bold text-danger">R$ {{ total_saidas|brl }}</span>
             <a href="{% url 'saida_create' imovel.pk %}" class="btn btn-outline-danger btn-sm ms-2">+ Nova</a>
           </div>
           <div class="table-responsive">
@@ -290,7 +291,7 @@
                 <tr>
                   <td>{{ s.get_tipo_display }}</td>
                   <td>{{ s.data|date:"d/m/Y" }}</td>
-                  <td>R$ {{ s.valor|floatformat:2 }}</td>
+                  <td>R$ {{ s.valor|brl }}</td>
                   <td><span class="badge bg-secondary">{{ s.get_pago_por_display }}</span></td>
                   <td class="text-end">
                     <a href="{% url 'saida_edit' s.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>

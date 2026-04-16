@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load imoveis_tags %}
 {% block title %}Contratos — GestImóveis{% endblock %}
 {% block page_title %}<i class="bi bi-file-earmark-text me-2"></i>Contratos{% endblock %}
 {% block nav_contratos %}active{% endblock %}
@@ -43,7 +44,7 @@
           <td><a href="{% url 'contrato_detail' c.pk %}" class="fw-semibold text-primary">{{ c.inquilino.nome }}</a></td>
           <td class="small text-muted">{{ c.imovel.endereco|truncatechars:30 }}</td>
           <td class="small">{{ c.data_inicio|date:"d/m/Y" }} → {{ c.data_fim|date:"d/m/Y" }}</td>
-          <td><strong>R$ {{ c.valor_mensal|floatformat:2 }}</strong></td>
+          <td><strong>R$ {{ c.valor_mensal|brl }}</strong></td>
           <td><span class="status-badge badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
           <td>
             {% if c.arquivo %}
