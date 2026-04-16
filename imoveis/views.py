@@ -168,13 +168,17 @@ def imovel_create(request):
 @login_required
 def imovel_edit(request, pk):
     imovel = get_object_or_404(Imovel, pk=pk)
-    form = ImovelForm(request.POST or None, request.FILES or None, instance=imovel)
-    foto_formset = FotoImovelFormSet(request.POST or None, request.FILES or None, instance=imovel)
-    if form.is_valid() and foto_formset.is_valid():
-        form.save()
-        foto_formset.save()
-        messages.success(request, 'Imóvel atualizado.')
-        return redirect('imovel_detail', pk=pk)
+    if request.method == 'POST':
+        form = ImovelForm(request.POST, request.FILES, instance=imovel)
+        foto_formset = FotoImovelFormSet(request.POST, request.FILES, instance=imovel)
+        if form.is_valid() and foto_formset.is_valid():
+            form.save()
+            foto_formset.save()
+            messages.success(request, 'Imóvel atualizado.')
+            return redirect('imovel_detail', pk=pk)
+    else:
+        form = ImovelForm(instance=imovel)
+        foto_formset = FotoImovelFormSet(instance=imovel)
     return render(request, 'imoveis/imovel_form.html', {
         'form': form, 'foto_formset': foto_formset, 'titulo': 'Editar Imóvel', 'obj': imovel
     })
@@ -337,13 +341,17 @@ def contrato_create(request):
 @login_required
 def contrato_edit(request, pk):
     obj = get_object_or_404(Contrato, pk=pk)
-    form = ContratoForm(request.POST or None, request.FILES or None, instance=obj)
-    fiador_formset = FiadorFormSet(request.POST or None, request.FILES or None, instance=obj)
-    if form.is_valid() and fiador_formset.is_valid():
-        form.save()
-        fiador_formset.save()
-        messages.success(request, 'Contrato atualizado.')
-        return redirect('contrato_detail', pk=pk)
+    if request.method == 'POST':
+        form = ContratoForm(request.POST, request.FILES, instance=obj)
+        fiador_formset = FiadorFormSet(request.POST, request.FILES, instance=obj)
+        if form.is_valid() and fiador_formset.is_valid():
+            form.save()
+            fiador_formset.save()
+            messages.success(request, 'Contrato atualizado.')
+            return redirect('contrato_detail', pk=pk)
+    else:
+        form = ContratoForm(instance=obj)
+        fiador_formset = FiadorFormSet(instance=obj)
     return render(request, 'contratos/contrato_form.html', {
         'form': form, 'fiador_formset': fiador_formset, 'titulo': 'Editar Contrato', 'obj': obj
     })
@@ -436,11 +444,14 @@ def laudo_create(request):
 @login_required
 def laudo_edit(request, pk):
     obj = get_object_or_404(LaudoVistoria, pk=pk)
-    form = LaudoVistoriaForm(request.POST or None, request.FILES or None, instance=obj)
-    if form.is_valid():
-        form.save()
-        messages.success(request, 'Laudo atualizado.')
-        return redirect('laudo_list')
+    if request.method == 'POST':
+        form = LaudoVistoriaForm(request.POST, request.FILES, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Laudo atualizado.')
+            return redirect('laudo_list')
+    else:
+        form = LaudoVistoriaForm(instance=obj)
     return render(request, 'laudos/laudo_form.html', {'form': form, 'titulo': 'Editar Laudo', 'obj': obj})
 
 
@@ -496,12 +507,16 @@ def lancamento_create(request):
 @login_required
 def lancamento_edit(request, pk):
     obj = get_object_or_404(Lancamento, pk=pk)
-    form = LancamentoForm(request.POST or None, request.FILES or None, instance=obj)
-    if form.is_valid():
-        form.save()
-        messages.success(request, 'Lançamento atualizado.')
-        return redirect('lancamento_list')
+    if request.method == 'POST':
+        form = LancamentoForm(request.POST, request.FILES, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Lançamento atualizado.')
+            return redirect('lancamento_list')
+    else:
+        form = LancamentoForm(instance=obj)
     return render(request, 'financeiro/lancamento_form.html', {'form': form, 'titulo': 'Editar Lançamento', 'obj': obj})
+
 
 
 @login_required
@@ -535,11 +550,14 @@ def notificacao_create(request, imovel_pk):
 @login_required
 def notificacao_edit(request, pk):
     obj = get_object_or_404(Notificacao, pk=pk)
-    form = NotificacaoForm(request.POST or None, request.FILES or None, instance=obj)
-    if form.is_valid():
-        form.save()
-        messages.success(request, 'Notificação atualizada.')
-        return redirect('imovel_detail', pk=obj.imovel_id)
+    if request.method == 'POST':
+        form = NotificacaoForm(request.POST, request.FILES, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Notificação atualizada.')
+            return redirect('imovel_detail', pk=obj.imovel_id)
+    else:
+        form = NotificacaoForm(instance=obj)
     return render(request, 'imoveis/notificacao_form.html', {
         'form': form, 'imovel': obj.imovel, 'titulo': 'Editar Notificação'
     })
@@ -575,11 +593,14 @@ def saida_create(request, imovel_pk):
 @login_required
 def saida_edit(request, pk):
     obj = get_object_or_404(Saida, pk=pk)
-    form = SaidaForm(request.POST or None, request.FILES or None, instance=obj)
-    if form.is_valid():
-        form.save()
-        messages.success(request, 'Saída atualizada.')
-        return redirect('imovel_detail', pk=obj.imovel_id)
+    if request.method == 'POST':
+        form = SaidaForm(request.POST, request.FILES, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Saída atualizada.')
+            return redirect('imovel_detail', pk=obj.imovel_id)
+    else:
+        form = SaidaForm(instance=obj)
     return render(request, 'imoveis/saida_form.html', {
         'form': form, 'imovel': obj.imovel, 'titulo': 'Editar Saída'
     })
@@ -615,11 +636,14 @@ def entrada_create(request, imovel_pk):
 @login_required
 def entrada_edit(request, pk):
     obj = get_object_or_404(Entrada, pk=pk)
-    form = EntradaForm(request.POST or None, request.FILES or None, instance=obj)
-    if form.is_valid():
-        form.save()
-        messages.success(request, 'Entrada atualizada.')
-        return redirect('imovel_detail', pk=obj.imovel_id)
+    if request.method == 'POST':
+        form = EntradaForm(request.POST, request.FILES, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Entrada atualizada.')
+            return redirect('imovel_detail', pk=obj.imovel_id)
+    else:
+        form = EntradaForm(instance=obj)
     return render(request, 'imoveis/entrada_form.html', {
         'form': form, 'imovel': obj.imovel, 'titulo': 'Editar Entrada'
     })
