@@ -11,62 +11,100 @@
 </head>
 <body class="login-page">
 
-  <div class="login-card">
-    <div class="login-logo">
-      <i class="bi bi-buildings-fill fs-1" style="color: #1a3a5c"></i>
-      <h4>GestImóveis</h4>
-      <small>Sistema de Gestão Imobiliária</small>
+  <div class="login-split">
+
+    <!-- Painel esquerdo — boas-vindas -->
+    <div class="login-left">
+      <!-- Formas decorativas -->
+      <div class="login-blob login-blob-1"></div>
+      <div class="login-blob login-blob-2"></div>
+      <div class="login-blob login-blob-3"></div>
+
+      <!-- Grade de pontos -->
+      <div class="login-dots"></div>
+
+      <!-- Ícones + decorativos -->
+      <span class="login-plus login-plus-tl">+</span>
+      <span class="login-plus login-plus-br">+</span>
+      <span class="login-circle login-circle-sm"></span>
+      <span class="login-circle login-circle-lg"></span>
+
+      <!-- Conteúdo textual -->
+      <div class="login-left-content">
+        <div class="login-brand">
+          <i class="bi bi-buildings-fill"></i>
+          <span>GestImóveis</span>
+        </div>
+        <h2>Bem-vindo(a) de volta!</h2>
+        <p>Acesse sua conta para gerenciar imóveis, contratos e documentos com eficiência.</p>
+      </div>
     </div>
 
-    {% if form.errors %}
-    <div class="alert alert-danger small py-2">
-      <i class="bi bi-exclamation-triangle me-1"></i>
-      Usuário ou senha inválidos. Tente novamente.
+    <!-- Painel direito — formulário -->
+    <div class="login-right">
+      <div class="login-form-wrap">
+
+        <h3 class="login-form-title">Entrar</h3>
+        <p class="login-form-subtitle">Informe suas credenciais de acesso</p>
+
+        {% if form.errors %}
+        <div class="alert alert-danger small py-2 mb-4">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Usuário ou senha inválidos. Tente novamente.
+        </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next }}">
+
+          <div class="mb-3">
+            <label class="form-label" for="id_username">Usuário</label>
+            <div class="input-group">
+              <span class="input-group-text login-input-icon">
+                <i class="bi bi-person"></i>
+              </span>
+              <input
+                type="text"
+                name="username"
+                id="id_username"
+                class="form-control login-input"
+                placeholder="Digite seu usuário"
+                autofocus
+                required
+              >
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label" for="id_password">Senha</label>
+            <div class="input-group">
+              <span class="input-group-text login-input-icon">
+                <i class="bi bi-lock"></i>
+              </span>
+              <input
+                type="password"
+                name="password"
+                id="id_password"
+                class="form-control login-input"
+                placeholder="Digite sua senha"
+                required
+              >
+            </div>
+          </div>
+
+          <button type="submit" class="btn login-btn w-100">
+            <i class="bi bi-box-arrow-in-right me-2"></i> Entrar
+          </button>
+        </form>
+
+        <p class="login-footer-note">
+          &copy; {% now "Y" %} GestImóveis &mdash; Acesso restrito a funcionários autorizados
+        </p>
+      </div>
     </div>
-    {% endif %}
 
-    <form method="post" novalidate>
-      {% csrf_token %}
-      <input type="hidden" name="next" value="{{ next }}">
-
-      <div class="mb-3">
-        <label class="form-label" for="id_username">
-          <i class="bi bi-person me-1"></i>Usuário
-        </label>
-        <input
-          type="text"
-          name="username"
-          id="id_username"
-          class="form-control"
-          placeholder="Digite seu usuário"
-          autofocus
-          required
-        >
-      </div>
-
-      <div class="mb-4">
-        <label class="form-label" for="id_password">
-          <i class="bi bi-lock me-1"></i>Senha
-        </label>
-        <input
-          type="password"
-          name="password"
-          id="id_password"
-          class="form-control"
-          placeholder="Digite sua senha"
-          required
-        >
-      </div>
-
-      <button type="submit" class="btn btn-primary w-100">
-        <i class="bi bi-box-arrow-in-right me-1"></i> Entrar
-      </button>
-    </form>
-
-    <p class="text-center text-muted mt-4 mb-0" style="font-size:.78rem">
-      &copy; {% now "Y" %} GestImóveis &mdash; Acesso restrito a funcionários autorizados
-    </p>
-  </div>
+  </div><!-- /login-split -->
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
