@@ -5,8 +5,9 @@
 
 ## 1. Identidade da Empresa
 
-Nome: Shelter
-logo:
+**Nome:** Shelter
+
+![Logo Shelter](../docs/ShelterLOGO.svg)
 
 ---
 
@@ -28,7 +29,7 @@ Solucionar barreiras técnicas relacionadas ao fluxo e armazenamento de dados pr
 
 | Perfil | Acesso |
 |---|---|
-| Funcionários | Interface web completa (CRUD, GED) |
+| Funcionários | Interface web completa (CRUD, GED, Financeiro) |
 | Gestores | Dashboard, BI, filtros e indicadores |
 | Vistoriadores | Acesso mobile para consultas e atualizações em campo |
 | Auditores | Acesso a documentos centralizados via GED |
@@ -41,7 +42,8 @@ Solucionar barreiras técnicas relacionadas ao fluxo e armazenamento de dados pr
 | Camada | Tecnologia |
 |---|---|
 | Back-end principal | Python + Django |
-| Banco de dados | SQLite |
+| Banco de dados (produção) | MySQL |
+| Banco de dados (desenvolvimento) | SQLite |
 | APIs complementares | FastAPI (serviços assíncronos de alta performance) |
 | Arquitetura de API | RESTful (GET, POST, PUT, DELETE) |
 | Infraestrutura | Hospedagem em nuvem (acesso remoto seguro) |

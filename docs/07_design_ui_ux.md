@@ -5,7 +5,21 @@
 
 ## 1. Identidade Visual
 
-⚠️ Inserir: diretrizes de aplicação da logo (sidebar, login, topbar, favicon)
+**Empresa:** Shelter
+
+![Logo Shelter](../assets/Shelter_LOGO.svg)
+
+### Diretrizes de Aplicação da Logo
+
+| Contexto | Versão | Observações |
+|---|---|---|
+| Sidebar (topo) | Completa (SVG) | Sobre fundo escuro `#3A3A3A` — logo já usa cores compatíveis |
+| Login (painel esquerdo) | Completa (SVG) | Sobre fundo escuro `#3A3A3A` |
+| Topbar | Reduzida ou só símbolo | Sobre fundo claro `#F7F7F7` |
+| Favicon | Símbolo isolado | Exportar apenas o elemento gráfico dourado |
+
+> O arquivo da logo está em `assets/Shelter_LOGO.svg`.
+> Nunca distorcer proporções. Nunca aplicar sobre fundos que conflitem com `#F2B441` ou `#3A3A3A`.
 
 ### Personalidade
 O sistema deve transmitir uma experiência **moderna e limpa** — interface sem ruído visual, foco no conteúdo, espaçamento generoso e hierarquia clara.
