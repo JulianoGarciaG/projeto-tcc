@@ -4,7 +4,17 @@
       "Bash(venv/Scripts/python manage.py makemigrations)",
       "Bash(venv/Scripts/python manage.py migrate)",
       "Bash(venv/Scripts/python manage.py check)",
-      "Bash(python -m venv venv)"
+      "Bash(python -m venv venv)",
+      "Bash(venv/Scripts/python manage.py runserver 8000)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:8000/login/)",
+      "Bash(python -c \"import playwright\")",
+      "Bash(node -e \"require\\('playwright'\\)\")",
+      "Bash(curl -s http://127.0.0.1:8000/login/)",
+      "Bash(curl -s http://127.0.0.1:8000/static/css/custom.css)",
+      "Bash(curl -s http://127.0.0.1:8000/static/assets/Shelter_LOGO.svg)",
+      "Bash(python -c ' *)",
+      "Bash(pkill -f \"manage.py runserver\")",
+      "Bash(venv/Scripts/python manage.py runserver)"
     ]
   }
 }

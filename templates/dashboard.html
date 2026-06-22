@@ -1,65 +1,65 @@
 {% extends 'base.html' %}
 {% load imoveis_tags %}
-{% block title %}Dashboard — GestImóveis{% endblock %}
-{% block page_title %}<i class="bi bi-speedometer2 me-2"></i>Dashboard{% endblock %}
+{% block title %}Dashboard — Shelter{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
 
 {% block extra_css %}
 <style>
   .chart-wrapper { position: relative; height: 260px; }
+  .dashboard-filter-bar { background: var(--color-surface); border-radius: 6px; padding: 1.1rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.06); margin-bottom: 1.5rem; }
+  .dashboard-filter-bar .form-label { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); margin-bottom: .3rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 
 <!-- Filtros do Dashboard -->
-<div class="section-card mb-4">
-  <div class="section-card-body">
-    <form method="get" class="row g-2 align-items-end">
-      <div class="col-12 col-md-3">
-        <label class="form-label">Imóvel</label>
-        <select name="imovel_id" class="form-select">
-          <option value="">Todos os imóveis</option>
-          {% for im in imoveis_lista %}
-          <option value="{{ im.pk }}" {% if filtro_imovel_id == im.pk|stringformat:"s" %}selected{% endif %}>
-            {{ im.endereco|truncatechars:40 }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label">Data início</label>
-        <input type="date" name="data_inicio" value="{{ filtro_data_inicio }}" class="form-control">
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label">Data fim</label>
-        <input type="date" name="data_fim" value="{{ filtro_data_fim }}" class="form-control">
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label">Status</label>
-        <select name="status" class="form-select">
-          <option value="">Todos</option>
-          {% for val, label in status_choices %}
-          <option value="{{ val }}" {% if filtro_status == val %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-6 col-md-3 d-flex gap-2">
-        <button type="submit" class="btn btn-primary flex-fill">
-          <i class="bi bi-funnel me-1"></i> Filtrar
-        </button>
-        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary" title="Limpar filtros">
-          <i class="bi bi-x-lg"></i>
-        </a>
-      </div>
-    </form>
-  </div>
+<div class="dashboard-filter-bar">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-12 col-md-4">
+      <label class="form-label">Imóvel</label>
+      <select name="imovel_id" class="form-select">
+        <option value="">Todos os imóveis</option>
+        {% for im in imoveis_lista %}
+        <option value="{{ im.pk }}" {% if filtro_imovel_id == im.pk|stringformat:"s" %}selected{% endif %}>
+          {{ im.endereco|truncatechars:40 }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Data início</label>
+      <input type="date" name="data_inicio" value="{{ filtro_data_inicio }}" class="form-control">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Data fim</label>
+      <input type="date" name="data_fim" value="{{ filtro_data_fim }}" class="form-control">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        <option value="">Todos</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if filtro_status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-primary flex-fill">
+        <i class="bi bi-funnel me-1"></i> Filtrar
+      </button>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary" title="Limpar filtros">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </form>
 </div>
 
 <!-- KPI Cards -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-4 col-lg">
-    <div class="kpi-card kpi-blue">
+    <div class="kpi-card kpi-gold">
       <div class="kpi-icon"><i class="bi bi-house-door-fill"></i></div>
       <div>
         <div class="kpi-value">{{ total_imoveis }}</div>
@@ -86,7 +86,7 @@
     </div>
   </div>
   <div class="col-6 col-md-4 col-lg">
-    <div class="kpi-card kpi-amber">
+    <div class="kpi-card kpi-info">
       <div class="kpi-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
       <div>
         <div class="kpi-value">{{ contratos_ativos }}</div>
@@ -95,7 +95,7 @@
     </div>
   </div>
   <div class="col-6 col-md-4 col-lg">
-    <div class="kpi-card kpi-purple">
+    <div class="kpi-card kpi-neutral">
       <div class="kpi-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
       <div>
         <div class="kpi-value">{{ inadimplentes }}</div>
@@ -107,10 +107,10 @@
 
 <!-- Gráficos -->
 <div class="row g-3 mb-4">
-  <div class="col-md-4">
+  <div class="col-md-5">
     <div class="section-card h-100">
       <div class="section-card-header">
-        <i class="bi bi-pie-chart-fill text-primary"></i> Ocupação dos Imóveis
+        Ocupação dos imóveis
       </div>
       <div class="section-card-body">
         <div class="chart-wrapper">
@@ -119,10 +119,11 @@
       </div>
     </div>
   </div>
-  <div class="col-md-8">
+  <div class="col-md-7">
     <div class="section-card h-100">
       <div class="section-card-header">
-        <i class="bi bi-bar-chart-fill text-success"></i> Recebimentos vs. Pendências (6 meses)
+        Recebimentos vs. Pendências
+        <span class="ms-1" style="font-size:.78rem; color:var(--color-text-muted); font-weight:400;">&middot; últimos 6 meses</span>
       </div>
       <div class="section-card-body">
         <div class="chart-wrapper">
@@ -136,7 +137,7 @@
 <!-- Últimos Lançamentos -->
 <div class="section-card">
   <div class="section-card-header">
-    <i class="bi bi-clock-history text-secondary"></i> Últimos Lançamentos Financeiros
+    <i class="bi bi-clock-history"></i> Últimos Lançamentos Financeiros
     <a href="{% url 'lancamento_list' %}" class="btn btn-outline-primary btn-sm ms-auto">Ver todos</a>
   </div>
   <div class="table-responsive">
@@ -180,15 +181,26 @@ new Chart(document.getElementById('chartPizza'), {
     labels: {{ pizza_labels|safe }},
     datasets: [{
       data: {{ pizza_data|safe }},
-      backgroundColor: ['#16a34a', '#dc2626', '#d97706'],
+      backgroundColor: ['#2E7D32', '#C62828', '#F2B441'],
       borderWidth: 2,
-      borderColor: '#fff',
+      borderColor: '#F7F3EA',
     }]
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } }
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          font: { size: 12, family: 'Montserrat' },
+          padding: 16,
+          usePointStyle: true,
+          pointStyleWidth: 10,
+        }
+      }
+    },
+    cutout: '62%',
   }
 });
 
@@ -198,25 +210,47 @@ new Chart(document.getElementById('chartBarras'), {
     labels: {{ meses_labels|safe }},
     datasets: [
       {
-        label: 'Recebido (R$)',
+        label: 'Recebido',
         data: {{ meses_pagos|safe }},
-        backgroundColor: 'rgba(22,163,74,.75)',
+        backgroundColor: 'rgba(46, 125, 50, 0.75)',
         borderRadius: 5,
+        borderSkipped: false,
       },
       {
-        label: 'Pendente/Atrasado (R$)',
+        label: 'Pendente / Atrasado',
         data: {{ meses_pendentes|safe }},
-        backgroundColor: 'rgba(220,38,38,.65)',
+        backgroundColor: 'rgba(198, 40, 40, 0.65)',
         borderRadius: 5,
+        borderSkipped: false,
       }
     ]
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom' } },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          font: { size: 12, family: 'Montserrat' },
+          padding: 16,
+          usePointStyle: true,
+          pointStyleWidth: 10,
+        }
+      }
+    },
     scales: {
-      y: { beginAtZero: true, ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } }
+      x: { grid: { display: false } },
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(0,0,0,.05)' },
+        ticks: {
+          callback: function(v) {
+            if (v >= 1000) return 'R$ ' + (v/1000).toLocaleString('pt-BR') + 'k';
+            return 'R$ ' + v.toLocaleString('pt-BR');
+          }
+        }
+      }
     }
   }
 });
