@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambientes virtuais
+venv/
+env/
+.venv/
+
+# Variáveis de ambiente
+.env
+
+# Django
+*.log
+/staticfiles/
+
+# Observação: db.sqlite3 é mantido versionado propositalmente
+# (banco de dev com dados de exemplo para o time do TCC)
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+*.swp
