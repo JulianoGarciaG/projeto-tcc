@@ -49,51 +49,26 @@ a { text-decoration: none; }
 }
 
 #sidebar .sidebar-brand {
-  padding: .75rem 1rem;
+  padding: .5rem;
   border-bottom: 1px solid rgba(255,255,255,.08);
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   height: 72px;
   box-sizing: border-box;
 }
 
+#sidebar > ul.nav {
+  padding-top: 0 !important;
+}
+
 #sidebar .sidebar-brand img {
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: left center;
-}
-
-/* Marca compacta exibida quando a sidebar está colapsada (G1) */
-#sidebar .sidebar-brand .brand-compact {
-  display: none;
-  width: 100%;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary);
-  font-weight: 700;
-  font-size: 1.6rem;
-  line-height: 1;
-}
-
-/* ---------- Colapso desktop da sidebar (G1) ---------- */
-@media (min-width: 769px) {
-  html.sidebar-collapsed { --sidebar-width: 76px; }
-
-  html.sidebar-collapsed #sidebar .nav-text,
-  html.sidebar-collapsed #sidebar .nav-section-label {
-    display: none;
-  }
-  html.sidebar-collapsed #sidebar .nav-link {
-    justify-content: center;
-    padding: .6rem .5rem;
-  }
-  html.sidebar-collapsed #sidebar .nav-link.active {
-    padding-left: calc(.5rem - 3px);
-  }
-  html.sidebar-collapsed #sidebar .sidebar-brand .brand-full { display: none; }
-  html.sidebar-collapsed #sidebar .sidebar-brand .brand-compact { display: flex; }
+  width: 160%;
+  max-width: none;
+  height: auto;
+  flex-shrink: 0;
 }
 
 #sidebar .nav-section-label {
