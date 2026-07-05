@@ -88,12 +88,12 @@ class FotoImovel(models.Model):
 
 class Inquilino(models.Model):
     FAIXA_RENDA_CHOICES = [
-        ('ate_2sm', 'Até 2 salários mínimos'),
-        ('2_4sm', 'De 2 a 4 salários mínimos'),
-        ('4_6sm', 'De 4 a 6 salários mínimos'),
-        ('6_10sm', 'De 6 a 10 salários mínimos'),
-        ('10_20sm', 'De 10 a 20 salários mínimos'),
-        ('acima_20sm', 'Acima de 20 salários mínimos'),
+        ('ate_2k', '< R$ 2k'),
+        ('2_4k', 'R$ 2k - R$ 3.9k'),
+        ('4_7k', 'R$ 4k - R$ 6.9k'),
+        ('7_10k', 'R$ 7k - R$ 9.9k'),
+        ('10_16k', 'R$ 10k - R$ 15.9k'),
+        ('acima_16k', 'R$ 16k +'),
     ]
 
     nome = models.CharField(max_length=200)

@@ -22,7 +22,8 @@
       "Bash(cp assets/Shelter_LOGO.jpg static/assets/Shelter_LOGO.jpg)",
       "Bash(cp assets/Shelter_LOGO_white.jpg static/assets/Shelter_LOGO_white.jpg)",
       "Bash(venv/Scripts/pip list *)",
-      "Bash(venv/Scripts/python -c \"import xhtml2pdf; print\\('xhtml2pdf importa OK'\\)\")"
+      "Bash(venv/Scripts/python -c \"import xhtml2pdf; print\\('xhtml2pdf importa OK'\\)\")",
+      "Bash(venv/Scripts/python *)"
     ]
   }
 }

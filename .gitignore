@@ -26,3 +26,5 @@ desktop.ini
 # IDE
 .idea/
 *.swp
+
+media/
