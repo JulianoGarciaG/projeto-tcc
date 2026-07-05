@@ -52,8 +52,11 @@ Opcionalmente, manter também um botão "Regerar PDF" na tela de detalhe (rota `
 
 ## 3. Modelagem de dados
 
-### 3.1 Contrato — sem novo model
-Nenhuma mudança de schema necessária. A qualificação PF vs PJ no documento sai de `Inquilino.cpf`/`Inquilino.cnpj`/`Inquilino.qualificacao` condicionalmente por `Contrato.tipo_contrato`.
+### 3.1 Contrato — 1 campo novo
+Os dados do documento já existem. Adicionar **apenas** um `FileField` dedicado para o PDF gerado (não sobrescrever o `arquivo` de upload manual):
+- `Contrato.documento_gerado = FileField(upload_to='contratos/gerados/', blank=True, null=True, verbose_name='Contrato gerado (PDF)')`
+
+A qualificação PF vs PJ no documento sai de `Inquilino.cpf`/`Inquilino.cnpj`/`Inquilino.qualificacao` condicionalmente por `Contrato.tipo_contrato`.
 
 ### 3.2 Recibo — novo model (`imoveis/models.py`)
 Quase todos os campos opcionais (regra: só aparecem no PDF se preenchidos).
@@ -72,17 +75,17 @@ class Recibo(models.Model):
     proveniente_sitio = CharField(300, blank, 'Proveniente do sítio')  # ex: "Apartamento 21C, Prédio Maranhão"
     periodo_referente = CharField(200, blank, 'Correspondente ao período de')
     vencido_em        = DateField(null, blank)
-    quantia           = DecimalField(10,2, null, blank, 'Quantia de')
+    quantia           = DecimalField(10,2, null, blank, 'Quantia de')  # TOTAL recebido
     assinante_nome    = CharField(200, blank)
-    assinante_cpf     = CharField(14, blank)
+    assinante_cpf     = CharField(14, blank, validators=[validate_cpf])  # ver §5 (validação de CPF)
     data_assinatura   = DateField(null, blank)
-    arquivo           = FileField(upload_to='recibos/', blank, null)  # PDF gerado
+    arquivo           = FileField(upload_to='recibos/', blank, null)  # PDF gerado (model novo, sem conflito)
     criado_em         = DateTimeField(auto_now_add=True)
 
-    def total(self):  # "somatório dos valores inseridos"
+    def somatorio(self):  # soma dos valores que constituem a quantia
         return sum(v for v in [valor_aluguel, valor_impostos, valor_seguros, valor_condominio] if v)
 ```
-> Ponto aberto: `quantia` ("Quantia de") — tratado como campo opcional separado; o somatório exibido = soma dos 4 componentes. Confirmar (ver §9).
+> **Semântica confirmada:** `quantia` ("Quantia de") é o **valor total recebido**; os campos `valor_aluguel/impostos/seguros/condominio` são as **parcelas que compõem** esse total, e `somatorio()` retorna a soma delas. No PDF: exibir as parcelas preenchidas + o `somatorio()` (deve bater com `quantia`) e destacar `quantia` como o total do recibo.
 
 ### 3.3 Laudo — catálogo configurável + dados da vistoria
 
@@ -112,12 +115,13 @@ class ItemVistoria(models.Model):
 class TestemunhaLaudo(models.Model):
     laudo = FK LaudoVistoria (CASCADE, related_name='testemunhas')
     nome  = CharField(200)
-    cpf   = CharField(14, blank)
+    cpf   = CharField(14, blank, validators=[validate_cpf])  # ver §5
 ```
 
-**Novos campos em `LaudoVistoria`:**
-- `local_assinatura = CharField(200, blank)`
-- `data_assinatura  = DateField(null, blank)`
+**Mudanças em `LaudoVistoria`:**
+- **`contrato` passa a ser OBRIGATÓRIO** (confirmado): `contrato = FK(Contrato, on_delete=models.PROTECT, related_name='laudos')` — remover `null=True, blank=True` e trocar `SET_NULL` por `PROTECT`. Assim todo laudo tem locatário derivável e o ponto "laudo sem contrato" deixa de existir.
+- Novos campos: `local_assinatura = CharField(200, blank)`, `data_assinatura = DateField(null, blank)`.
+- Campo dedicado para o PDF gerado: `documento_gerado = FileField(upload_to='laudos/gerados/', blank=True, null=True, verbose_name='Laudo gerado (PDF)')` (não sobrescreve o `arquivo` de upload manual).
 
 **Métodos de resumo automático em `LaudoVistoria`** (calculado, nunca digitado):
 ```
@@ -128,11 +132,12 @@ def resumo_vistoria(self):
             'regular': itens.filter(estado='regular').count(),
             'ruim':    itens.filter(estado='ruim').count()}
 def locador_nome(self):   return self.imovel.proprietario.nome
-def locatario_nome(self): return self.contrato.inquilino.nome if self.contrato else ''
+def locatario_nome(self): return self.contrato.inquilino.nome   # contrato agora é obrigatório
 ```
 
 ### 3.4 Migrations
-- `makemigrations` → 1 migração de schema (novos models + 2 campos em LaudoVistoria).
+- `makemigrations` → 1 migração de schema (novos models + campos `local_assinatura`/`data_assinatura`/`documento_gerado` em LaudoVistoria + `documento_gerado` em Contrato + `contrato` obrigatório).
+- **Atenção — `LaudoVistoria.contrato` NOT NULL:** se houver laudos existentes com `contrato` nulo no `db.sqlite3`, a migração falha. Antes de aplicar: (a) preencher/atribuir um contrato aos laudos órfãos, ou (b) excluí-los. A migração deve ser gerada com um passo de dados (`RunPython`) ou o dado corrigido manualmente antes do `migrate`.
 - **Data migration** `00XX_seed_vistoria_catalog.py`: popula `ComodoTemplate`/`ItemVistoriaTemplate` com os 5 cômodos e itens do enunciado (Sala, Cozinha, Quarto, Banheiro, Área externa). Usa `RunPython` com `apps.get_model` (forward + reverse).
 
 ---
@@ -148,19 +153,21 @@ xhtml2pdf renderiza um **subconjunto** de HTML/CSS — **não** herda `base.html
 
 Reutilizar o filtro `{{ valor|brl }}` (`{% load imoveis_tags %}`) e `|date:"d/m/Y"`.
 
-> Logo: `static/assets/Shelter_LOGO_white.svg` é **SVG — não suportado pelo xhtml2pdf**. Usar um PNG do logo (ou cabeçalho em texto) nos PDFs (ver §9).
+> **Logo (resolvido):** o usuário adicionou `Shelter_LOGO.jpg` (escuro) e `Shelter_LOGO_white.jpg` (branco) em **`./assets/`** (raiz). O xhtml2pdf renderiza JPG. Passos na execução: (1) **copiar** os JPG para **`static/assets/`** (só o que está em `STATICFILES_DIRS` é resolvido pelo `link_callback`); (2) no cabeçalho dos PDFs (fundo branco) usar a versão **escura** via `<img src="{% static 'assets/Shelter_LOGO.jpg' %}">`.
 
 ---
 
-## 5. Forms (`imoveis/forms.py`)
+## 5. Forms (`imoveis/forms.py`) + validação de CPF
+
+**Validação de CPF (confirmado):** criar **`imoveis/validators.py`** com `validate_cpf(value)` — implementa o algoritmo dos dígitos verificadores do CPF (aceita com/sem máscara), levanta `ValidationError` se inválido. Aplicar como `validators=[validate_cpf]` nos novos campos de CPF: `Recibo.assinante_cpf` e `TestemunhaLaudo.cpf`. (Opcional: aplicar também a `Inquilino.cpf`; **não** retroativo a dados já existentes para não quebrar registros legados — decidir na execução.)
 
 Seguir convenção `_ctrl`/`_sel`, widgets explícitos.
 
-- **`ReciboForm(ModelForm)`** — todos os campos; datas `DateInput(type=date)`; valores `NumberInput(step=0.01)`. `clean()`: exigir ao menos um valor/campo preenchido.
-- **`LaudoVistoriaForm`** — adicionar `local_assinatura`, `data_assinatura`. Manter `arquivo` (upload manual) opcional, já que agora o PDF é gerado.
+- **`ReciboForm(ModelForm)`** — todos os campos; datas `DateInput(type=date)`; valores `NumberInput(step=0.01)`. `clean()`: exigir ao menos um valor/campo preenchido; validação de CPF vem do validator do model.
+- **`LaudoVistoriaForm`** — adicionar `local_assinatura`, `data_assinatura`; **`contrato` agora obrigatório** (campo required, sem `empty_label` vazio selecionável). Manter `arquivo` (upload manual) opcional, já que o PDF vai para `documento_gerado`.
 - **`ItemVistoriaForm` + `ItemVistoriaFormSet`** = `inlineformset_factory(LaudoVistoria, ItemVistoria, extra=0, can_delete=True)` — no `laudo_create`, pré-popular `initial` a partir de `ItemVistoriaTemplate` (agrupado por cômodo), padrão idêntico ao `FiadorFormSet`.
 - **`TestemunhaLaudoForm` + `TestemunhaFormSet`** = `inlineformset_factory(LaudoVistoria, TestemunhaLaudo, extra=2, can_delete=True)`.
-- Contrato: **sem alteração** (dados já capturados).
+- Contrato: **sem alteração no form** (dados já capturados; o novo `documento_gerado` é preenchido pela view, não pelo usuário).
 
 ---
 
@@ -169,11 +176,11 @@ Seguir convenção `_ctrl`/`_sel`, widgets explícitos.
 > **Padrão comum:** as views de `create`/`edit` de cada seção, após `form.save()` (e `formset.save()` quando houver), chamam o helper de geração, gravam no `FileField` e **retornam o PDF como resposta** (download automático). A rota `*_gerar_pdf` continua existindo para "Regerar" a partir do detail.
 
 ### Contrato (geração stateless, dispara no save)
-- Contrato já é criado por `contrato_create`. Ao **salvar** (`contrato_create`/`contrato_edit`), gerar `documentos/contrato_pdf.html`, salvar em `contrato.arquivo` e baixar. Botão "Regerar PDF" no detail → `contrato_gerar_pdf`.
+- Contrato já é criado por `contrato_create`. Ao **salvar** (`contrato_create`/`contrato_edit`), gerar `documentos/contrato_pdf.html`, salvar em **`contrato.documento_gerado`** e baixar. Botão "Regerar PDF" no detail → `contrato_gerar_pdf`.
 - URL: `contratos/<int:pk>/gerar-pdf/` name `contrato_gerar_pdf`.
 
 ### Laudo (formsets + detail + geração no save)
-- Atualizar `laudo_create`/`laudo_edit` para validar/salvar `LaudoVistoriaForm` + `ItemVistoriaFormSet` + `TestemunhaFormSet` juntos (padrão `contrato_create`); **após salvar, gerar e anexar o PDF** em `laudo.arquivo` e baixar. No create, pré-popular itens do catálogo.
+- Atualizar `laudo_create`/`laudo_edit` para validar/salvar `LaudoVistoriaForm` + `ItemVistoriaFormSet` + `TestemunhaFormSet` juntos (padrão `contrato_create`); **após salvar, gerar e anexar o PDF** em **`laudo.documento_gerado`** e baixar. No create, pré-popular itens do catálogo.
 - Nova view `laudo_detail(request, pk)` (hoje não existe) — mostra itens por cômodo, resumo, testemunhas, link do PDF e botão "Regerar".
 - URLs: `laudos/<int:pk>/` `laudo_detail`; `laudos/<int:pk>/gerar-pdf/` `laudo_gerar_pdf`.
 
@@ -192,8 +199,8 @@ Seguir convenção `_ctrl`/`_sel`, widgets explícitos.
 ## 7. Validação por formulário
 
 - **Contrato:** já garantido pelas constraints do model (todos obrigatórios exceto `observacoes`). Nenhuma validação nova obrigatória; PF/PJ é visual/condicional no template.
-- **Recibo:** valores `Decimal ≥ 0`; datas `type=date`; `clean()` exige ≥ 1 campo preenchido. CPF: manter placeholder-mask como o resto do projeto (sem validação estrita — ver §9).
-- **Laudo:** `estado` obrigatório em cada linha usada de `ItemVistoria`; `data` obrigatória; testemunhas opcionais. Convenção do projeto = sem `clean_*` estrito de CPF.
+- **Recibo:** valores `Decimal ≥ 0`; datas `type=date`; `clean()` exige ≥ 1 campo preenchido; **CPF validado** por `validate_cpf` (`assinante_cpf`).
+- **Laudo:** **`contrato` obrigatório**; `estado` obrigatório em cada linha usada de `ItemVistoria`; `data` obrigatória; testemunhas opcionais, mas **CPF (se preenchido) validado** por `validate_cpf`.
 
 ---
 
@@ -207,30 +214,36 @@ Seguir convenção `_ctrl`/`_sel`, widgets explícitos.
 
 ---
 
-## 9. Riscos, pontos em aberto e confirmações necessárias
+## 9. Decisões dos pontos em aberto (resolvidas) + riscos
 
-1. **`arquivo` sobrescrito:** gravar o PDF gerado em `Contrato.arquivo`/`LaudoVistoria.arquivo` **sobrescreve** um upload manual anterior no mesmo campo. Alternativa: campo dedicado `documento_gerado`. → *Confirmar se pode sobrescrever ou se prefere campo separado.*
-2. **Recibo `quantia` vs somatório:** "Quantia de" tratado como campo opcional separado; somatório = soma de aluguel+impostos+seguros+condomínio. → *Confirmar semântica.*
-3. **UI de itens do Laudo (MVP):** o formulário mostra todos os itens do catálogo agrupados por cômodo, cada um com `estado` (select, em branco = não vistoriado) + observação; só salva os com estado preenchido. Um "adicionar cômodo dinamicamente" via JS fica como evolução. → *Confirmar se o MVP atende.*
-4. **Logo em SVG:** `Shelter_LOGO_white.svg` não renderiza no xhtml2pdf → usar PNG ou cabeçalho textual nos PDFs. → *Fornecer um PNG do logo, ou aceitar cabeçalho em texto.*
-5. **Laudo sem contrato vinculado:** `contrato` é opcional → sem locatário derivável. Deixar em branco no PDF ou adicionar campos-override de texto livre? → *Confirmar comportamento.*
-6. **CPF/valores:** projeto não tem validação estrita de CPF (só placeholder). Manter assim ou adicionar validação? → *Confirmar.*
-7. **Compatibilidade:** venv está com Django 6.0.6 (requirements diz `<7.0`); `xhtml2pdf` puxa `reportlab` como dependência transitiva. Validar `manage.py check` após instalar.
+1. **PDF gerado ✅ campo separado:** grava em `Contrato.documento_gerado` e `LaudoVistoria.documento_gerado` (não sobrescreve o `arquivo` de upload manual). Recibo usa seu próprio `arquivo` (model novo, sem conflito).
+2. **Recibo `quantia` ✅:** `quantia` = **valor total recebido**; as parcelas (aluguel/impostos/seguros/condomínio) **compõem** esse total; `somatorio()` soma as parcelas. PDF mostra parcelas + somatório + destaca `quantia` como total.
+3. **UI de itens do Laudo (MVP) ✅:** itens do catálogo agrupados por cômodo, `estado` em branco = não vistoriado, só salva os com estado preenchido. "Adicionar cômodo dinâmico" fica como evolução futura.
+4. **Logo ✅:** usar `Shelter_LOGO.jpg` (escuro) — copiar de `./assets/` para `static/assets/` e referenciar via `{% static %}` no cabeçalho dos PDFs (ver §4).
+5. **Laudo `contrato` ✅ obrigatório:** deixa de existir laudo sem contrato; locatário sempre derivável. Requer cuidado na migração (ver §3.4).
+6. **CPF ✅ validado:** `imoveis/validators.py::validate_cpf` aplicado a `Recibo.assinante_cpf` e `TestemunhaLaudo.cpf` (ver §5).
+
+**Riscos remanescentes:**
+- **Migração `LaudoVistoria.contrato` NOT NULL:** laudos órfãos existentes quebram o `migrate` — corrigir dados antes (ver §3.4).
+- **Compatibilidade:** venv está com Django 6.0.6 (requirements diz `<7.0`); `xhtml2pdf` puxa `reportlab` como dependência transitiva. Validar `manage.py check` após instalar.
+- **CPF legado:** se aplicar `validate_cpf` também a `Inquilino.cpf`, registros já cadastrados com CPF inválido passam a falhar na edição — por isso a aplicação retroativa fica **opcional** e não é o padrão.
 
 ---
 
 ## 10. Arquivos a criar/modificar (ordem de execução)
 
 1. `requirements.txt` — adicionar `xhtml2pdf`; instalar no venv (`venv/Scripts/pip install xhtml2pdf`).
-2. `imoveis/models.py` — `Recibo`, `ComodoTemplate`, `ItemVistoriaTemplate`, `ItemVistoria`, `TestemunhaLaudo`; +campos e métodos em `LaudoVistoria`.
-3. `imoveis/migrations/` — `makemigrations` (schema) + data migration `seed_vistoria_catalog`.
-4. `imoveis/pdf.py` — helpers pisa + `link_callback`.
-5. `imoveis/forms.py` — `ReciboForm`, extensão de `LaudoVistoriaForm`, `ItemVistoria`/`Testemunha` forms + formsets.
-6. `imoveis/views.py` — recibo CRUD + `*_gerar_pdf` (3), `laudo_detail`, laudo create/edit com formsets, `documentos` atualizado.
-7. `imoveis/urls.py` — novas rotas.
-8. `imoveis/admin.py` — registrar novos models + inline do catálogo.
-9. Templates: `documentos/base_pdf.html`, `documentos/contrato_pdf.html`, `documentos/laudo_pdf.html`, `documentos/recibo_pdf.html`; `recibos/recibo_list|form|detail.html`; `laudos/laudo_detail.html` + update `laudo_form.html`/`laudo_list.html`; update `contratos/contrato_detail.html`, `ged/documentos.html`, `base.html`.
-10. Verificação (§11).
+2. **Copiar** `assets/Shelter_LOGO.jpg` e `assets/Shelter_LOGO_white.jpg` para `static/assets/` (para o `{% static %}`/`link_callback` resolver).
+3. `imoveis/validators.py` — `validate_cpf` (algoritmo dos dígitos verificadores).
+4. `imoveis/models.py` — `Recibo`, `ComodoTemplate`, `ItemVistoriaTemplate`, `ItemVistoria`, `TestemunhaLaudo`; em `LaudoVistoria`: `contrato` obrigatório + `local_assinatura`/`data_assinatura`/`documento_gerado` + métodos; em `Contrato`: `documento_gerado`.
+5. `imoveis/migrations/` — **corrigir laudos órfãos** (sem contrato) → `makemigrations` (schema) + data migration `seed_vistoria_catalog`.
+6. `imoveis/pdf.py` — helpers pisa + `link_callback` + `gerar_e_anexar`.
+7. `imoveis/forms.py` — `ReciboForm`, extensão de `LaudoVistoriaForm` (contrato required), `ItemVistoria`/`Testemunha` forms + formsets.
+8. `imoveis/views.py` — recibo CRUD + `*_gerar_pdf` (3), `laudo_detail`, laudo create/edit com formsets, `documentos` atualizado.
+9. `imoveis/urls.py` — novas rotas.
+10. `imoveis/admin.py` — registrar novos models + inline do catálogo.
+11. Templates: `documentos/base_pdf.html`, `documentos/contrato_pdf.html`, `documentos/laudo_pdf.html`, `documentos/recibo_pdf.html`; `recibos/recibo_list|form|detail.html`; `laudos/laudo_detail.html` + update `laudo_form.html`/`laudo_list.html`; update `contratos/contrato_detail.html`, `ged/documentos.html`, `base.html`.
+12. Verificação (§11).
 
 ---
 

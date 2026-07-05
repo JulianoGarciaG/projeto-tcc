@@ -14,7 +14,9 @@
       "Bash(curl -s http://127.0.0.1:8000/static/assets/Shelter_LOGO.svg)",
       "Bash(python -c ' *)",
       "Bash(pkill -f \"manage.py runserver\")",
-      "Bash(venv/Scripts/python manage.py runserver)"
+      "Bash(venv/Scripts/python manage.py runserver)",
+      "Bash(venv/Scripts/python manage.py runserver 0.0.0.0:8000 --noreload)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8000/login/)"
     ]
   }
 }
