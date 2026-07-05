@@ -7,7 +7,7 @@
 
 **Nome:** Shelter
 
-![Logo Shelter](../docs/ShelterLOGO.svg)
+![Logo Shelter](../static/assets/Shelter_LOGO.svg)
 
 ---
 
@@ -70,13 +70,14 @@ Pillow>=10.0.0
 
 | Módulo | Descrição |
 |---|---|
-| **Imóveis** | Cadastro, status, fotos, notificações, entradas e saídas |
+| **Imóveis** | Cadastro, fotos, status (automático) e notificações de órgãos públicos |
 | **Proprietários** | Cadastro e identificação dos proprietários |
 | **Inquilinos** | Cadastro e documentação dos locatários |
 | **Contratos** | Gestão de contratos, fiadores, renovações e distratos |
-| **Laudos de Vistoria** | Registro e arquivo de vistorias de entrada, saída e periódicas |
-| **Financeiro** | Lançamentos de pagamentos, comprovantes e inadimplência |
-| **GED** | Central de documentos digitais (contratos, laudos, comprovantes) |
+| **Laudos de Vistoria** | Registro e arquivo de vistorias de entrada e saída |
+| **Financeiro** | Lançamentos de pagamentos (`Lancamento`), comprovantes e inadimplência |
+| **Recibos** | Emissão de recibos de pagamento com geração de PDF |
+| **GED** | Central de documentos digitais (contratos, laudos, comprovantes, recibos) |
 | **Dashboard / BI** | Indicadores, gráficos e filtros dinâmicos para gestão estratégica |
 
 ---

@@ -71,7 +71,7 @@ Os documentos do contrato variam conforme o `tipo_contrato`:
 | `PJ` (Pessoa Jurídica) | `contrato_social` |
 
 **Comportamento na interface:**
-- O formulário exibe/oculta os campos dinamicamente via JavaScript conforme o tipo selecionado.
+- Esses campos (e `recibo_chaves`, `comprovante_anual`) **não fazem parte** do formulário de criação/edição de contrato (`ContratoForm`) — são anexados individualmente na tela de detalhe do contrato via `contrato_anexar_documento` (mesmo padrão do anexo de laudo assinado).
 
 ---
 
@@ -88,20 +88,23 @@ Os documentos do contrato variam conforme o `tipo_contrato`:
 | Entidade protegida | Protege contra exclusão de |
 |---|---|
 | `Proprietario` | Não pode ser excluído se possui imóveis (`PROTECT`) |
-| `Imovel` | Não pode ser excluído se possui contratos (`PROTECT`) |
+| `Imovel` | Não pode ser excluído se possui contratos ou recibos (`PROTECT`) |
 | `Inquilino` | Não pode ser excluído se possui contratos (`PROTECT`) |
+| `Contrato` | Não pode ser excluído se possui laudos de vistoria ou recibos vinculados (`PROTECT`); a view `contrato_delete` captura `ProtectedError` e exibe mensagem orientando a excluir os vínculos primeiro |
 
 ---
 
 ## 8. GED — Gestão Eletrônica de Documentos
 
 - Todos os documentos do sistema são armazenados digitalmente, eliminando a dependência de pastas físicas.
-- A central GED (`/documentos/`) agrega automaticamente todos os arquivos anexados, agrupados por tipo:
-  - Contratos com arquivo PDF
-  - Laudos de vistoria com arquivo
-  - Comprovantes de pagamento
-  - Recibos de entrega de chaves
-  - Comprovantes anuais de pagamento
+- A central GED (`/documentos/`) agrega automaticamente todos os arquivos anexados, agrupados por tipo (view `documentos` em `imoveis/views.py`):
+  - Contratos com PDF gerado (`Contrato.documento_gerado`)
+  - Laudos de vistoria com anexo assinado (`LaudoVistoria.arquivo`)
+  - Laudos com PDF gerado (`LaudoVistoria.documento_gerado`)
+  - Comprovantes de pagamento (`Lancamento.comprovante`)
+  - Recibos de entrega de chaves do contrato (`Contrato.recibo_chaves`)
+  - Comprovantes anuais de pagamento do contrato (`Contrato.comprovante_anual`)
+  - Recibos com PDF gerado (`Recibo.arquivo`)
 - Um documento só aparece na central GED se o campo de arquivo **não estiver vazio**.
 
 ---
@@ -116,6 +119,8 @@ O dashboard suporta filtros combinados aplicados simultaneamente:
 | Data início | `data_vencimento__gte` |
 | Data fim | `data_vencimento__lte` |
 | Status do lançamento | `status` |
+
+O filtro de período (data início/fim) é validado e limpo por `DashboardFiltroForm` (`imoveis/forms.py`), um `forms.Form` com os campos opcionais `data_inicio`/`data_fim`, ambos com widget Flatpickr (formato dd/mm/aaaa).
 
 **Métricas calculadas:**
 - Total de imóveis, ocupados e vagos (com base no filtro de imóvel)
@@ -143,7 +148,24 @@ O dashboard suporta filtros combinados aplicados simultaneamente:
 
 ---
 
-## 12. Acesso Mobile (Vistoriadores em Campo)
+## 12. Validações de Documentos e Campos (`imoveis/validators.py`)
+
+Todos os validadores customizados aceitam o valor com ou sem máscara e removem os não-dígitos antes de validar.
+
+| Validador | Campos que o utilizam | Regra |
+|---|---|---|
+| `validate_cpf` | `Inquilino.cpf`, `TestemunhaLaudo.cpf`, `Recibo.assinante_cpf` | 11 dígitos + dígitos verificadores válidos |
+| `validate_cnpj` | `Inquilino.cnpj` | 14 dígitos + dígitos verificadores válidos |
+| `validate_cpf_cnpj` | `Proprietario.cpf_cnpj` | 11 dígitos → valida como CPF; 14 dígitos → valida como CNPJ; caso contrário, erro |
+| `validate_rg` | `Inquilino.rg` | Aceita apenas letras, números, "." e "-" (sem dígito verificador nacional) |
+| `validate_rg_cpf` | `Fiador.rg_cpf` | Se restarem exatamente 11 dígitos numéricos, valida como CPF (dígitos verificadores); caso contrário, valida o formato como RG |
+| `validate_telefone` | `Proprietario.telefone`, `Inquilino.telefone` | Exige 10 dígitos (fixo com DDD) ou 11 dígitos (celular com DDD), com ou sem máscara |
+
+**Dia de vencimento do contrato:** `Contrato.dia_vencimento` usa `MinValueValidator(1)` e `MaxValueValidator(31)` (django.core.validators), restringindo o valor ao intervalo de 1 a 31.
+
+---
+
+## 13. Acesso Mobile (Vistoriadores em Campo)
 
 - A interface é responsiva e permite que vistoriadores realizem consultas e atualizações diretamente do local do imóvel via dispositivos móveis.
 - A sidebar é ocultada no mobile e acessada via toggle hamburger.

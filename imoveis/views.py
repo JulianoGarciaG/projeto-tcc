@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Sum, Q, ProtectedError
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from datetime import date, timedelta
 
 from .models import (
@@ -15,6 +15,7 @@ from .forms import (
     ContratoForm, FiadorFormSet, LaudoVistoriaForm, LancamentoForm,
     NotificacaoForm, RenovacaoContratoForm, DistratoForm,
     ReciboForm, ItemVistoriaFormSet, TestemunhaFormSet, item_vistoria_formset_factory,
+    DashboardFiltroForm,
 )
 from .pdf import gerar_e_anexar, pdf_download_response
 
@@ -70,9 +71,12 @@ def dashboard(request):
 
     # Filtros
     imovel_id = request.GET.get('imovel_id', '')
-    data_inicio = request.GET.get('data_inicio', '')
-    data_fim = request.GET.get('data_fim', '')
     status_filtro = request.GET.get('status', '')
+    filtro_form = DashboardFiltroForm(request.GET)
+    data_inicio = data_fim = None
+    if filtro_form.is_valid():
+        data_inicio = filtro_form.cleaned_data.get('data_inicio')
+        data_fim = filtro_form.cleaned_data.get('data_fim')
 
     lancamentos_qs = Lancamento.objects.select_related('contrato__inquilino', 'contrato__imovel')
     imoveis_qs = Imovel.objects.all()
@@ -137,8 +141,7 @@ def dashboard(request):
         # Filtros
         'imoveis_lista': Imovel.objects.all(),
         'filtro_imovel_id': imovel_id,
-        'filtro_data_inicio': data_inicio,
-        'filtro_data_fim': data_fim,
+        'filtro_form': filtro_form,
         'filtro_status': status_filtro,
         'status_choices': Lancamento.STATUS_CHOICES,
     }
@@ -179,6 +182,11 @@ def imovel_detail(request, pk):
     fotos = imovel.fotos.all()
     notificacoes = imovel.notificacoes.order_by('-data_recebimento')
     contrato_ativo = imovel.contratos.filter(status='ativo').order_by('-data_inicio').first()
+    planta_e_imagem = bool(
+        imovel.planta_projeto
+        and imovel.planta_projeto.name.lower().endswith(
+            ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'))
+    )
     return render(request, 'imoveis/imovel_detail.html', {
         'imovel': imovel,
         'contratos': contratos,
@@ -186,6 +194,7 @@ def imovel_detail(request, pk):
         'fotos': fotos,
         'notificacoes': notificacoes,
         'contrato_ativo': contrato_ativo,
+        'planta_e_imagem': planta_e_imagem,
     })
 
 
@@ -400,6 +409,30 @@ def contrato_edit(request, pk):
 def contrato_gerar_pdf(request, pk):
     contrato = get_object_or_404(Contrato.objects.select_related('imovel', 'inquilino'), pk=pk)
     return _gerar_pdf_contrato(contrato)
+
+
+# Campos de documento (GED) do contrato anexáveis pela tela de detalhe.
+CAMPOS_DOCUMENTO_CONTRATO = (
+    'comprovante_renda', 'contrato_social', 'recibo_chaves', 'comprovante_anual',
+)
+
+
+@login_required
+def contrato_anexar_documento(request, pk, campo):
+    """Anexo dos documentos GED do contrato, enviado a partir do detail
+    (mesmo padrão do laudo_anexar_arquivo)."""
+    contrato = get_object_or_404(Contrato, pk=pk)
+    if campo not in CAMPOS_DOCUMENTO_CONTRATO:
+        raise Http404('Documento inválido.')
+    if request.method == 'POST':
+        arquivo = request.FILES.get('arquivo')
+        if arquivo:
+            setattr(contrato, campo, arquivo)
+            contrato.save(update_fields=[campo])
+            messages.success(request, 'Documento anexado ao contrato com sucesso.')
+        else:
+            messages.error(request, 'Selecione um arquivo para anexar.')
+    return redirect('contrato_detail', pk=pk)
 
 
 @login_required

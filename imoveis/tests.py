@@ -8,12 +8,15 @@ from django.template.loader import render_to_string
 from django.test import TestCase
 from django.urls import reverse
 
-from .forms import LaudoVistoriaForm, ReciboForm
+from .forms import ContratoForm, LaudoVistoriaForm, ReciboForm
 from .models import (
-    Contrato, Imovel, Inquilino, ItemVistoria, LaudoVistoria,
+    Contrato, Imovel, Inquilino, ItemVistoria, Lancamento, LaudoVistoria,
     Proprietario, Recibo, TestemunhaLaudo,
 )
-from .validators import validate_cpf, validate_cnpj, validate_cpf_cnpj
+from .validators import (
+    validate_cpf, validate_cnpj, validate_cpf_cnpj,
+    validate_rg_cpf, validate_telefone,
+)
 
 CPF_VALIDO = '529.982.247-25'
 CPF_VALIDO_2 = '111.444.777-35'
@@ -458,3 +461,142 @@ class GeracaoPdfViewTests(TestCase):
         resp = self.client.get(reverse('documentos'))
         self.assertEqual(resp.status_code, 200)
         self.assertNotIn(self.contrato, resp.context['contratos_gerados'])
+
+
+class ValidateRgCpfTests(TestCase):
+    """Módulo 01 — validate_rg_cpf (Fiador.rg_cpf)."""
+
+    def test_cpf_valido_aceito(self):
+        validate_rg_cpf(CPF_VALIDO)  # 11 dígitos → validado como CPF
+
+    def test_cpf_11_digitos_invalido_rejeitado(self):
+        with self.assertRaises(ValidationError):
+            validate_rg_cpf('529.982.247-26')  # DV errado
+
+    def test_rg_valido_aceito(self):
+        validate_rg_cpf('MG-12.345.678')  # não tem 11 dígitos → validado como RG
+
+    def test_rg_com_caractere_invalido_rejeitado(self):
+        with self.assertRaises(ValidationError):
+            validate_rg_cpf('12.345.678/9')  # "/" não é aceito no RG
+
+
+class ValidateTelefoneTests(TestCase):
+    """Módulo 02 — validate_telefone (Proprietario/Inquilino.telefone)."""
+
+    def test_fixo_10_digitos_com_mascara(self):
+        validate_telefone('(44) 3222-1111')
+
+    def test_celular_11_digitos_sem_mascara(self):
+        validate_telefone('44999998888')
+
+    def test_telefone_curto_rejeitado(self):
+        with self.assertRaises(ValidationError):
+            validate_telefone('123')
+
+    def test_proprietario_telefone_invalido_bloqueado(self):
+        proprietario = Proprietario(nome='Dona', cpf_cnpj=CPF_VALIDO_2, telefone='99')
+        with self.assertRaises(ValidationError):
+            proprietario.full_clean()
+
+
+class DiaVencimentoTests(TestCase):
+    """Módulo 03 — faixa 1..31 em Contrato.dia_vencimento."""
+
+    def setUp(self):
+        _, _, _, self.contrato = criar_base()
+
+    def test_dia_zero_rejeitado(self):
+        self.contrato.dia_vencimento = 0
+        with self.assertRaises(ValidationError):
+            self.contrato.full_clean()
+
+    def test_dia_32_rejeitado(self):
+        self.contrato.dia_vencimento = 32
+        with self.assertRaises(ValidationError):
+            self.contrato.full_clean()
+
+    def test_dias_validos_aceitos(self):
+        for dia in (1, 15, 31):
+            self.contrato.dia_vencimento = dia
+            self.contrato.full_clean()  # não deve levantar
+
+
+class DashboardFiltroTests(TestCase):
+    """Módulo 04 — filtro de período do Dashboard em dd/mm/aaaa."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester', password='x')
+        self.client.force_login(self.user)
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+        self.lanc_junho = Lancamento.objects.create(
+            contrato=self.contrato, tipo='aluguel', status='pago',
+            valor=Decimal('1500.00'), data_vencimento=date(2026, 6, 15),
+        )
+        self.lanc_agosto = Lancamento.objects.create(
+            contrato=self.contrato, tipo='aluguel', status='pendente',
+            valor=Decimal('1500.00'), data_vencimento=date(2026, 8, 15),
+        )
+
+    def test_filtro_datas_ddmmyyyy(self):
+        resp = self.client.get(reverse('dashboard'),
+                               {'data_inicio': '01/06/2026', 'data_fim': '30/06/2026'})
+        self.assertEqual(resp.status_code, 200)
+        ultimos = list(resp.context['ultimos_lancamentos'])
+        self.assertIn(self.lanc_junho, ultimos)
+        self.assertNotIn(self.lanc_agosto, ultimos)
+
+    def test_sem_filtro_lista_todos(self):
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        ultimos = list(resp.context['ultimos_lancamentos'])
+        self.assertIn(self.lanc_junho, ultimos)
+        self.assertIn(self.lanc_agosto, ultimos)
+
+    def test_campos_usam_flatpickr(self):
+        resp = self.client.get(reverse('dashboard'))
+        form = resp.context['filtro_form']
+        self.assertEqual(form.fields['data_inicio'].widget.attrs.get('data-flatpickr'), 'true')
+        self.assertEqual(form.fields['data_fim'].widget.attrs.get('data-flatpickr'), 'true')
+
+
+class ContratoDocumentoTests(TestCase):
+    """Módulos 07/08 — documentos GED do contrato anexados pelo detail."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester', password='x')
+        self.client.force_login(self.user)
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+
+    def test_form_nao_expoe_campos_de_documento(self):
+        form = ContratoForm()
+        for campo in ('comprovante_renda', 'contrato_social',
+                      'recibo_chaves', 'comprovante_anual'):
+            self.assertNotIn(campo, ContratoForm.Meta.fields)
+            self.assertNotIn(campo, form.fields)
+
+    def test_anexar_documento_campo_valido(self):
+        arquivo = SimpleUploadedFile('recibo_chaves.pdf', b'%PDF-1.4 fake', 'application/pdf')
+        resp = self.client.post(
+            reverse('contrato_anexar_documento', args=[self.contrato.pk, 'recibo_chaves']),
+            {'arquivo': arquivo})
+        self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
+        self.contrato.refresh_from_db()
+        self.assertTrue(self.contrato.recibo_chaves)
+        self.contrato.recibo_chaves.delete(save=False)
+
+    def test_anexar_documento_campo_fora_da_whitelist(self):
+        arquivo = SimpleUploadedFile('x.pdf', b'%PDF-1.4 fake', 'application/pdf')
+        resp = self.client.post(
+            reverse('contrato_anexar_documento', args=[self.contrato.pk, 'documento_gerado']),
+            {'arquivo': arquivo})
+        self.assertEqual(resp.status_code, 404)
+        self.contrato.refresh_from_db()
+        self.assertFalse(self.contrato.documento_gerado)
+
+    def test_anexar_sem_arquivo_nao_salva(self):
+        resp = self.client.post(
+            reverse('contrato_anexar_documento', args=[self.contrato.pk, 'recibo_chaves']), {})
+        self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
+        self.contrato.refresh_from_db()
+        self.assertFalse(self.contrato.recibo_chaves)

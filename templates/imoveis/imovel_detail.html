@@ -108,6 +108,23 @@
       </div>
     </div>
 
+    <!-- Planta/Projeto -->
+    {% if imovel.planta_projeto %}
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-map me-1"></i> Planta/Projeto</div>
+      <div class="section-card-body">
+        {% if planta_e_imagem %}
+        <a href="{{ imovel.planta_projeto.url }}" target="_blank">
+          <img src="{{ imovel.planta_projeto.url }}" class="img-fluid rounded mb-2" alt="Planta/Projeto do imóvel">
+        </a>
+        {% endif %}
+        <a href="{{ imovel.planta_projeto.url }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Abrir/Baixar Planta
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Notificações -->
     <div class="section-card mb-3">
       <div class="section-card-header">

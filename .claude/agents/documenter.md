@@ -7,7 +7,7 @@ description: |
 
   Este agente é exclusivamente responsável pela documentação.
 
-model: sonnet
+model: opus
 
 tools:
   - Read

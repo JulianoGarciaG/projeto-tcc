@@ -53,10 +53,10 @@ venv/Scripts/python manage.py createsuperuser
 | `Proprietario` | Dono do imóvel (`cpf_cnpj` validado) |
 | `Imovel` | Imóvel com `numero`/`complemento` e status `vago`/`ocupado` (gerenciado por signal); **não tem** `valor_aluguel` — o valor vem do contrato ativo |
 | `FotoImovel` | Fotos vinculadas ao imóvel |
-| `Inquilino` | Locatário (`faixa_renda` por salário mínimo; CPF/CNPJ/RG validados) |
-| `Contrato` | Contrato de locação (Imovel ↔ Inquilino); PDF gerado em `documento_gerado` |
-| `Fiador` | Fiadores do contrato |
-| `LaudoVistoria` | Laudo de vistoria (tipos `entrada`/`saida`); `documento_gerado` = PDF do sistema, `arquivo` = anexo do laudo assinado (upload só no detail) |
+| `Inquilino` | Locatário (`faixa_renda` em faixas de R$, não mais em salários mínimos; CPF/CNPJ/RG/telefone validados) |
+| `Contrato` | Contrato de locação (Imovel ↔ Inquilino); PDF gerado em `documento_gerado`; documentos GED (`comprovante_renda`/`contrato_social`/`recibo_chaves`/`comprovante_anual`) anexados individualmente pela tela de detalhe via `contrato_anexar_documento` (não fazem parte do form de criação/edição) |
+| `Fiador` | Fiadores do contrato (`rg_cpf` validado) |
+| `LaudoVistoria` | Laudo de vistoria (tipos `entrada`/`saida`); `contrato` é **obrigatório** (`PROTECT`) e o select é dependente do imóvel escolhido (endpoint `contratos_por_imovel_json`); `documento_gerado` = PDF do sistema, `arquivo` = anexo do laudo assinado (upload só no detail) |
 | `ComodoTemplate` / `ItemVistoriaTemplate` | Catálogo do checklist de vistoria (seed na migração 0004: 5 cômodos, 32 itens) |
 | `ItemVistoria` | Itens vistoriados de um laudo (estado bom/regular/ruim) |
 | `TestemunhaLaudo` | Testemunhas do laudo |
@@ -75,17 +75,18 @@ venv/Scripts/python manage.py createsuperuser
 
 ### Consolidado
 - **Rodada 1** (`PLANO_GERACAO_DOCUMENTOS.md`): geração de PDF para Contrato/Laudo/Recibo (xhtml2pdf), models `Recibo`/`ComodoTemplate`/`ItemVistoriaTemplate`/`ItemVistoria`/`TestemunhaLaudo`, CRUD de Recibos, seed do catálogo de vistoria.
-- **Rodada 2** (`PLANO_AJUSTES_RODADA2.md`, 25 itens, migrações 0005–0006): PDF deixou de ser automático (padrão PRG; botão "Regerar PDF" é o único gatilho); toasts Bootstrap para mensagens; colapso da sidebar no desktop (persistido em `localStorage`); máscaras IMask + Flatpickr; validação de CPF/CNPJ/RG; `Imovel.numero`/`complemento`; remoção de `Imovel.valor_aluguel`, `Proprietario.endereco`, `Contrato.arquivo`, `Recibo.proveniente_sitio`, tipo `periodica` de laudo e do módulo Entrada/Saída; `Inquilino.faixa_renda` + `observacoes`; select de contrato dependente do imóvel no laudo (endpoint `contratos_por_imovel_json`); Recibo com vínculos obrigatórios e período em duas datas; anexo do laudo assinado via `laudo_anexar_arquivo`.
-- Suíte de testes: **48 testes** em `imoveis/tests.py`, todos passando.
+- **Rodada 2** (`PLANO_AJUSTES_RODADA2.md`, 25 itens, migrações 0005–0006): PDF deixou de ser automático (padrão PRG; botão "Regerar PDF" é o único gatilho); toasts Bootstrap para mensagens; colapso da sidebar no desktop (persistido em `localStorage`) — **removido na Rodada 3, ver abaixo**; máscaras IMask + Flatpickr; validação de CPF/CNPJ/RG; `Imovel.numero`/`complemento`; remoção de `Imovel.valor_aluguel`, `Proprietario.endereco`, `Contrato.arquivo`, `Recibo.proveniente_sitio`, tipo `periodica` de laudo e do módulo Entrada/Saída; `Inquilino.faixa_renda` + `observacoes`; select de contrato dependente do imóvel no laudo (endpoint `contratos_por_imovel_json`); Recibo com vínculos obrigatórios e período em duas datas; anexo do laudo assinado via `laudo_anexar_arquivo`.
+- **Rodada 3** (`planner-docs/melhorias-validacao-visualizacao-documentos/` + `planner-docs/remover-colapso-sidebar-e-ajustar-logo/`, migração 0007–0008): novos validators `validate_rg_cpf` (`Fiador.rg_cpf`) e `validate_telefone` (`Proprietario.telefone`/`Inquilino.telefone`); `MinValueValidator(1)`/`MaxValueValidator(31)` em `Contrato.dia_vencimento`; filtro de período do Dashboard migrado para `DashboardFiltroForm` (Flatpickr dd/mm/aaaa, antes era `input type="date"` nativo); preview da Planta/Projeto na tela de detalhe do imóvel; aumento do espaço de assinatura no PDF do laudo; os 4 campos de documento GED do Contrato (`comprovante_renda`/`contrato_social`/`recibo_chaves`/`comprovante_anual`) saíram do `ContratoForm` e passaram a ser anexados na tela de detalhe via `contrato_anexar_documento` (mesmo padrão do `laudo_anexar_arquivo`); remoção completa do colapso da sidebar no desktop (sempre expandida — sem toggle, sem `localStorage`, sem `.sidebar-collapsed`/`.brand-compact`) e ajuste do CSS da logo (`#sidebar .sidebar-brand img`) para preencher a largura do container.
+- Suíte de testes: **66 testes** em `imoveis/tests.py`, todos passando.
 
 ### Pendente
-- Validação manual no navegador (checklist na seção 7 do `PLANO_AJUSTES_RODADA2.md`): colapso da sidebar, toasts, máscaras, datepickers, fluxos de PDF via botão.
+- Validação manual no navegador dos itens visuais/UX da Rodada 3 (datepicker do dashboard, preview da planta, espaço de assinatura do laudo, uploads de documento do contrato pelo detail).
 - Nenhuma rodada futura planejada ainda.
 
-### Convenções obrigatórias (estabelecidas nas Rodadas 1–2)
+### Convenções obrigatórias (estabelecidas nas Rodadas 1–3)
 - **PDF nunca é gerado ao salvar** — create/edit fazem redirect + toast; só as views `*_gerar_pdf` geram/baixam PDF.
 - **Campos de data novos** usam `_date_widget()` de `imoveis/forms.py` (Flatpickr dd/mm/yyyy); **moeda** usa `_moeda_widget()` + campo em `localized_fields` (aceita "1500,00"; máscara **sem** separador de milhar — `USE_THOUSAND_SEPARATOR` está desligado, não ligar).
-- **Documentos**: `imoveis/validators.py` tem `validate_cpf`, `validate_cnpj`, `validate_cpf_cnpj` (condicional 11/14 dígitos) e `validate_rg` — reutilizar, não duplicar.
+- **Documentos**: `imoveis/validators.py` tem `validate_cpf`, `validate_cnpj`, `validate_cpf_cnpj` (condicional 11/14 dígitos), `validate_rg`, `validate_rg_cpf` (condicional: 11 dígitos → CPF, senão RG — usado em `Fiador.rg_cpf`) e `validate_telefone` (exige 10 ou 11 dígitos incluindo DDD, com ou sem máscara — usado em `Proprietario.telefone`/`Inquilino.telefone`) — reutilizar, não duplicar.
 - **Checklist do laudo**: laudo novo exige `item_vistoria_formset_factory(extra=len(catalogo))`; `extra=0` renderiza 0 linhas e o checklist some.
 - **Encoding (Windows)**: nunca editar templates com `Get-Content`/`Set-Content` do PowerShell 5.1 — corrompe UTF-8. Usar o Edit tool.
 

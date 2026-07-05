@@ -29,31 +29,6 @@
         </div>
       </div>
 
-      <!-- Documentos GED -->
-      <div class="section-card mb-4">
-        <div class="section-card-header"><i class="bi bi-folder2-open me-1"></i> Documentos (GED)</div>
-        <div class="section-card-body">
-          <div class="row g-3">
-            <div class="col-md-6 campo-pf">
-              <label class="form-label">Comprovante de Renda <span class="badge bg-info text-dark small">PF</span></label>
-              {{ form.comprovante_renda }}
-            </div>
-            <div class="col-md-6 campo-pj" style="display:none;">
-              <label class="form-label">Contrato Social <span class="badge bg-warning text-dark small">PJ</span></label>
-              {{ form.contrato_social }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Recibo de Entrega de Chaves</label>
-              {{ form.recibo_chaves }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Comprovante Anual de Pagamento</label>
-              {{ form.comprovante_anual }}
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Fiadores -->
       <div class="section-card mb-4">
         <div class="section-card-header"><i class="bi bi-person-check me-1"></i> Fiador(es)</div>
@@ -94,23 +69,4 @@
     </form>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-(function () {
-  const tipoSelect = document.getElementById('{{ form.tipo_contrato.id_for_label }}');
-  const camposPF = document.querySelectorAll('.campo-pf');
-  const camposPJ = document.querySelectorAll('.campo-pj');
-
-  function toggleTipo() {
-    const isPJ = tipoSelect.value === 'PJ';
-    camposPF.forEach(el => el.style.display = isPJ ? 'none' : '');
-    camposPJ.forEach(el => el.style.display = isPJ ? '' : 'none');
-  }
-
-  toggleTipo();
-  tipoSelect.addEventListener('change', toggleTipo);
-})();
-</script>
 {% endblock %}

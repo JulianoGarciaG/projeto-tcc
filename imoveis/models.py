@@ -1,6 +1,10 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from .validators import validate_cpf, validate_cnpj, validate_cpf_cnpj, validate_rg
+from .validators import (
+    validate_cpf, validate_cnpj, validate_cpf_cnpj, validate_rg,
+    validate_rg_cpf, validate_telefone,
+)
 
 
 class Proprietario(models.Model):
@@ -8,7 +12,7 @@ class Proprietario(models.Model):
     cpf_cnpj = models.CharField(max_length=20, unique=True, validators=[validate_cpf_cnpj],
                                 verbose_name='CPF/CNPJ')
     email = models.EmailField(blank=True)
-    telefone = models.CharField(max_length=20, blank=True)
+    telefone = models.CharField(max_length=20, blank=True, validators=[validate_telefone])
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -100,7 +104,7 @@ class Inquilino(models.Model):
     cpf = models.CharField(max_length=14, unique=True, validators=[validate_cpf], verbose_name='CPF')
     cnpj = models.CharField(max_length=18, blank=True, validators=[validate_cnpj], verbose_name='CNPJ')
     email = models.EmailField(blank=True)
-    telefone = models.CharField(max_length=20, blank=True)
+    telefone = models.CharField(max_length=20, blank=True, validators=[validate_telefone])
     rg = models.CharField(max_length=20, blank=True, validators=[validate_rg], verbose_name='RG')
     qualificacao = models.CharField(max_length=300, blank=True, verbose_name='Qualificação',
                                     help_text='Estado civil, profissão, nacionalidade')
@@ -138,7 +142,9 @@ class Contrato(models.Model):
     data_inicio = models.DateField(verbose_name='Data de Início')
     data_fim = models.DateField(verbose_name='Data de Término')
     valor_mensal = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Valor Mensal')
-    dia_vencimento = models.PositiveSmallIntegerField(default=10, verbose_name='Dia de Vencimento')
+    dia_vencimento = models.PositiveSmallIntegerField(
+        default=10, verbose_name='Dia de Vencimento',
+        validators=[MinValueValidator(1), MaxValueValidator(31)])
     # Documentos GED vinculados ao contrato
     comprovante_renda = models.FileField(upload_to='comprovantes_renda/', blank=True, null=True,
                                          verbose_name='Comprovante de Renda (PF)')
@@ -166,7 +172,7 @@ class Fiador(models.Model):
     contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='fiadores')
     nome = models.CharField(max_length=200)
     qualificacao = models.CharField(max_length=300, blank=True, verbose_name='Qualificação')
-    rg_cpf = models.CharField(max_length=20, verbose_name='RG/CPF')
+    rg_cpf = models.CharField(max_length=20, validators=[validate_rg_cpf], verbose_name='RG/CPF')
     certidao_onus = models.FileField(upload_to='certidoes/', blank=True, null=True,
                                      verbose_name='Certidão de Ônus')
     garantia = models.CharField(max_length=200, blank=True, verbose_name='Garantia')

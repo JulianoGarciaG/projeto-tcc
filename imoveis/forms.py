@@ -27,6 +27,12 @@ def _moeda_widget():
 _telefone_attrs = {**_ctrl, 'data-mask': 'telefone', 'placeholder': '(00) 00000-0000'}
 
 
+class DashboardFiltroForm(forms.Form):
+    """Filtro de período do Dashboard — datas em dd/mm/aaaa (Flatpickr)."""
+    data_inicio = forms.DateField(required=False, widget=_date_widget())
+    data_fim = forms.DateField(required=False, widget=_date_widget())
+
+
 class ProprietarioForm(forms.ModelForm):
     class Meta:
         model = Proprietario
@@ -121,8 +127,7 @@ class ContratoForm(forms.ModelForm):
         fields = [
             'imovel', 'inquilino', 'tipo_contrato', 'status',
             'data_inicio', 'data_fim', 'valor_mensal', 'dia_vencimento',
-            'comprovante_renda', 'contrato_social',
-            'recibo_chaves', 'comprovante_anual', 'observacoes',
+            'observacoes',
         ]
         widgets = {
             'imovel': forms.Select(attrs=_sel),
@@ -131,10 +136,6 @@ class ContratoForm(forms.ModelForm):
             'status': forms.Select(attrs=_sel),
             'valor_mensal': forms.NumberInput(attrs={**_ctrl, 'step': '0.01'}),
             'dia_vencimento': forms.NumberInput(attrs={**_ctrl, 'min': 1, 'max': 31}),
-            'comprovante_renda': forms.ClearableFileInput(attrs=_ctrl),
-            'contrato_social': forms.ClearableFileInput(attrs=_ctrl),
-            'recibo_chaves': forms.ClearableFileInput(attrs=_ctrl),
-            'comprovante_anual': forms.ClearableFileInput(attrs=_ctrl),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 3}),
         }
 

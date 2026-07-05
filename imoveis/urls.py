@@ -40,6 +40,8 @@ urlpatterns = [
     path('contratos/<int:pk>/editar/', views.contrato_edit, name='contrato_edit'),
     path('contratos/<int:pk>/excluir/', views.contrato_delete, name='contrato_delete'),
     path('contratos/<int:pk>/gerar-pdf/', views.contrato_gerar_pdf, name='contrato_gerar_pdf'),
+    path('contratos/<int:pk>/anexar/<str:campo>/', views.contrato_anexar_documento,
+         name='contrato_anexar_documento'),
     path('contratos/<int:contrato_pk>/renovar/', views.renovacao_create, name='renovacao_create'),
     path('contratos/<int:contrato_pk>/distrato/', views.distrato_create, name='distrato_create'),
 

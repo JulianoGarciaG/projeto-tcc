@@ -67,3 +67,27 @@ def validate_rg(value):
     """
     if not re.fullmatch(r'[A-Za-z0-9.\-]*', str(value)):
         raise ValidationError('RG deve conter apenas letras, números, "." e "-".')
+
+
+def validate_rg_cpf(value):
+    """Valida RG ou CPF conforme o conteúdo do campo.
+
+    Se o valor tiver exatamente 11 dígitos numéricos, valida como CPF
+    (dígitos verificadores); caso contrário, valida o formato como RG.
+    """
+    digitos = re.sub(r'\D', '', str(value))
+    if len(digitos) == 11:
+        validate_cpf(value)
+    else:
+        validate_rg(value)
+
+
+def validate_telefone(value):
+    """Valida telefone brasileiro pela quantidade de dígitos.
+
+    Aceita 10 dígitos (fixo com DDD) ou 11 dígitos (celular com DDD),
+    com ou sem máscara — ex.: (44) 99999-8888 ou 4432221111.
+    """
+    digitos = re.sub(r'\D', '', str(value))
+    if len(digitos) not in (10, 11):
+        raise ValidationError('Telefone deve conter 10 ou 11 dígitos, incluindo o DDD.')

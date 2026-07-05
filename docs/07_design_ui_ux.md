@@ -7,18 +7,18 @@
 
 **Empresa:** Shelter
 
-![Logo Shelter](../assets/Shelter_LOGO.svg)
+![Logo Shelter](../static/assets/Shelter_LOGO.svg)
 
 ### Diretrizes de Aplicação da Logo
 
-| Contexto | Versão | Observações |
+| Contexto | Arquivo | Observações |
 |---|---|---|
-| Sidebar (topo) | Completa (SVG) | Sobre fundo escuro `#3A3A3A` — logo já usa cores compatíveis |
-| Login (painel esquerdo) | Completa (SVG) | Sobre fundo escuro `#3A3A3A` |
-| Topbar | Reduzida ou só símbolo | Sobre fundo claro `#F7F7F7` |
-| Favicon | Símbolo isolado | Exportar apenas o elemento gráfico dourado |
+| Sidebar (topo, sempre expandida) | `Shelter_LOGO_white.svg` | Sobre fundo escuro `#3A3A3A`; preenche a largura do container `.sidebar-brand` (`width: 160%`, `overflow: hidden` no container) |
+| Login (painel esquerdo) | `Shelter_LOGO_white.svg` | Sobre fundo escuro `#3A3A3A` |
+| PDFs (`templates/documentos/base_pdf.html`) | `Shelter_LOGO.jpg` | Versão rasterizada, compatível com xhtml2pdf |
+| Favicon | Símbolo isolado | Exportar apenas o elemento gráfico dourado (ainda não implementado) |
 
-> O arquivo da logo está em `assets/Shelter_LOGO.svg`.
+> Os arquivos da logo estão em `static/assets/` (`Shelter_LOGO.svg`, `Shelter_LOGO_white.svg`, `Shelter_LOGO.jpg`, `Shelter_LOGO_white.jpg`).
 > Nunca distorcer proporções. Nunca aplicar sobre fundos que conflitem com `#F2B441` ou `#3A3A3A`.
 
 ### Personalidade
@@ -92,6 +92,8 @@ O sistema deve transmitir uma experiência **moderna e limpa** — interface sem
 
 ## 5. Sidebar
 
+A sidebar é **sempre expandida no desktop** (o colapso introduzido na Rodada 2 foi removido; não há botão de toggle nem persistência em `localStorage` para desktop — apenas o toggle hamburger no mobile, ver seção 12).
+
 ### Especificações
 - **Fundo:** `#3A3A3A`
 - **Texto:** `#FFFFFF` com opacidade `0.75`
@@ -111,7 +113,7 @@ O sistema deve transmitir uma experiência **moderna e limpa** — interface sem
 
 ### Seções do Menu
 ```
-[Logo / Nome da empresa]   ⚠️ Inserir
+[Logo Shelter]
 
 ─── Cadastros ───
   Imóveis
@@ -122,6 +124,7 @@ O sistema deve transmitir uma experiência **moderna e limpa** — interface sem
   Contratos
   Laudos de Vistoria
   Financeiro
+  Recibos
 
 ─── Documentos ───
   GED — Documentos
@@ -285,7 +288,7 @@ Padrão: pill arredondado (`border-radius: 999px`), padding `0.25rem 0.65rem`, G
 ## 16. Página de Login
 
 - Layout **split**: dois painéis lado a lado
-- **Painel esquerdo:** fundo `#3A3A3A`, elementos decorativos (blobs, grade de pontos), texto de boas-vindas, logo da empresa ⚠️ Inserir
+- **Painel esquerdo:** fundo `#3A3A3A`, elementos decorativos (blobs, grade de pontos), texto de boas-vindas, logo da empresa (`Shelter_LOGO_white.svg`)
 - **Painel direito:** fundo `#F7F7F7`, formulário centralizado com inputs estilizados
 - Border-radius do container: `8px` (desktop), sem radius (mobile)
 - No mobile: apenas o painel direito (formulário) é exibido
