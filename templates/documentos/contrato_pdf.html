@@ -1,0 +1,63 @@
+{% extends 'documentos/base_pdf.html' %}
+{% load imoveis_tags %}
+
+{% block titulo_doc %}Contrato de Locação de Imóvel{% endblock %}
+
+{% block conteudo %}
+<h2 class="secao">Informações do Imóvel</h2>
+<table class="dados">
+  <tr><td class="rotulo">Tipo</td><td>{{ contrato.imovel.get_tipo_display }}</td></tr>
+  <tr><td class="rotulo">Endereço</td><td>{{ contrato.imovel.endereco }}{% if contrato.imovel.bairro %}, {{ contrato.imovel.bairro }}{% endif %}{% if contrato.imovel.cidade %} — {{ contrato.imovel.cidade }}{% endif %}</td></tr>
+  <tr><td class="rotulo">Proprietário (Locador)</td><td>{{ contrato.imovel.proprietario.nome }}</td></tr>
+  <tr><td class="rotulo">CPF/CNPJ do Locador</td><td>{{ contrato.imovel.proprietario.cpf_cnpj }}</td></tr>
+  {% if contrato.imovel.area_m2 %}<tr><td class="rotulo">Área</td><td>{{ contrato.imovel.area_m2 }} m²</td></tr>{% endif %}
+  {% if contrato.imovel.matricula %}<tr><td class="rotulo">Matrícula</td><td>{{ contrato.imovel.matricula }}</td></tr>{% endif %}
+</table>
+
+<h2 class="secao">Informações do Locatário ({{ contrato.get_tipo_contrato_display }})</h2>
+<table class="dados">
+  <tr><td class="rotulo">Nome{% if contrato.tipo_contrato == 'PJ' %} / Razão Social{% endif %}</td><td>{{ contrato.inquilino.nome }}</td></tr>
+  {% if contrato.tipo_contrato == 'PJ' %}
+    <tr><td class="rotulo">CNPJ</td><td>{{ contrato.inquilino.cnpj|default:'—' }}</td></tr>
+    <tr><td class="rotulo">CPF do Responsável</td><td>{{ contrato.inquilino.cpf }}</td></tr>
+  {% else %}
+    <tr><td class="rotulo">CPF</td><td>{{ contrato.inquilino.cpf }}</td></tr>
+    {% if contrato.inquilino.rg %}<tr><td class="rotulo">RG</td><td>{{ contrato.inquilino.rg }}</td></tr>{% endif %}
+  {% endif %}
+  {% if contrato.inquilino.qualificacao %}<tr><td class="rotulo">Qualificação</td><td>{{ contrato.inquilino.qualificacao }}</td></tr>{% endif %}
+  {% if contrato.inquilino.telefone %}<tr><td class="rotulo">Telefone</td><td>{{ contrato.inquilino.telefone }}</td></tr>{% endif %}
+  {% if contrato.inquilino.email %}<tr><td class="rotulo">E-mail</td><td>{{ contrato.inquilino.email }}</td></tr>{% endif %}
+</table>
+
+<h2 class="secao">Condições da Locação</h2>
+<table class="dados">
+  <tr><td class="rotulo">Valor do Aluguel</td><td>R$ {{ contrato.valor_mensal|brl }} mensais</td></tr>
+  <tr><td class="rotulo">Dia de Pagamento</td><td>Dia {{ contrato.dia_vencimento }} de cada mês</td></tr>
+  <tr><td class="rotulo">Início do Contrato</td><td>{{ contrato.data_inicio|date:"d/m/Y" }}</td></tr>
+  <tr><td class="rotulo">Término do Contrato</td><td>{{ contrato.data_fim|date:"d/m/Y" }}</td></tr>
+</table>
+
+{% if contrato.fiadores.all %}
+<h2 class="secao">Fiador(es)</h2>
+<table class="dados">
+  {% for f in contrato.fiadores.all %}
+  <tr>
+    <td class="rotulo">{{ f.nome }}</td>
+    <td>RG/CPF: {{ f.rg_cpf }}{% if f.qualificacao %} — {{ f.qualificacao }}{% endif %}{% if f.garantia %} — Garantia: {{ f.garantia }}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+{% if contrato.observacoes %}
+<h2 class="secao">Observações</h2>
+<div class="destaque">{{ contrato.observacoes|linebreaksbr }}</div>
+{% endif %}
+
+<div class="assinatura">
+  <div class="linha-assinatura">{{ contrato.imovel.proprietario.nome }} — Locador(a)</div>
+</div>
+<div class="assinatura">
+  <div class="linha-assinatura">{{ contrato.inquilino.nome }} — Locatário(a)</div>
+</div>
+{% endblock %}

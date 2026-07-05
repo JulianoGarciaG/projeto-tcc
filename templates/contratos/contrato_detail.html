@@ -8,6 +8,10 @@
 <div class="mb-3 d-flex gap-2 flex-wrap">
   <a href="{% url 'contrato_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a>
   <a href="{% url 'contrato_edit' contrato.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i> Editar</a>
+  <a href="{% url 'contrato_gerar_pdf' contrato.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Regerar Contrato (PDF)</a>
+  {% if contrato.documento_gerado %}
+  <a href="{{ contrato.documento_gerado.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i> Contrato Gerado (PDF)</a>
+  {% endif %}
   {% if contrato.arquivo %}
   <a href="{{ contrato.arquivo.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Contrato PDF</a>
   {% endif %}
@@ -53,12 +57,13 @@
       <div class="section-card-header"><i class="bi bi-folder2-open me-1"></i> Documentos</div>
       <div class="section-card-body">
         <ul class="list-unstyled small mb-0">
+          {% if contrato.documento_gerado %}<li><a href="{{ contrato.documento_gerado.url }}" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i> Contrato Gerado (PDF)</a></li>{% endif %}
           {% if contrato.arquivo %}<li><a href="{{ contrato.arquivo.url }}" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i> Contrato PDF</a></li>{% endif %}
           {% if contrato.comprovante_renda %}<li><a href="{{ contrato.comprovante_renda.url }}" target="_blank"><i class="bi bi-file-earmark me-1"></i> Comprovante de Renda</a></li>{% endif %}
           {% if contrato.contrato_social %}<li><a href="{{ contrato.contrato_social.url }}" target="_blank"><i class="bi bi-file-earmark me-1"></i> Contrato Social</a></li>{% endif %}
           {% if contrato.recibo_chaves %}<li><a href="{{ contrato.recibo_chaves.url }}" target="_blank"><i class="bi bi-key me-1"></i> Recibo de Chaves</a></li>{% endif %}
           {% if contrato.comprovante_anual %}<li><a href="{{ contrato.comprovante_anual.url }}" target="_blank"><i class="bi bi-calendar-check me-1"></i> Comprovante Anual</a></li>{% endif %}
-          {% if not contrato.arquivo and not contrato.comprovante_renda and not contrato.contrato_social and not contrato.recibo_chaves and not contrato.comprovante_anual %}
+          {% if not contrato.documento_gerado and not contrato.arquivo and not contrato.comprovante_renda and not contrato.contrato_social and not contrato.recibo_chaves and not contrato.comprovante_anual %}
           <li class="text-muted">Nenhum documento anexado.</li>
           {% endif %}
         </ul>

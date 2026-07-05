@@ -3,6 +3,7 @@ from django.forms import inlineformset_factory
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato, Saida, Entrada,
+    Recibo, ItemVistoria, TestemunhaLaudo,
 )
 
 _ctrl = {'class': 'form-control'}
@@ -143,16 +144,58 @@ FiadorFormSet = inlineformset_factory(
 class LaudoVistoriaForm(forms.ModelForm):
     class Meta:
         model = LaudoVistoria
-        fields = ['imovel', 'contrato', 'tipo', 'data', 'responsavel', 'observacoes', 'arquivo']
+        fields = ['imovel', 'contrato', 'tipo', 'data', 'responsavel',
+                  'local_assinatura', 'data_assinatura', 'observacoes', 'arquivo']
         widgets = {
             'imovel': forms.Select(attrs=_sel),
             'contrato': forms.Select(attrs=_sel),
             'tipo': forms.Select(attrs=_sel),
             'data': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
             'responsavel': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome do vistoriador'}),
+            'local_assinatura': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Cidade da assinatura'}),
+            'data_assinatura': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 4}),
             'arquivo': forms.ClearableFileInput(attrs=_ctrl),
         }
+
+
+class ItemVistoriaForm(forms.ModelForm):
+    class Meta:
+        model = ItemVistoria
+        fields = ['comodo', 'item', 'estado', 'observacao', 'ordem']
+        widgets = {
+            'comodo': forms.HiddenInput(),
+            'item': forms.HiddenInput(),
+            'ordem': forms.HiddenInput(),
+            'estado': forms.Select(attrs=_sel),
+            'observacao': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Observação (opcional)'}),
+        }
+
+
+ItemVistoriaFormSet = inlineformset_factory(
+    LaudoVistoria, ItemVistoria,
+    form=ItemVistoriaForm,
+    extra=0,
+    can_delete=True,
+)
+
+
+class TestemunhaLaudoForm(forms.ModelForm):
+    class Meta:
+        model = TestemunhaLaudo
+        fields = ['nome', 'cpf']
+        widgets = {
+            'nome': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome completo'}),
+            'cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': '000.000.000-00'}),
+        }
+
+
+TestemunhaFormSet = inlineformset_factory(
+    LaudoVistoria, TestemunhaLaudo,
+    form=TestemunhaLaudoForm,
+    extra=2,
+    can_delete=True,
+)
 
 
 class LancamentoForm(forms.ModelForm):
@@ -241,3 +284,39 @@ class EntradaForm(forms.ModelForm):
             'comprovante': forms.ClearableFileInput(attrs=_ctrl),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 2}),
         }
+
+
+class ReciboForm(forms.ModelForm):
+    class Meta:
+        model = Recibo
+        fields = [
+            'imovel', 'contrato', 'parcela_atual', 'parcela_total',
+            'valor_aluguel', 'valor_impostos', 'valor_seguros', 'valor_condominio',
+            'quem_pagou', 'proveniente_sitio', 'periodo_referente', 'vencido_em',
+            'quantia', 'assinante_nome', 'assinante_cpf', 'data_assinatura',
+        ]
+        widgets = {
+            'imovel': forms.Select(attrs=_sel),
+            'contrato': forms.Select(attrs=_sel),
+            'parcela_atual': forms.NumberInput(attrs={**_ctrl, 'min': 1, 'placeholder': 'Nº'}),
+            'parcela_total': forms.NumberInput(attrs={**_ctrl, 'min': 1, 'placeholder': 'Total'}),
+            'valor_aluguel': forms.NumberInput(attrs={**_ctrl, 'step': '0.01', 'min': 0, 'placeholder': '0,00'}),
+            'valor_impostos': forms.NumberInput(attrs={**_ctrl, 'step': '0.01', 'min': 0, 'placeholder': '0,00'}),
+            'valor_seguros': forms.NumberInput(attrs={**_ctrl, 'step': '0.01', 'min': 0, 'placeholder': '0,00'}),
+            'valor_condominio': forms.NumberInput(attrs={**_ctrl, 'step': '0.01', 'min': 0, 'placeholder': '0,00'}),
+            'quem_pagou': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome de quem pagou'}),
+            'proveniente_sitio': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Ex: Apartamento 21C, Prédio Maranhão'}),
+            'periodo_referente': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Ex: 01/06/2026 a 30/06/2026'}),
+            'vencido_em': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
+            'quantia': forms.NumberInput(attrs={**_ctrl, 'step': '0.01', 'min': 0, 'placeholder': '0,00'}),
+            'assinante_nome': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome completo'}),
+            'assinante_cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': '000.000.000-00'}),
+            'data_assinatura': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        preenchidos = [v for v in cleaned.values() if v not in (None, '')]
+        if not preenchidos:
+            raise forms.ValidationError('Preencha ao menos um campo para emitir o recibo.')
+        return cleaned

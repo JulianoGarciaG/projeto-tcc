@@ -1,5 +1,7 @@
 from django.db import models
 
+from .validators import validate_cpf
+
 
 class Proprietario(models.Model):
     nome = models.CharField(max_length=200)
@@ -135,6 +137,8 @@ class Contrato(models.Model):
                                      verbose_name='Recibo de Entrega de Chaves')
     comprovante_anual = models.FileField(upload_to='contratos/comprovante_anual/', blank=True, null=True,
                                          verbose_name='Comprovante Anual de Pagamento')
+    documento_gerado = models.FileField(upload_to='contratos/gerados/', blank=True, null=True,
+                                        verbose_name='Contrato gerado (PDF)')
     observacoes = models.TextField(blank=True, verbose_name='Observações')
     criado_em = models.DateTimeField(auto_now_add=True)
 
@@ -172,12 +176,16 @@ class LaudoVistoria(models.Model):
     ]
 
     imovel = models.ForeignKey(Imovel, on_delete=models.CASCADE, related_name='laudos')
-    contrato = models.ForeignKey(Contrato, on_delete=models.SET_NULL, null=True, blank=True, related_name='laudos')
+    contrato = models.ForeignKey(Contrato, on_delete=models.PROTECT, related_name='laudos')
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
     data = models.DateField()
     responsavel = models.CharField(max_length=200, verbose_name='Responsável pela Vistoria')
     observacoes = models.TextField(blank=True, verbose_name='Observações')
+    local_assinatura = models.CharField(max_length=200, blank=True, verbose_name='Local da Assinatura')
+    data_assinatura = models.DateField(null=True, blank=True, verbose_name='Data da Assinatura')
     arquivo = models.FileField(upload_to='laudos/', blank=True, null=True, verbose_name='Laudo em PDF')
+    documento_gerado = models.FileField(upload_to='laudos/gerados/', blank=True, null=True,
+                                        verbose_name='Laudo gerado (PDF)')
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -185,8 +193,90 @@ class LaudoVistoria(models.Model):
         verbose_name_plural = 'Laudos de Vistoria'
         ordering = ['-data']
 
+    def resumo_vistoria(self):
+        """Resumo automático calculado a partir dos itens (nunca digitado)."""
+        itens = self.itens.all()
+        return {
+            'total': itens.count(),
+            'bom': itens.filter(estado='bom').count(),
+            'regular': itens.filter(estado='regular').count(),
+            'ruim': itens.filter(estado='ruim').count(),
+        }
+
+    def locador_nome(self):
+        return self.imovel.proprietario.nome
+
+    def locatario_nome(self):
+        return self.contrato.inquilino.nome
+
     def __str__(self):
         return f'{self.get_tipo_display()} — {self.imovel} ({self.data})'
+
+
+class ComodoTemplate(models.Model):
+    """Catálogo configurável de cômodos padrão da vistoria (editável no admin)."""
+    nome = models.CharField(max_length=100)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Cômodo (Modelo de Vistoria)'
+        verbose_name_plural = 'Cômodos (Modelo de Vistoria)'
+        ordering = ['ordem', 'nome']
+
+    def __str__(self):
+        return self.nome
+
+
+class ItemVistoriaTemplate(models.Model):
+    """Item avaliável de um cômodo do catálogo (ex: paredes e pintura)."""
+    comodo = models.ForeignKey(ComodoTemplate, on_delete=models.CASCADE, related_name='itens')
+    nome = models.CharField(max_length=150)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Item (Modelo de Vistoria)'
+        verbose_name_plural = 'Itens (Modelo de Vistoria)'
+        ordering = ['comodo__ordem', 'ordem', 'nome']
+
+    def __str__(self):
+        return f'{self.comodo.nome} — {self.nome}'
+
+
+class ItemVistoria(models.Model):
+    """Item avaliado em um laudo (snapshot do catálogo na data da vistoria)."""
+    ESTADO_CHOICES = [
+        ('bom', 'Bom'),
+        ('regular', 'Regular'),
+        ('ruim', 'Ruim'),
+    ]
+
+    laudo = models.ForeignKey(LaudoVistoria, on_delete=models.CASCADE, related_name='itens')
+    comodo = models.CharField(max_length=100, verbose_name='Cômodo')
+    item = models.CharField(max_length=150, verbose_name='Item')
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES)
+    observacao = models.CharField(max_length=300, blank=True, verbose_name='Observação')
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Item de Vistoria'
+        verbose_name_plural = 'Itens de Vistoria'
+        ordering = ['ordem', 'pk']
+
+    def __str__(self):
+        return f'{self.comodo} — {self.item} ({self.get_estado_display()})'
+
+
+class TestemunhaLaudo(models.Model):
+    laudo = models.ForeignKey(LaudoVistoria, on_delete=models.CASCADE, related_name='testemunhas')
+    nome = models.CharField(max_length=200)
+    cpf = models.CharField(max_length=14, blank=True, validators=[validate_cpf], verbose_name='CPF')
+
+    class Meta:
+        verbose_name = 'Testemunha do Laudo'
+        verbose_name_plural = 'Testemunhas do Laudo'
+
+    def __str__(self):
+        return f'{self.nome} (Testemunha do Laudo #{self.laudo_id})'
 
 
 class Lancamento(models.Model):
@@ -362,3 +452,50 @@ class Entrada(models.Model):
 
     def __str__(self):
         return f'{self.get_tipo_display()} — R$ {self.valor} ({self.imovel})'
+
+
+class Recibo(models.Model):
+    """Recibo de pagamento — quase todos os campos opcionais.
+
+    No PDF aparecem apenas os campos preenchidos. `quantia` é o valor total
+    recebido; os valores de aluguel/impostos/seguros/condomínio são as
+    parcelas que compõem esse total (ver somatorio()).
+    """
+    imovel = models.ForeignKey(Imovel, on_delete=models.SET_NULL, null=True, blank=True, related_name='recibos')
+    contrato = models.ForeignKey(Contrato, on_delete=models.SET_NULL, null=True, blank=True, related_name='recibos')
+    parcela_atual = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='Parcela Atual')
+    parcela_total = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='Total de Parcelas')
+    valor_aluguel = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                        verbose_name='Aluguel')
+    valor_impostos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                         verbose_name='Impostos')
+    valor_seguros = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                        verbose_name='Seguros')
+    valor_condominio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                           verbose_name='Condomínio')
+    quem_pagou = models.CharField(max_length=200, blank=True, verbose_name='Quem Pagou')
+    proveniente_sitio = models.CharField(max_length=300, blank=True, verbose_name='Proveniente do Sítio',
+                                         help_text='Imóvel de origem do valor. Ex: Apartamento 21C, Prédio Maranhão')
+    periodo_referente = models.CharField(max_length=200, blank=True, verbose_name='Correspondente ao Período de')
+    vencido_em = models.DateField(null=True, blank=True, verbose_name='Vencido em')
+    quantia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                  verbose_name='Quantia de')
+    assinante_nome = models.CharField(max_length=200, blank=True, verbose_name='Nome de Quem Assinou')
+    assinante_cpf = models.CharField(max_length=14, blank=True, validators=[validate_cpf],
+                                     verbose_name='CPF de Quem Assinou')
+    data_assinatura = models.DateField(null=True, blank=True, verbose_name='Data da Assinatura')
+    arquivo = models.FileField(upload_to='recibos/', blank=True, null=True, verbose_name='Recibo gerado (PDF)')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Recibo'
+        verbose_name_plural = 'Recibos'
+        ordering = ['-criado_em']
+
+    def somatorio(self):
+        """Soma das parcelas preenchidas que constituem a quantia."""
+        valores = [self.valor_aluguel, self.valor_impostos, self.valor_seguros, self.valor_condominio]
+        return sum(v for v in valores if v)
+
+    def __str__(self):
+        return f'Recibo #{self.pk} — {self.imovel or self.quem_pagou or "sem vínculo"}'

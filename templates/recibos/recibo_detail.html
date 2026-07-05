@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load imoveis_tags %}
+{% block title %}Recibo #{{ recibo.pk }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-receipt me-2"></i>Recibo #{{ recibo.pk }}{% endblock %}
+{% block nav_recibos %}active{% endblock %}
+
+{% block content %}
+<div class="mb-3 d-flex gap-2 flex-wrap">
+  <a href="{% url 'recibo_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a>
+  <a href="{% url 'recibo_edit' recibo.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i> Editar</a>
+  <a href="{% url 'recibo_gerar_pdf' recibo.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Regerar PDF</a>
+  {% if recibo.arquivo %}
+  <a href="{{ recibo.arquivo.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i> Recibo Gerado (PDF)</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-info-circle me-1"></i> Dados do Recibo</div>
+      <div class="section-card-body">
+        <dl class="row mb-0 small">
+          {% if recibo.imovel %}<dt class="col-5 text-muted">Imóvel</dt><dd class="col-7">{{ recibo.imovel.endereco }}</dd>{% endif %}
+          {% if recibo.contrato %}<dt class="col-5 text-muted">Contrato</dt><dd class="col-7">#{{ recibo.contrato.pk }} — {{ recibo.contrato.inquilino.nome }}</dd>{% endif %}
+          {% if recibo.parcela_atual %}<dt class="col-5 text-muted">Parcela</dt><dd class="col-7">{{ recibo.parcela_atual }}{% if recibo.parcela_total %}/{{ recibo.parcela_total }}{% endif %}</dd>{% endif %}
+          {% if recibo.quem_pagou %}<dt class="col-5 text-muted">Quem Pagou</dt><dd class="col-7">{{ recibo.quem_pagou }}</dd>{% endif %}
+          {% if recibo.proveniente_sitio %}<dt class="col-5 text-muted">Proveniente do Sítio</dt><dd class="col-7">{{ recibo.proveniente_sitio }}</dd>{% endif %}
+          {% if recibo.periodo_referente %}<dt class="col-5 text-muted">Período</dt><dd class="col-7">{{ recibo.periodo_referente }}</dd>{% endif %}
+          {% if recibo.vencido_em %}<dt class="col-5 text-muted">Vencido em</dt><dd class="col-7">{{ recibo.vencido_em|date:"d/m/Y" }}</dd>{% endif %}
+          {% if recibo.assinante_nome %}<dt class="col-5 text-muted">Assinante</dt><dd class="col-7">{{ recibo.assinante_nome }}</dd>{% endif %}
+          {% if recibo.assinante_cpf %}<dt class="col-5 text-muted">CPF Assinante</dt><dd class="col-7">{{ recibo.assinante_cpf }}</dd>{% endif %}
+          {% if recibo.data_assinatura %}<dt class="col-5 text-muted">Data Assinatura</dt><dd class="col-7">{{ recibo.data_assinatura|date:"d/m/Y" }}</dd>{% endif %}
+          <dt class="col-5 text-muted">Emitido em</dt><dd class="col-7">{{ recibo.criado_em|date:"d/m/Y H:i" }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-cash-coin me-1"></i> Valores</div>
+      <div class="section-card-body">
+        <table class="table table-sm mb-0 small">
+          <tbody>
+            {% if recibo.valor_aluguel %}<tr><td>Aluguel</td><td class="text-end">R$ {{ recibo.valor_aluguel|brl }}</td></tr>{% endif %}
+            {% if recibo.valor_impostos %}<tr><td>Impostos</td><td class="text-end">R$ {{ recibo.valor_impostos|brl }}</td></tr>{% endif %}
+            {% if recibo.valor_seguros %}<tr><td>Seguros</td><td class="text-end">R$ {{ recibo.valor_seguros|brl }}</td></tr>{% endif %}
+            {% if recibo.valor_condominio %}<tr><td>Condomínio</td><td class="text-end">R$ {{ recibo.valor_condominio|brl }}</td></tr>{% endif %}
+            <tr class="table-light"><th>Somatório</th><th class="text-end">R$ {{ recibo.somatorio|brl }}</th></tr>
+            {% if recibo.quantia %}<tr class="table-light"><th>Quantia (total recebido)</th><th class="text-end">R$ {{ recibo.quantia|brl }}</th></tr>{% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

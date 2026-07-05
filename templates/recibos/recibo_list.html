@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load imoveis_tags %}
+{% block title %}Recibos — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-receipt me-2"></i>Recibos{% endblock %}
+{% block nav_recibos %}active{% endblock %}
+
+{% block content %}
+<div class="section-card mb-4">
+  <div class="section-card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-9"><label class="form-label">Buscar</label><input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Quem pagou, assinante ou endereço..."></div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Filtrar</button>
+        <a href="{% url 'recibo_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="text-muted small">{{ recibos.count }} recibo(s)</span>
+  <a href="{% url 'recibo_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Novo Recibo</a>
+</div>
+
+<div class="section-card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr><th>#</th><th>Imóvel</th><th>Quem Pagou</th><th>Quantia</th><th>Emitido em</th><th>PDF</th><th class="text-end">Ações</th></tr>
+      </thead>
+      <tbody>
+        {% for r in recibos %}
+        <tr>
+          <td class="fw-semibold"><a href="{% url 'recibo_detail' r.pk %}">#{{ r.pk }}</a></td>
+          <td>{{ r.imovel.endereco|default:"—"|truncatechars:30 }}</td>
+          <td>{{ r.quem_pagou|default:"—" }}</td>
+          <td>{% if r.quantia %}R$ {{ r.quantia|brl }}{% else %}—{% endif %}</td>
+          <td>{{ r.criado_em|date:"d/m/Y" }}</td>
+          <td>{% if r.arquivo %}<a href="{{ r.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i></a>{% else %}—{% endif %}</td>
+          <td class="text-end">
+            <a href="{% url 'recibo_edit' r.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#del{{ r.pk }}"><i class="bi bi-trash"></i></button>
+            <div class="modal fade" id="del{{ r.pk }}" tabindex="-1">
+              <div class="modal-dialog modal-sm"><div class="modal-content">
+                <div class="modal-header border-0"><h6 class="modal-title text-danger">Confirmar exclusão</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body small">Excluir o recibo <strong>#{{ r.pk }}</strong>?</div>
+                <div class="modal-footer border-0"><button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><form method="post" action="{% url 'recibo_delete' r.pk %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-danger">Excluir</button></form></div>
+              </div></div>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Nenhum recibo encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

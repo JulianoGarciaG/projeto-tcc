@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-receipt me-2"></i>{{ titulo }}{% endblock %}
+{% block nav_recibos %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="mb-3"><a href="{% url 'recibo_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a></div>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-link-45deg me-1"></i> Vínculos (opcional)</div>
+        <div class="section-card-body">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Imóvel</label>{{ form.imovel }}</div>
+            <div class="col-md-6"><label class="form-label">Contrato</label>{{ form.contrato }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-cash-coin me-1"></i> Valores</div>
+        <div class="section-card-body">
+          <p class="text-muted small mb-3">Somente os campos preenchidos aparecem no recibo. O somatório dos valores é calculado automaticamente.</p>
+          <div class="row g-3">
+            <div class="col-md-3"><label class="form-label">Parcela Atual</label>{{ form.parcela_atual }}</div>
+            <div class="col-md-3"><label class="form-label">Total de Parcelas</label>{{ form.parcela_total }}</div>
+            <div class="col-md-6"><label class="form-label">Quantia de (R$) — total recebido</label>{{ form.quantia }}</div>
+            <div class="col-md-3"><label class="form-label">Aluguel (R$)</label>{{ form.valor_aluguel }}</div>
+            <div class="col-md-3"><label class="form-label">Impostos (R$)</label>{{ form.valor_impostos }}</div>
+            <div class="col-md-3"><label class="form-label">Seguros (R$)</label>{{ form.valor_seguros }}</div>
+            <div class="col-md-3"><label class="form-label">Condomínio (R$)</label>{{ form.valor_condominio }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-card-text me-1"></i> Detalhes</div>
+        <div class="section-card-body">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Quem Pagou</label>{{ form.quem_pagou }}</div>
+            <div class="col-md-6"><label class="form-label">Proveniente do Sítio</label>{{ form.proveniente_sitio }}</div>
+            <div class="col-md-6"><label class="form-label">Correspondente ao Período de</label>{{ form.periodo_referente }}</div>
+            <div class="col-md-6"><label class="form-label">Vencido em</label>{{ form.vencido_em }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-pen me-1"></i> Assinatura</div>
+        <div class="section-card-body">
+          <div class="row g-3">
+            <div class="col-md-5"><label class="form-label">Nome de Quem Assinou</label>{{ form.assinante_nome }}</div>
+            <div class="col-md-4"><label class="form-label">CPF de Quem Assinou</label>{{ form.assinante_cpf }}</div>
+            <div class="col-md-3"><label class="form-label">Data da Assinatura</label>{{ form.data_assinatura }}</div>
+          </div>
+        </div>
+      </div>
+
+      {% if form.errors %}
+      <div class="alert alert-danger small">
+        {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+        {% for field in form %}{% for error in field.errors %}<div>{{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2 justify-content-end mb-4">
+        <a href="{% url 'recibo_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-file-earmark-pdf me-1"></i> Salvar e Gerar PDF</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

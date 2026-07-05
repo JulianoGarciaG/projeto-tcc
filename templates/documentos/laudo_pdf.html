@@ -1,0 +1,65 @@
+{% extends 'documentos/base_pdf.html' %}
+
+{% block titulo_doc %}Laudo de Vistoria — {{ laudo.get_tipo_display }}{% endblock %}
+
+{% block conteudo %}
+<h2 class="secao">Identificação</h2>
+<table class="dados">
+  <tr><td class="rotulo">Tipo de Vistoria</td><td>{{ laudo.get_tipo_display }}</td></tr>
+  <tr><td class="rotulo">Imóvel</td><td>{{ laudo.imovel.endereco }}{% if laudo.imovel.bairro %}, {{ laudo.imovel.bairro }}{% endif %}{% if laudo.imovel.cidade %} — {{ laudo.imovel.cidade }}{% endif %}</td></tr>
+  <tr><td class="rotulo">Locador(a)</td><td>{{ laudo.locador_nome }}</td></tr>
+  <tr><td class="rotulo">Locatário(a)</td><td>{{ laudo.locatario_nome }}</td></tr>
+  <tr><td class="rotulo">Data da Vistoria</td><td>{{ laudo.data|date:"d/m/Y" }}</td></tr>
+  <tr><td class="rotulo">Responsável pela Vistoria</td><td>{{ laudo.responsavel }}</td></tr>
+</table>
+
+{% if grupos %}
+<h2 class="secao">Cômodos Vistoriados</h2>
+{% for grupo in grupos %}
+<table class="grade">
+  <tr><th colspan="3">{{ grupo.comodo }}</th></tr>
+  <tr><th style="width:45%;">Item</th><th style="width:15%;">Estado</th><th>Observação</th></tr>
+  {% for item in grupo.itens %}
+  <tr>
+    <td>{{ item.item }}</td>
+    <td>{{ item.get_estado_display }}</td>
+    <td>{% if item.observacao %}{{ item.observacao }}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endfor %}
+
+<div class="destaque">
+  <strong>Resumo da vistoria:</strong>
+  {{ resumo.total }} ite{{ resumo.total|pluralize:"m,ns" }} vistoriado{{ resumo.total|pluralize }} —
+  {{ resumo.bom }} bom, {{ resumo.regular }} regular, {{ resumo.ruim }} ruim.
+</div>
+{% endif %}
+
+{% if laudo.observacoes %}
+<h2 class="secao">Observações Gerais</h2>
+<div class="destaque">{{ laudo.observacoes|linebreaksbr }}</div>
+{% endif %}
+
+{% if laudo.local_assinatura or laudo.data_assinatura %}
+<p style="margin-top:24px;">
+  {% if laudo.local_assinatura %}{{ laudo.local_assinatura }}{% endif %}{% if laudo.local_assinatura and laudo.data_assinatura %}, {% endif %}{% if laudo.data_assinatura %}{{ laudo.data_assinatura|date:"d \d\e F \d\e Y" }}{% endif %}.
+</p>
+{% endif %}
+
+<div class="assinatura">
+  <div class="linha-assinatura">{{ laudo.locador_nome }} — Locador(a)</div>
+</div>
+<div class="assinatura">
+  <div class="linha-assinatura">{{ laudo.locatario_nome }} — Locatário(a)</div>
+</div>
+
+{% if testemunhas %}
+<h2 class="secao" style="margin-top:30px;">Testemunhas</h2>
+{% for t in testemunhas %}
+<div class="assinatura">
+  <div class="linha-assinatura">{{ t.nome }}{% if t.cpf %} — CPF: {{ t.cpf }}{% endif %}</div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

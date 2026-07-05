@@ -5,30 +5,96 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-7">
+  <div class="col-lg-10">
     <div class="mb-3"><a href="{% url 'laudo_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a></div>
-    <div class="section-card">
-      <div class="section-card-header"><i class="bi bi-clipboard-check me-1"></i> {{ titulo }}</div>
-      <div class="section-card-body">
-        <form method="post" enctype="multipart/form-data" novalidate>
-          {% csrf_token %}
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <!-- Dados do Laudo -->
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-clipboard-check me-1"></i> Dados do Laudo</div>
+        <div class="section-card-body">
           <div class="row g-3">
-            <div class="col-md-7"><label class="form-label">Imóvel *</label>{{ form.imovel }}</div>
-            <div class="col-md-5"><label class="form-label">Contrato (opcional)</label>{{ form.contrato }}</div>
-            <div class="col-md-5"><label class="form-label">Tipo *</label>{{ form.tipo }}</div>
+            <div class="col-md-6"><label class="form-label">Imóvel *</label>{{ form.imovel }}</div>
+            <div class="col-md-6"><label class="form-label">Contrato *</label>{{ form.contrato }}</div>
+            <div class="col-md-4"><label class="form-label">Tipo *</label>{{ form.tipo }}</div>
             <div class="col-md-4"><label class="form-label">Data *</label>{{ form.data }}</div>
-            <div class="col-12"><label class="form-label">Responsável pela Vistoria *</label>{{ form.responsavel }}</div>
-            <div class="col-12"><label class="form-label">Observações</label>{{ form.observacoes }}</div>
-            <div class="col-12"><label class="form-label">Laudo em PDF</label>{{ form.arquivo }}</div>
+            <div class="col-md-4"><label class="form-label">Responsável pela Vistoria *</label>{{ form.responsavel }}</div>
+            <div class="col-12"><label class="form-label">Observações Gerais</label>{{ form.observacoes }}</div>
+            <div class="col-12"><label class="form-label">Laudo em PDF (upload manual, opcional)</label>{{ form.arquivo }}</div>
           </div>
-          {% if form.errors %}<div class="alert alert-danger mt-3 small">{% for f in form %}{% for e in f.errors %}<div>{{ f.label }}: {{ e }}</div>{% endfor %}{% endfor %}</div>{% endif %}
-          <div class="d-flex gap-2 justify-content-end mt-4">
-            <a href="{% url 'laudo_list' %}" class="btn btn-outline-secondary">Cancelar</a>
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Salvar</button>
-          </div>
-        </form>
+        </div>
       </div>
-    </div>
+
+      <!-- Itens vistoriados por cômodo -->
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-house-check me-1"></i> Cômodos e Itens Vistoriados</div>
+        <div class="section-card-body">
+          <p class="text-muted small mb-3">Selecione o estado apenas dos itens vistoriados — itens sem estado não entram no laudo.</p>
+          {{ item_formset.management_form }}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <tbody>
+                {% for f in item_formset %}
+                {% ifchanged f.comodo.value %}
+                <tr class="table-light"><th colspan="4">{{ f.comodo.value }}</th></tr>
+                <tr class="small text-muted"><th style="width:40%;">Item</th><th style="width:20%;">Estado</th><th>Observação</th><th style="width:5%;"></th></tr>
+                {% endifchanged %}
+                <tr>
+                  <td>{{ f.item.value }}{{ f.comodo }}{{ f.item }}{{ f.ordem }}{{ f.id }}</td>
+                  <td>{{ f.estado }}</td>
+                  <td>{{ f.observacao }}</td>
+                  <td>
+                    {% if f.instance.pk %}
+                    <div class="form-check">{{ f.DELETE }}<label class="form-check-label small text-danger" for="{{ f.DELETE.id_for_label }}">Del</label></div>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assinatura e Testemunhas -->
+      <div class="section-card mb-4">
+        <div class="section-card-header"><i class="bi bi-pen me-1"></i> Assinatura e Testemunhas</div>
+        <div class="section-card-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-8"><label class="form-label">Local da Assinatura</label>{{ form.local_assinatura }}</div>
+            <div class="col-md-4"><label class="form-label">Data da Assinatura</label>{{ form.data_assinatura }}</div>
+          </div>
+          {{ testemunha_formset.management_form }}
+          {% for tf in testemunha_formset %}
+          <div class="row g-2 mb-2 align-items-end">
+            <div class="col-md-6"><label class="form-label small">Testemunha — Nome</label>{{ tf.nome }}</div>
+            <div class="col-md-4"><label class="form-label small">CPF</label>{{ tf.cpf }}</div>
+            <div class="col-md-2">
+              {% if tf.instance.pk %}
+              <div class="form-check">{{ tf.DELETE }}<label class="form-check-label small text-danger" for="{{ tf.DELETE.id_for_label }}">Del</label></div>
+              {% endif %}
+              {{ tf.id }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if form.errors or item_formset.errors or testemunha_formset.errors %}
+      <div class="alert alert-danger small">
+        {% for field in form %}{% for error in field.errors %}<div>{{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}
+        {% for f in item_formset %}{% for field in f %}{% for error in field.errors %}<div>Item {{ f.item.value }} ({{ f.comodo.value }}) – {{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}{% endfor %}
+        {% for tf in testemunha_formset %}{% for field in tf %}{% for error in field.errors %}<div>Testemunha – {{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2 justify-content-end mb-4">
+        <a href="{% url 'laudo_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-file-earmark-pdf me-1"></i> Salvar e Gerar PDF</button>
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}

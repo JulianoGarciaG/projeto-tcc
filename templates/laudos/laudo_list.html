@@ -33,12 +33,17 @@
       <tbody>
         {% for l in laudos %}
         <tr>
-          <td class="fw-semibold">{{ l.imovel.endereco|truncatechars:35 }}</td>
+          <td class="fw-semibold"><a href="{% url 'laudo_detail' l.pk %}">{{ l.imovel.endereco|truncatechars:35 }}</a></td>
           <td>{{ l.get_tipo_display }}</td>
           <td>{{ l.data|date:"d/m/Y" }}</td>
           <td>{{ l.responsavel }}</td>
-          <td>{% if l.arquivo %}<a href="{{ l.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i></a>{% else %}—{% endif %}</td>
+          <td>
+            {% if l.documento_gerado %}<a href="{{ l.documento_gerado.url }}" target="_blank" class="btn btn-sm btn-outline-danger" title="Laudo gerado"><i class="bi bi-file-earmark-pdf"></i></a>
+            {% elif l.arquivo %}<a href="{{ l.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i></a>
+            {% else %}—{% endif %}
+          </td>
           <td class="text-end">
+            <a href="{% url 'laudo_detail' l.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
             <a href="{% url 'laudo_edit' l.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
             <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#del{{ l.pk }}"><i class="bi bi-trash"></i></button>
             <div class="modal fade" id="del{{ l.pk }}" tabindex="-1">

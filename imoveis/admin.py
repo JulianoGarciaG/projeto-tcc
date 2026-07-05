@@ -2,6 +2,7 @@ from django.contrib import admin
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato, Saida, Entrada,
+    Recibo, ComodoTemplate, ItemVistoriaTemplate, ItemVistoria, TestemunhaLaudo,
 )
 
 
@@ -76,10 +77,38 @@ class EntradaAdmin(admin.ModelAdmin):
     search_fields = ['imovel__endereco']
 
 
+class ItemVistoriaInline(admin.TabularInline):
+    model = ItemVistoria
+    extra = 0
+
+
+class TestemunhaLaudoInline(admin.TabularInline):
+    model = TestemunhaLaudo
+    extra = 0
+
+
 @admin.register(LaudoVistoria)
 class LaudoVistoriaAdmin(admin.ModelAdmin):
     list_display = ['imovel', 'tipo', 'data', 'responsavel']
     list_filter = ['tipo']
+    inlines = [ItemVistoriaInline, TestemunhaLaudoInline]
+
+
+class ItemVistoriaTemplateInline(admin.TabularInline):
+    model = ItemVistoriaTemplate
+    extra = 1
+
+
+@admin.register(ComodoTemplate)
+class ComodoTemplateAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'ordem']
+    inlines = [ItemVistoriaTemplateInline]
+
+
+@admin.register(Recibo)
+class ReciboAdmin(admin.ModelAdmin):
+    list_display = ['pk', 'imovel', 'quem_pagou', 'quantia', 'data_assinatura', 'criado_em']
+    search_fields = ['quem_pagou', 'assinante_nome', 'imovel__endereco']
 
 
 @admin.register(Lancamento)

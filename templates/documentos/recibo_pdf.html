@@ -1,0 +1,41 @@
+{% extends 'documentos/base_pdf.html' %}
+{% load imoveis_tags %}
+
+{% block titulo_doc %}Recibo{% if recibo.parcela_atual and recibo.parcela_total %} — Parcela {{ recibo.parcela_atual }}/{{ recibo.parcela_total }}{% endif %}{% endblock %}
+
+{% block conteudo %}
+{% if recibo.quantia %}
+<div class="destaque" style="font-size:13pt;">
+  <strong>Quantia de: R$ {{ recibo.quantia|brl }}</strong>
+</div>
+{% endif %}
+
+<table class="dados">
+  {% if recibo.imovel %}<tr><td class="rotulo">Imóvel</td><td>{{ recibo.imovel.endereco }}{% if recibo.imovel.cidade %} — {{ recibo.imovel.cidade }}{% endif %}</td></tr>{% endif %}
+  {% if recibo.quem_pagou %}<tr><td class="rotulo">Quem Pagou</td><td>{{ recibo.quem_pagou }}</td></tr>{% endif %}
+  {% if recibo.proveniente_sitio %}<tr><td class="rotulo">Proveniente do Sítio</td><td>{{ recibo.proveniente_sitio }}</td></tr>{% endif %}
+  {% if recibo.periodo_referente %}<tr><td class="rotulo">Correspondente ao Período de</td><td>{{ recibo.periodo_referente }}</td></tr>{% endif %}
+  {% if recibo.vencido_em %}<tr><td class="rotulo">Vencido em</td><td>{{ recibo.vencido_em|date:"d/m/Y" }}</td></tr>{% endif %}
+</table>
+
+{% if recibo.valor_aluguel or recibo.valor_impostos or recibo.valor_seguros or recibo.valor_condominio %}
+<h2 class="secao">Composição do Valor</h2>
+<table class="grade">
+  <tr><th>Descrição</th><th style="width:30%;">Valor</th></tr>
+  {% if recibo.valor_aluguel %}<tr><td>Aluguel</td><td>R$ {{ recibo.valor_aluguel|brl }}</td></tr>{% endif %}
+  {% if recibo.valor_impostos %}<tr><td>Impostos</td><td>R$ {{ recibo.valor_impostos|brl }}</td></tr>{% endif %}
+  {% if recibo.valor_seguros %}<tr><td>Seguros</td><td>R$ {{ recibo.valor_seguros|brl }}</td></tr>{% endif %}
+  {% if recibo.valor_condominio %}<tr><td>Condomínio</td><td>R$ {{ recibo.valor_condominio|brl }}</td></tr>{% endif %}
+  <tr><th>Somatório</th><th>R$ {{ recibo.somatorio|brl }}</th></tr>
+</table>
+{% endif %}
+
+{% if recibo.assinante_nome or recibo.assinante_cpf or recibo.data_assinatura %}
+{% if recibo.data_assinatura %}<p style="margin-top:24px;">Data: {{ recibo.data_assinatura|date:"d/m/Y" }}.</p>{% endif %}
+<div class="assinatura">
+  <div class="linha-assinatura">
+    {% if recibo.assinante_nome %}{{ recibo.assinante_nome }}{% else %}Assinatura{% endif %}{% if recibo.assinante_cpf %} — CPF: {{ recibo.assinante_cpf }}{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

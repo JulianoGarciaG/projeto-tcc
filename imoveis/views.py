@@ -7,12 +7,56 @@ from datetime import date, timedelta
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Notificacao, RenovacaoContrato, Distrato, Saida, Entrada,
+    Recibo, ItemVistoriaTemplate,
 )
 from .forms import (
     ImovelForm, FotoImovelFormSet, ProprietarioForm, InquilinoForm,
     ContratoForm, FiadorFormSet, LaudoVistoriaForm, LancamentoForm,
     NotificacaoForm, RenovacaoContratoForm, DistratoForm, SaidaForm, EntradaForm,
+    ReciboForm, ItemVistoriaFormSet, TestemunhaFormSet,
 )
+from .pdf import gerar_e_anexar, pdf_download_response
+
+
+# ============================================================
+# Helpers de geração de PDF (documentos GED)
+# ============================================================
+
+def _gerar_pdf_contrato(contrato):
+    filename = f'contrato_{contrato.pk}.pdf'
+    pdf_bytes = gerar_e_anexar(contrato, 'documentos/contrato_pdf.html',
+                               {'contrato': contrato}, 'documento_gerado', filename)
+    return pdf_download_response(pdf_bytes, filename)
+
+
+def _itens_agrupados(laudo):
+    """Agrupa os itens do laudo por cômodo, preservando a ordem."""
+    grupos = []
+    for item in laudo.itens.all():
+        if not grupos or grupos[-1]['comodo'] != item.comodo:
+            grupos.append({'comodo': item.comodo, 'itens': []})
+        grupos[-1]['itens'].append(item)
+    return grupos
+
+
+def _gerar_pdf_laudo(laudo):
+    filename = f'laudo_{laudo.pk}.pdf'
+    contexto = {
+        'laudo': laudo,
+        'grupos': _itens_agrupados(laudo),
+        'resumo': laudo.resumo_vistoria(),
+        'testemunhas': laudo.testemunhas.all(),
+    }
+    pdf_bytes = gerar_e_anexar(laudo, 'documentos/laudo_pdf.html',
+                               contexto, 'documento_gerado', filename)
+    return pdf_download_response(pdf_bytes, filename)
+
+
+def _gerar_pdf_recibo(recibo):
+    filename = f'recibo_{recibo.pk}.pdf'
+    pdf_bytes = gerar_e_anexar(recibo, 'documentos/recibo_pdf.html',
+                               {'recibo': recibo}, 'arquivo', filename)
+    return pdf_download_response(pdf_bytes, filename)
 
 
 # ============================================================
@@ -331,8 +375,8 @@ def contrato_create(request):
         contrato = form.save()
         fiador_formset.instance = contrato
         fiador_formset.save()
-        messages.success(request, 'Contrato cadastrado com sucesso.')
-        return redirect('contrato_list')
+        messages.success(request, 'Contrato cadastrado com sucesso. PDF gerado e anexado ao GED.')
+        return _gerar_pdf_contrato(contrato)
     return render(request, 'contratos/contrato_form.html', {
         'form': form, 'fiador_formset': fiador_formset, 'titulo': 'Novo Contrato'
     })
@@ -345,16 +389,22 @@ def contrato_edit(request, pk):
         form = ContratoForm(request.POST, request.FILES, instance=obj)
         fiador_formset = FiadorFormSet(request.POST, request.FILES, instance=obj)
         if form.is_valid() and fiador_formset.is_valid():
-            form.save()
+            contrato = form.save()
             fiador_formset.save()
-            messages.success(request, 'Contrato atualizado.')
-            return redirect('contrato_detail', pk=pk)
+            messages.success(request, 'Contrato atualizado. PDF regenerado e anexado ao GED.')
+            return _gerar_pdf_contrato(contrato)
     else:
         form = ContratoForm(instance=obj)
         fiador_formset = FiadorFormSet(instance=obj)
     return render(request, 'contratos/contrato_form.html', {
         'form': form, 'fiador_formset': fiador_formset, 'titulo': 'Editar Contrato', 'obj': obj
     })
+
+
+@login_required
+def contrato_gerar_pdf(request, pk):
+    contrato = get_object_or_404(Contrato.objects.select_related('imovel', 'inquilino'), pk=pk)
+    return _gerar_pdf_contrato(contrato)
 
 
 @login_required
@@ -431,14 +481,52 @@ def laudo_list(request):
     })
 
 
+def _initial_itens_catalogo():
+    """Pré-popula o formset de itens a partir do catálogo configurável."""
+    itens = ItemVistoriaTemplate.objects.select_related('comodo').order_by('comodo__ordem', 'ordem', 'nome')
+    return [
+        {'comodo': t.comodo.nome, 'item': t.nome, 'ordem': ordem}
+        for ordem, t in enumerate(itens)
+    ]
+
+
+@login_required
+def laudo_detail(request, pk):
+    laudo = get_object_or_404(
+        LaudoVistoria.objects.select_related('imovel__proprietario', 'contrato__inquilino'), pk=pk)
+    return render(request, 'laudos/laudo_detail.html', {
+        'laudo': laudo,
+        'grupos': _itens_agrupados(laudo),
+        'resumo': laudo.resumo_vistoria(),
+        'testemunhas': laudo.testemunhas.all(),
+    })
+
+
 @login_required
 def laudo_create(request):
-    form = LaudoVistoriaForm(request.POST or None, request.FILES or None)
-    if form.is_valid():
-        form.save()
-        messages.success(request, 'Laudo registrado com sucesso.')
-        return redirect('laudo_list')
-    return render(request, 'laudos/laudo_form.html', {'form': form, 'titulo': 'Novo Laudo de Vistoria'})
+    if request.method == 'POST':
+        form = LaudoVistoriaForm(request.POST, request.FILES)
+        # initial também no POST: linhas com estado em branco continuam
+        # "inalteradas" (não vistoriadas) e são ignoradas pelo formset.
+        item_formset = ItemVistoriaFormSet(request.POST, prefix='itens',
+                                           initial=_initial_itens_catalogo())
+        testemunha_formset = TestemunhaFormSet(request.POST, prefix='testemunhas')
+        if form.is_valid() and item_formset.is_valid() and testemunha_formset.is_valid():
+            laudo = form.save()
+            item_formset.instance = laudo
+            item_formset.save()
+            testemunha_formset.instance = laudo
+            testemunha_formset.save()
+            messages.success(request, 'Laudo registrado com sucesso. PDF gerado e anexado ao GED.')
+            return _gerar_pdf_laudo(laudo)
+    else:
+        form = LaudoVistoriaForm()
+        item_formset = ItemVistoriaFormSet(prefix='itens', initial=_initial_itens_catalogo())
+        testemunha_formset = TestemunhaFormSet(prefix='testemunhas')
+    return render(request, 'laudos/laudo_form.html', {
+        'form': form, 'item_formset': item_formset, 'testemunha_formset': testemunha_formset,
+        'titulo': 'Novo Laudo de Vistoria',
+    })
 
 
 @login_required
@@ -446,13 +534,29 @@ def laudo_edit(request, pk):
     obj = get_object_or_404(LaudoVistoria, pk=pk)
     if request.method == 'POST':
         form = LaudoVistoriaForm(request.POST, request.FILES, instance=obj)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Laudo atualizado.')
-            return redirect('laudo_list')
+        item_formset = ItemVistoriaFormSet(request.POST, instance=obj, prefix='itens')
+        testemunha_formset = TestemunhaFormSet(request.POST, instance=obj, prefix='testemunhas')
+        if form.is_valid() and item_formset.is_valid() and testemunha_formset.is_valid():
+            laudo = form.save()
+            item_formset.save()
+            testemunha_formset.save()
+            messages.success(request, 'Laudo atualizado. PDF regenerado e anexado ao GED.')
+            return _gerar_pdf_laudo(laudo)
     else:
         form = LaudoVistoriaForm(instance=obj)
-    return render(request, 'laudos/laudo_form.html', {'form': form, 'titulo': 'Editar Laudo', 'obj': obj})
+        item_formset = ItemVistoriaFormSet(instance=obj, prefix='itens')
+        testemunha_formset = TestemunhaFormSet(instance=obj, prefix='testemunhas')
+    return render(request, 'laudos/laudo_form.html', {
+        'form': form, 'item_formset': item_formset, 'testemunha_formset': testemunha_formset,
+        'titulo': 'Editar Laudo', 'obj': obj,
+    })
+
+
+@login_required
+def laudo_gerar_pdf(request, pk):
+    laudo = get_object_or_404(
+        LaudoVistoria.objects.select_related('imovel__proprietario', 'contrato__inquilino'), pk=pk)
+    return _gerar_pdf_laudo(laudo)
 
 
 @login_required
@@ -660,20 +764,85 @@ def entrada_delete(request, pk):
 
 
 # ============================================================
+# Recibos
+# ============================================================
+
+@login_required
+def recibo_list(request):
+    q = request.GET.get('q', '')
+    qs = Recibo.objects.select_related('imovel', 'contrato__inquilino')
+    if q:
+        qs = qs.filter(Q(quem_pagou__icontains=q) | Q(assinante_nome__icontains=q) |
+                       Q(imovel__endereco__icontains=q))
+    return render(request, 'recibos/recibo_list.html', {'recibos': qs, 'q': q})
+
+
+@login_required
+def recibo_detail(request, pk):
+    recibo = get_object_or_404(Recibo.objects.select_related('imovel', 'contrato__inquilino'), pk=pk)
+    return render(request, 'recibos/recibo_detail.html', {'recibo': recibo})
+
+
+@login_required
+def recibo_create(request):
+    form = ReciboForm(request.POST or None)
+    if form.is_valid():
+        recibo = form.save()
+        messages.success(request, 'Recibo registrado com sucesso. PDF gerado e anexado ao GED.')
+        return _gerar_pdf_recibo(recibo)
+    return render(request, 'recibos/recibo_form.html', {'form': form, 'titulo': 'Novo Recibo'})
+
+
+@login_required
+def recibo_edit(request, pk):
+    obj = get_object_or_404(Recibo, pk=pk)
+    form = ReciboForm(request.POST or None, instance=obj)
+    if form.is_valid():
+        recibo = form.save()
+        messages.success(request, 'Recibo atualizado. PDF regenerado e anexado ao GED.')
+        return _gerar_pdf_recibo(recibo)
+    return render(request, 'recibos/recibo_form.html', {'form': form, 'titulo': 'Editar Recibo', 'obj': obj})
+
+
+@login_required
+def recibo_gerar_pdf(request, pk):
+    recibo = get_object_or_404(Recibo.objects.select_related('imovel', 'contrato__inquilino'), pk=pk)
+    return _gerar_pdf_recibo(recibo)
+
+
+@login_required
+def recibo_delete(request, pk):
+    obj = get_object_or_404(Recibo, pk=pk)
+    if request.method == 'POST':
+        obj.delete()
+        messages.success(request, 'Recibo removido.')
+    return redirect('recibo_list')
+
+
+# ============================================================
 # GED — Documentos centralizados
 # ============================================================
 
 @login_required
 def documentos(request):
     contratos = Contrato.objects.exclude(arquivo='').select_related('imovel', 'inquilino')
-    laudos = LaudoVistoria.objects.exclude(arquivo='').select_related('imovel')
+    contratos_gerados = (Contrato.objects.exclude(documento_gerado='')
+                         .exclude(documento_gerado__isnull=True).select_related('imovel', 'inquilino'))
+    laudos = LaudoVistoria.objects.exclude(arquivo='').exclude(arquivo__isnull=True).select_related('imovel')
+    laudos_gerados = (LaudoVistoria.objects.exclude(documento_gerado='')
+                      .exclude(documento_gerado__isnull=True).select_related('imovel'))
     comprovantes = Lancamento.objects.exclude(comprovante='').select_related('contrato__imovel')
     contratos_recibo = Contrato.objects.exclude(recibo_chaves='').select_related('imovel', 'inquilino')
     contratos_anual = Contrato.objects.exclude(comprovante_anual='').select_related('imovel', 'inquilino')
+    recibos = (Recibo.objects.exclude(arquivo='').exclude(arquivo__isnull=True)
+               .select_related('imovel', 'contrato__inquilino'))
     return render(request, 'ged/documentos.html', {
         'contratos': contratos,
+        'contratos_gerados': contratos_gerados,
         'laudos': laudos,
+        'laudos_gerados': laudos_gerados,
         'comprovantes': comprovantes,
         'contratos_recibo': contratos_recibo,
         'contratos_anual': contratos_anual,
+        'recibos': recibos,
     })

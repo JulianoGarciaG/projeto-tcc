@@ -45,14 +45,25 @@ urlpatterns = [
     path('contratos/<int:pk>/', views.contrato_detail, name='contrato_detail'),
     path('contratos/<int:pk>/editar/', views.contrato_edit, name='contrato_edit'),
     path('contratos/<int:pk>/excluir/', views.contrato_delete, name='contrato_delete'),
+    path('contratos/<int:pk>/gerar-pdf/', views.contrato_gerar_pdf, name='contrato_gerar_pdf'),
     path('contratos/<int:contrato_pk>/renovar/', views.renovacao_create, name='renovacao_create'),
     path('contratos/<int:contrato_pk>/distrato/', views.distrato_create, name='distrato_create'),
 
     # Laudos
     path('laudos/', views.laudo_list, name='laudo_list'),
     path('laudos/novo/', views.laudo_create, name='laudo_create'),
+    path('laudos/<int:pk>/', views.laudo_detail, name='laudo_detail'),
     path('laudos/<int:pk>/editar/', views.laudo_edit, name='laudo_edit'),
     path('laudos/<int:pk>/excluir/', views.laudo_delete, name='laudo_delete'),
+    path('laudos/<int:pk>/gerar-pdf/', views.laudo_gerar_pdf, name='laudo_gerar_pdf'),
+
+    # Recibos
+    path('recibos/', views.recibo_list, name='recibo_list'),
+    path('recibos/novo/', views.recibo_create, name='recibo_create'),
+    path('recibos/<int:pk>/', views.recibo_detail, name='recibo_detail'),
+    path('recibos/<int:pk>/editar/', views.recibo_edit, name='recibo_edit'),
+    path('recibos/<int:pk>/excluir/', views.recibo_delete, name='recibo_delete'),
+    path('recibos/<int:pk>/gerar-pdf/', views.recibo_gerar_pdf, name='recibo_gerar_pdf'),
 
     # Financeiro
     path('financeiro/', views.lancamento_list, name='lancamento_list'),

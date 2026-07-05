@@ -1,0 +1,101 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+  body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 11pt;
+    color: #1a1a1a;
+  }
+  .cabecalho {
+    border-bottom: 2px solid #1a1a1a;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+  .cabecalho img {
+    height: 42px;
+  }
+  h1.titulo-doc {
+    font-size: 16pt;
+    text-align: center;
+    text-transform: uppercase;
+    margin: 14px 0 18px 0;
+  }
+  h2.secao {
+    font-size: 12pt;
+    text-transform: uppercase;
+    border-bottom: 1px solid #999;
+    padding-bottom: 3px;
+    margin: 16px 0 8px 0;
+  }
+  table.dados {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+  }
+  table.dados td {
+    padding: 3px 6px;
+    vertical-align: top;
+  }
+  table.dados td.rotulo {
+    width: 35%;
+    font-weight: bold;
+    color: #444;
+  }
+  table.grade {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+  }
+  table.grade th, table.grade td {
+    border: 1px solid #666;
+    padding: 4px 6px;
+    font-size: 10pt;
+  }
+  table.grade th {
+    background-color: #e8e8e8;
+    text-align: left;
+  }
+  .destaque {
+    background-color: #f0f0f0;
+    border: 1px solid #999;
+    padding: 8px 10px;
+    margin: 10px 0;
+  }
+  .assinatura {
+    margin-top: 40px;
+    text-align: center;
+  }
+  .linha-assinatura {
+    border-top: 1px solid #1a1a1a;
+    width: 70%;
+    margin: 0 auto;
+    padding-top: 4px;
+    font-size: 10pt;
+  }
+  .rodape {
+    font-size: 8pt;
+    color: #777;
+    text-align: center;
+    margin-top: 30px;
+  }
+</style>
+</head>
+<body>
+  <div class="cabecalho">
+    <img src="{% static 'assets/Shelter_LOGO.jpg' %}" alt="Shelter">
+  </div>
+
+  <h1 class="titulo-doc">{% block titulo_doc %}{% endblock %}</h1>
+
+  {% block conteudo %}{% endblock %}
+
+  <div class="rodape">Documento gerado automaticamente pelo sistema Shelter — Gestão Imobiliária.</div>
+</body>
+</html>
