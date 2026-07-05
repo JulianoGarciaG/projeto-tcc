@@ -24,8 +24,7 @@
           {% if recibo.contrato %}<dt class="col-5 text-muted">Contrato</dt><dd class="col-7">#{{ recibo.contrato.pk }} — {{ recibo.contrato.inquilino.nome }}</dd>{% endif %}
           {% if recibo.parcela_atual %}<dt class="col-5 text-muted">Parcela</dt><dd class="col-7">{{ recibo.parcela_atual }}{% if recibo.parcela_total %}/{{ recibo.parcela_total }}{% endif %}</dd>{% endif %}
           {% if recibo.quem_pagou %}<dt class="col-5 text-muted">Quem Pagou</dt><dd class="col-7">{{ recibo.quem_pagou }}</dd>{% endif %}
-          {% if recibo.proveniente_sitio %}<dt class="col-5 text-muted">Proveniente do Sítio</dt><dd class="col-7">{{ recibo.proveniente_sitio }}</dd>{% endif %}
-          {% if recibo.periodo_referente %}<dt class="col-5 text-muted">Período</dt><dd class="col-7">{{ recibo.periodo_referente }}</dd>{% endif %}
+          {% if recibo.periodo_inicio and recibo.periodo_fim %}<dt class="col-5 text-muted">Período</dt><dd class="col-7">de {{ recibo.periodo_inicio|date:"d/m/Y" }} a {{ recibo.periodo_fim|date:"d/m/Y" }}</dd>{% endif %}
           {% if recibo.vencido_em %}<dt class="col-5 text-muted">Vencido em</dt><dd class="col-7">{{ recibo.vencido_em|date:"d/m/Y" }}</dd>{% endif %}
           {% if recibo.assinante_nome %}<dt class="col-5 text-muted">Assinante</dt><dd class="col-7">{{ recibo.assinante_nome }}</dd>{% endif %}
           {% if recibo.assinante_cpf %}<dt class="col-5 text-muted">CPF Assinante</dt><dd class="col-7">{{ recibo.assinante_cpf }}</dd>{% endif %}

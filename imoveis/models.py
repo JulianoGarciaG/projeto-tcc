@@ -1,14 +1,14 @@
 from django.db import models
 
-from .validators import validate_cpf
+from .validators import validate_cpf, validate_cnpj, validate_cpf_cnpj, validate_rg
 
 
 class Proprietario(models.Model):
     nome = models.CharField(max_length=200)
-    cpf_cnpj = models.CharField(max_length=20, unique=True, verbose_name='CPF/CNPJ')
+    cpf_cnpj = models.CharField(max_length=20, unique=True, validators=[validate_cpf_cnpj],
+                                verbose_name='CPF/CNPJ')
     email = models.EmailField(blank=True)
     telefone = models.CharField(max_length=20, blank=True)
-    endereco = models.CharField(max_length=300, blank=True)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -43,9 +43,10 @@ class Imovel(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='vago')
     categoria = models.CharField(max_length=10, choices=CATEGORIA_CHOICES, default='urbano', verbose_name='Categoria')
     endereco = models.CharField(max_length=300)
+    numero = models.CharField(max_length=20, blank=True, verbose_name='Número')
+    complemento = models.CharField(max_length=100, blank=True, verbose_name='Complemento')
     bairro = models.CharField(max_length=100, blank=True)
     cidade = models.CharField(max_length=100, default='')
-    valor_aluguel = models.DecimalField(max_digits=10, decimal_places=2)
     area_m2 = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, verbose_name='Área (m²)')
     descricao = models.TextField(blank=True)
     # Campos comuns urbano/rural
@@ -86,16 +87,27 @@ class FotoImovel(models.Model):
 
 
 class Inquilino(models.Model):
+    FAIXA_RENDA_CHOICES = [
+        ('ate_2sm', 'Até 2 salários mínimos'),
+        ('2_4sm', 'De 2 a 4 salários mínimos'),
+        ('4_6sm', 'De 4 a 6 salários mínimos'),
+        ('6_10sm', 'De 6 a 10 salários mínimos'),
+        ('10_20sm', 'De 10 a 20 salários mínimos'),
+        ('acima_20sm', 'Acima de 20 salários mínimos'),
+    ]
+
     nome = models.CharField(max_length=200)
-    cpf = models.CharField(max_length=14, unique=True, verbose_name='CPF')
-    cnpj = models.CharField(max_length=18, blank=True, verbose_name='CNPJ')
+    cpf = models.CharField(max_length=14, unique=True, validators=[validate_cpf], verbose_name='CPF')
+    cnpj = models.CharField(max_length=18, blank=True, validators=[validate_cnpj], verbose_name='CNPJ')
     email = models.EmailField(blank=True)
     telefone = models.CharField(max_length=20, blank=True)
-    rg = models.CharField(max_length=20, blank=True, verbose_name='RG')
+    rg = models.CharField(max_length=20, blank=True, validators=[validate_rg], verbose_name='RG')
     qualificacao = models.CharField(max_length=300, blank=True, verbose_name='Qualificação',
                                     help_text='Estado civil, profissão, nacionalidade')
     profissao = models.CharField(max_length=100, blank=True, verbose_name='Profissão')
-    renda_mensal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    faixa_renda = models.CharField(max_length=20, choices=FAIXA_RENDA_CHOICES, blank=True,
+                                   verbose_name='Faixa de Renda')
+    observacoes = models.TextField(blank=True, verbose_name='Observações')
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -127,7 +139,6 @@ class Contrato(models.Model):
     data_fim = models.DateField(verbose_name='Data de Término')
     valor_mensal = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Valor Mensal')
     dia_vencimento = models.PositiveSmallIntegerField(default=10, verbose_name='Dia de Vencimento')
-    arquivo = models.FileField(upload_to='contratos/', blank=True, null=True, verbose_name='Arquivo do Contrato')
     # Documentos GED vinculados ao contrato
     comprovante_renda = models.FileField(upload_to='comprovantes_renda/', blank=True, null=True,
                                          verbose_name='Comprovante de Renda (PF)')
@@ -172,7 +183,6 @@ class LaudoVistoria(models.Model):
     TIPO_CHOICES = [
         ('entrada', 'Vistoria de Entrada'),
         ('saida', 'Vistoria de Saída'),
-        ('periodica', 'Vistoria Periódica'),
     ]
 
     imovel = models.ForeignKey(Imovel, on_delete=models.CASCADE, related_name='laudos')
@@ -395,74 +405,15 @@ class Distrato(models.Model):
         return f'{self.get_tipo_display()} — Contrato #{self.contrato_id}'
 
 
-class Saida(models.Model):
-    TIPO_CHOICES = [
-        ('tributos', 'Pagamento de Tributos (IPTU/ITR)'),
-        ('reforma', 'Reforma/Adequação'),
-        ('construcao_inicial', 'Construção Inicial'),
-        ('consumos', 'Consumos (água/energia/condom.)'),
-        ('despesas_juridicas', 'Despesas Jurídicas'),
-        ('previsao_despesas', 'Previsão de Despesas'),
-    ]
-    PAGO_POR_CHOICES = [
-        ('inquilino', 'Inquilino'),
-        ('administradora', 'Administradora'),
-    ]
-
-    imovel = models.ForeignKey(Imovel, on_delete=models.CASCADE, related_name='saidas')
-    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
-    descricao = models.CharField(max_length=300, blank=True, verbose_name='Descrição')
-    valor = models.DecimalField(max_digits=10, decimal_places=2)
-    data = models.DateField()
-    pago_por = models.CharField(max_length=15, choices=PAGO_POR_CHOICES, verbose_name='Pago Por')
-    comprovante = models.FileField(upload_to='saidas/', blank=True, null=True)
-    observacoes = models.TextField(blank=True, verbose_name='Observações')
-    criado_em = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = 'Saída'
-        verbose_name_plural = 'Saídas'
-        ordering = ['-data']
-
-    def __str__(self):
-        return f'{self.get_tipo_display()} — R$ {self.valor} ({self.imovel})'
-
-
-class Entrada(models.Model):
-    TIPO_CHOICES = [
-        ('recibo_imovel', 'Recibo por Imóvel'),
-        ('recibo_periodo', 'Recibo por Período'),
-        ('previsao_mes', 'Previsão de Recebíveis (Mês)'),
-        ('previsao_ano', 'Previsão de Recebíveis (Ano)'),
-    ]
-
-    imovel = models.ForeignKey(Imovel, on_delete=models.CASCADE, related_name='entradas')
-    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
-    descricao = models.CharField(max_length=300, blank=True, verbose_name='Descrição')
-    valor = models.DecimalField(max_digits=10, decimal_places=2)
-    data = models.DateField()
-    comprovante = models.FileField(upload_to='entradas/', blank=True, null=True)
-    observacoes = models.TextField(blank=True, verbose_name='Observações')
-    criado_em = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = 'Entrada'
-        verbose_name_plural = 'Entradas'
-        ordering = ['-data']
-
-    def __str__(self):
-        return f'{self.get_tipo_display()} — R$ {self.valor} ({self.imovel})'
-
-
 class Recibo(models.Model):
-    """Recibo de pagamento — quase todos os campos opcionais.
+    """Recibo de pagamento — imóvel/contrato obrigatórios, demais campos opcionais.
 
     No PDF aparecem apenas os campos preenchidos. `quantia` é o valor total
     recebido; os valores de aluguel/impostos/seguros/condomínio são as
     parcelas que compõem esse total (ver somatorio()).
     """
-    imovel = models.ForeignKey(Imovel, on_delete=models.SET_NULL, null=True, blank=True, related_name='recibos')
-    contrato = models.ForeignKey(Contrato, on_delete=models.SET_NULL, null=True, blank=True, related_name='recibos')
+    imovel = models.ForeignKey(Imovel, on_delete=models.PROTECT, related_name='recibos')
+    contrato = models.ForeignKey(Contrato, on_delete=models.PROTECT, related_name='recibos')
     parcela_atual = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='Parcela Atual')
     parcela_total = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='Total de Parcelas')
     valor_aluguel = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
@@ -474,9 +425,8 @@ class Recibo(models.Model):
     valor_condominio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                                            verbose_name='Condomínio')
     quem_pagou = models.CharField(max_length=200, blank=True, verbose_name='Quem Pagou')
-    proveniente_sitio = models.CharField(max_length=300, blank=True, verbose_name='Proveniente do Sítio',
-                                         help_text='Imóvel de origem do valor. Ex: Apartamento 21C, Prédio Maranhão')
-    periodo_referente = models.CharField(max_length=200, blank=True, verbose_name='Correspondente ao Período de')
+    periodo_inicio = models.DateField(null=True, blank=True, verbose_name='Período — Início')
+    periodo_fim = models.DateField(null=True, blank=True, verbose_name='Período — Fim')
     vencido_em = models.DateField(null=True, blank=True, verbose_name='Vencido em')
     quantia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                                   verbose_name='Quantia de')
@@ -498,4 +448,4 @@ class Recibo(models.Model):
         return sum(v for v in valores if v)
 
     def __str__(self):
-        return f'Recibo #{self.pk} — {self.imovel or self.quem_pagou or "sem vínculo"}'
+        return f'Recibo #{self.pk} — {self.imovel}'

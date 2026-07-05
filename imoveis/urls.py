@@ -17,15 +17,9 @@ urlpatterns = [
     path('notificacoes/<int:pk>/editar/', views.notificacao_edit, name='notificacao_edit'),
     path('notificacoes/<int:pk>/excluir/', views.notificacao_delete, name='notificacao_delete'),
 
-    # Saídas (via imóvel)
-    path('imoveis/<int:imovel_pk>/saidas/nova/', views.saida_create, name='saida_create'),
-    path('saidas/<int:pk>/editar/', views.saida_edit, name='saida_edit'),
-    path('saidas/<int:pk>/excluir/', views.saida_delete, name='saida_delete'),
-
-    # Entradas (via imóvel)
-    path('imoveis/<int:imovel_pk>/entradas/nova/', views.entrada_create, name='entrada_create'),
-    path('entradas/<int:pk>/editar/', views.entrada_edit, name='entrada_edit'),
-    path('entradas/<int:pk>/excluir/', views.entrada_delete, name='entrada_delete'),
+    # Contratos por imóvel (JSON — select dependente do laudo)
+    path('imoveis/<int:imovel_pk>/contratos-json/', views.contratos_por_imovel_json,
+         name='contratos_por_imovel_json'),
 
     # Proprietários
     path('proprietarios/', views.proprietario_list, name='proprietario_list'),
@@ -56,6 +50,7 @@ urlpatterns = [
     path('laudos/<int:pk>/editar/', views.laudo_edit, name='laudo_edit'),
     path('laudos/<int:pk>/excluir/', views.laudo_delete, name='laudo_delete'),
     path('laudos/<int:pk>/gerar-pdf/', views.laudo_gerar_pdf, name='laudo_gerar_pdf'),
+    path('laudos/<int:pk>/anexar/', views.laudo_anexar_arquivo, name='laudo_anexar_arquivo'),
 
     # Recibos
     path('recibos/', views.recibo_list, name='recibo_list'),

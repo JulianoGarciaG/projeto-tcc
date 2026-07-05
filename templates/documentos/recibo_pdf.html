@@ -11,10 +11,9 @@
 {% endif %}
 
 <table class="dados">
-  {% if recibo.imovel %}<tr><td class="rotulo">Imóvel</td><td>{{ recibo.imovel.endereco }}{% if recibo.imovel.cidade %} — {{ recibo.imovel.cidade }}{% endif %}</td></tr>{% endif %}
+  {% if recibo.imovel %}<tr><td class="rotulo">Imóvel</td><td>{{ recibo.imovel.endereco }}{% if recibo.imovel.numero %}, {{ recibo.imovel.numero }}{% endif %}{% if recibo.imovel.complemento %} — {{ recibo.imovel.complemento }}{% endif %}{% if recibo.imovel.cidade %} — {{ recibo.imovel.cidade }}{% endif %}</td></tr>{% endif %}
   {% if recibo.quem_pagou %}<tr><td class="rotulo">Quem Pagou</td><td>{{ recibo.quem_pagou }}</td></tr>{% endif %}
-  {% if recibo.proveniente_sitio %}<tr><td class="rotulo">Proveniente do Sítio</td><td>{{ recibo.proveniente_sitio }}</td></tr>{% endif %}
-  {% if recibo.periodo_referente %}<tr><td class="rotulo">Correspondente ao Período de</td><td>{{ recibo.periodo_referente }}</td></tr>{% endif %}
+  {% if recibo.periodo_inicio and recibo.periodo_fim %}<tr><td class="rotulo">Correspondente ao Período</td><td>de {{ recibo.periodo_inicio|date:"d/m/Y" }} a {{ recibo.periodo_fim|date:"d/m/Y" }}</td></tr>{% endif %}
   {% if recibo.vencido_em %}<tr><td class="rotulo">Vencido em</td><td>{{ recibo.vencido_em|date:"d/m/Y" }}</td></tr>{% endif %}
 </table>
 

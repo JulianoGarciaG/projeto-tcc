@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template.loader import render_to_string
 from django.test import TestCase
 from django.urls import reverse
@@ -12,21 +13,24 @@ from .models import (
     Contrato, Imovel, Inquilino, ItemVistoria, LaudoVistoria,
     Proprietario, Recibo, TestemunhaLaudo,
 )
-from .validators import validate_cpf
+from .validators import validate_cpf, validate_cnpj, validate_cpf_cnpj
 
 CPF_VALIDO = '529.982.247-25'
+CPF_VALIDO_2 = '111.444.777-35'
 CPF_INVALIDO = '111.111.111-11'
+CNPJ_VALIDO = '11.222.333/0001-81'
+CNPJ_INVALIDO = '11.222.333/0001-99'
 
 
 def criar_base():
     """Fixtures mínimas: proprietário, imóvel, inquilino e contrato ativo."""
-    proprietario = Proprietario.objects.create(nome='Maria Dona', cpf_cnpj='123.456.789-00')
+    proprietario = Proprietario.objects.create(nome='Maria Dona', cpf_cnpj=CPF_VALIDO_2)
     imovel = Imovel.objects.create(
-        proprietario=proprietario, tipo='casa', endereco='Rua A, 100',
-        cidade='Maringá', valor_aluguel=Decimal('1500.00'),
+        proprietario=proprietario, tipo='casa', endereco='Rua A',
+        numero='100', complemento='Fundos', cidade='Maringá',
     )
     inquilino = Inquilino.objects.create(
-        nome='João Locatário', cpf='987.654.321-00', cnpj='12.345.678/0001-90',
+        nome='João Locatário', cpf=CPF_VALIDO, cnpj=CNPJ_VALIDO,
         qualificacao='solteiro, brasileiro, empresário',
     )
     contrato = Contrato.objects.create(
@@ -57,7 +61,46 @@ class ValidateCpfTests(TestCase):
             validate_cpf('123')
 
 
+class ValidateCnpjTests(TestCase):
+    def test_cnpj_valido_com_mascara(self):
+        validate_cnpj(CNPJ_VALIDO)  # não deve levantar
+
+    def test_cnpj_valido_sem_mascara(self):
+        validate_cnpj('11222333000181')
+
+    def test_cnpj_digito_verificador_errado(self):
+        with self.assertRaises(ValidationError):
+            validate_cnpj(CNPJ_INVALIDO)
+
+    def test_cnpj_digitos_repetidos_invalido(self):
+        with self.assertRaises(ValidationError):
+            validate_cnpj('11.111.111/1111-11')
+
+    def test_cnpj_curto_invalido(self):
+        with self.assertRaises(ValidationError):
+            validate_cnpj('123')
+
+    def test_cpf_cnpj_condicional(self):
+        validate_cpf_cnpj(CPF_VALIDO)     # 11 dígitos → CPF
+        validate_cpf_cnpj(CNPJ_VALIDO)    # 14 dígitos → CNPJ
+        with self.assertRaises(ValidationError):
+            validate_cpf_cnpj('123456789012')  # 12 dígitos → nem CPF nem CNPJ
+
+    def test_inquilino_cpf_invalido_bloqueado(self):
+        inquilino = Inquilino(nome='Zé', cpf=CPF_INVALIDO)
+        with self.assertRaises(ValidationError):
+            inquilino.full_clean()
+
+    def test_proprietario_cnpj_valido_aceito(self):
+        proprietario = Proprietario(nome='Empresa Dona', cpf_cnpj=CNPJ_VALIDO)
+        proprietario.full_clean()  # não deve levantar
+
+
 class ReciboTests(TestCase):
+    def setUp(self):
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+        self.vinculos = {'imovel': str(self.imovel.pk), 'contrato': str(self.contrato.pk)}
+
     def test_somatorio_considera_apenas_valores_preenchidos(self):
         recibo = Recibo(valor_aluguel=Decimal('1200.00'), valor_condominio=Decimal('300.00'))
         self.assertEqual(recibo.somatorio(), Decimal('1500.00'))
@@ -65,26 +108,48 @@ class ReciboTests(TestCase):
     def test_somatorio_vazio_e_zero(self):
         self.assertEqual(Recibo().somatorio(), 0)
 
-    def test_form_exige_ao_menos_um_campo(self):
-        form = ReciboForm(data={})
+    def test_form_exige_imovel_e_contrato(self):
+        # R1 — imóvel e contrato passam a ser obrigatórios
+        form = ReciboForm(data={'quem_pagou': 'Fulano'})
+        self.assertFalse(form.is_valid())
+        self.assertIn('imovel', form.errors)
+        self.assertIn('contrato', form.errors)
+
+    def test_form_exige_ao_menos_um_campo_alem_dos_vinculos(self):
+        form = ReciboForm(data=self.vinculos)
         self.assertFalse(form.is_valid())
         self.assertIn('Preencha ao menos um campo', str(form.errors))
 
     def test_form_valido_com_um_campo(self):
-        form = ReciboForm(data={'quem_pagou': 'Fulano'})
+        form = ReciboForm(data={**self.vinculos, 'quem_pagou': 'Fulano'})
         self.assertTrue(form.is_valid(), form.errors)
 
+    def test_form_aceita_moeda_com_virgula(self):
+        # G5 — campos monetários localizados aceitam "1500,00"
+        form = ReciboForm(data={**self.vinculos, 'quantia': '1500,00'})
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['quantia'], Decimal('1500.00'))
+
+    def test_form_aceita_data_ddmmyyyy(self):
+        # G7 — datepickers em dd/mm/yyyy
+        form = ReciboForm(data={**self.vinculos, 'periodo_inicio': '01/06/2026',
+                                'periodo_fim': '30/06/2026'})
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['periodo_inicio'], date(2026, 6, 1))
+        self.assertEqual(form.cleaned_data['periodo_fim'], date(2026, 6, 30))
+
     def test_form_rejeita_cpf_invalido(self):
-        form = ReciboForm(data={'assinante_cpf': CPF_INVALIDO})
+        form = ReciboForm(data={**self.vinculos, 'assinante_cpf': CPF_INVALIDO})
         self.assertFalse(form.is_valid())
         self.assertIn('assinante_cpf', form.errors)
 
     def test_form_aceita_cpf_valido(self):
-        form = ReciboForm(data={'assinante_cpf': CPF_VALIDO})
+        form = ReciboForm(data={**self.vinculos, 'assinante_cpf': CPF_VALIDO})
         self.assertTrue(form.is_valid(), form.errors)
 
     def test_pdf_exibe_apenas_campos_preenchidos(self):
         recibo = Recibo(
+            imovel=self.imovel, contrato=self.contrato,
             quantia=Decimal('1500.00'), valor_aluguel=Decimal('1200.00'),
             valor_condominio=Decimal('300.00'), quem_pagou='Fulano de Tal',
         )
@@ -99,6 +164,19 @@ class ReciboTests(TestCase):
         self.assertNotIn('Seguros', html)
         self.assertNotIn('Vencido em', html)
         self.assertNotIn('Proveniente do Sítio', html)
+
+    def test_pdf_endereco_completo_e_periodo(self):
+        # R2/R3 — endereço com número/complemento; período só com as duas datas
+        recibo = Recibo(imovel=self.imovel, contrato=self.contrato,
+                        quantia=Decimal('100.00'),
+                        periodo_inicio=date(2026, 6, 1), periodo_fim=date(2026, 6, 30))
+        html = render_to_string('documentos/recibo_pdf.html', {'recibo': recibo})
+        self.assertIn('Rua A, 100 — Fundos', html)
+        self.assertIn('de 01/06/2026 a 30/06/2026', html)
+
+        recibo.periodo_fim = None
+        html = render_to_string('documentos/recibo_pdf.html', {'recibo': recibo})
+        self.assertNotIn('Correspondente ao Período', html)
 
 
 class ContratoPdfTests(TestCase):
@@ -145,6 +223,28 @@ class LaudoTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('contrato', form.errors)
 
+    def test_form_restringe_contratos_ao_imovel(self):
+        # L1 — contrato de outro imóvel é rejeitado
+        outro_imovel = Imovel.objects.create(
+            proprietario=self.imovel.proprietario, tipo='casa',
+            endereco='Rua B', cidade='Maringá',
+        )
+        form = LaudoVistoriaForm(data={
+            'imovel': outro_imovel.pk, 'contrato': self.contrato.pk,
+            'tipo': 'entrada', 'data': '2026-07-01', 'responsavel': 'Carlos',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('contrato', form.errors)
+
+    def test_tipo_periodica_removido(self):
+        # L2 — a opção "Vistoria Periódica" não existe mais
+        tipos = [t[0] for t in LaudoVistoria.TIPO_CHOICES]
+        self.assertNotIn('periodica', tipos)
+
+    def test_form_nao_expoe_upload_manual(self):
+        # L3 — o upload manual saiu da criação (fica só no detail, L6)
+        self.assertNotIn('arquivo', LaudoVistoriaForm.Meta.fields)
+
     def test_resumo_vistoria_calculado(self):
         ItemVistoria.objects.create(laudo=self.laudo, comodo='Sala', item='Piso', estado='bom', ordem=0)
         ItemVistoria.objects.create(laudo=self.laudo, comodo='Sala', item='Teto e forro', estado='regular', ordem=1)
@@ -179,8 +279,99 @@ class LaudoTests(TestCase):
         self.assertIn('Piso novo', html)
         self.assertIn('1 item vistoriado', html)
         self.assertIn('Testemunha Um', html)
+        # L5 — espaço extra acima das linhas de assinatura do laudo
+        self.assertIn('assinatura-laudo', html)
         # Sem observações gerais preenchidas, a seção não aparece
         self.assertNotIn('Observações Gerais', html)
+
+
+class FluxoViewTests(TestCase):
+    """G3/G4/L1/L4/L6 — comportamento das views após a Rodada 2."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester', password='x')
+        self.client.force_login(self.user)
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+
+    def test_recibo_create_redireciona_sem_pdf(self):
+        # G4 — salvar não gera/baixa PDF; segue o padrão PRG
+        resp = self.client.post(reverse('recibo_create'), {
+            'imovel': str(self.imovel.pk), 'contrato': str(self.contrato.pk),
+            'quem_pagou': 'Fulano', 'quantia': '1500,00', 'valor_aluguel': '1500,00',
+        })
+        recibo = Recibo.objects.latest('criado_em')
+        self.assertRedirects(resp, reverse('recibo_detail', args=[recibo.pk]))
+        self.assertFalse(recibo.arquivo)  # nenhum PDF anexado automaticamente
+        self.assertEqual(recibo.quantia, Decimal('1500.00'))
+
+    def test_contrato_create_redireciona_sem_pdf(self):
+        # G4 + G7 — datas em dd/mm/yyyy aceitas
+        resp = self.client.post(reverse('contrato_create'), {
+            'imovel': str(self.imovel.pk), 'inquilino': str(self.inquilino.pk),
+            'tipo_contrato': 'PF', 'status': 'ativo',
+            'data_inicio': '01/08/2026', 'data_fim': '01/08/2027',
+            'valor_mensal': '2000.00', 'dia_vencimento': '10',
+            'fiadores-TOTAL_FORMS': '1', 'fiadores-INITIAL_FORMS': '0',
+            'fiadores-MIN_NUM_FORMS': '0', 'fiadores-MAX_NUM_FORMS': '1000',
+        })
+        contrato = Contrato.objects.latest('criado_em')
+        self.assertRedirects(resp, reverse('contrato_detail', args=[contrato.pk]))
+        self.assertFalse(contrato.documento_gerado)
+        self.assertEqual(contrato.data_inicio, date(2026, 8, 1))
+
+    def test_contrato_delete_protegido_nao_da_500(self):
+        # G3 — contrato com laudo vinculado: mensagem amigável + redirect
+        LaudoVistoria.objects.create(
+            imovel=self.imovel, contrato=self.contrato, tipo='entrada',
+            data=date(2026, 7, 1), responsavel='Carlos',
+        )
+        resp = self.client.post(reverse('contrato_delete', args=[self.contrato.pk]), follow=True)
+        self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
+        self.assertTrue(Contrato.objects.filter(pk=self.contrato.pk).exists())
+        mensagens = [str(m) for m in resp.context['messages']]
+        self.assertTrue(any('não pode ser excluído' in m for m in mensagens))
+
+    def test_contrato_delete_sem_vinculos_funciona(self):
+        contrato_pk = self.contrato.pk
+        resp = self.client.post(reverse('contrato_delete', args=[contrato_pk]))
+        self.assertRedirects(resp, reverse('contrato_list'))
+        self.assertFalse(Contrato.objects.filter(pk=contrato_pk).exists())
+
+    def test_contratos_por_imovel_json(self):
+        # L1 — endpoint retorna apenas os contratos do imóvel
+        resp = self.client.get(reverse('contratos_por_imovel_json', args=[self.imovel.pk]))
+        self.assertEqual(resp.status_code, 200)
+        dados = resp.json()['contratos']
+        self.assertEqual(len(dados), 1)
+        self.assertEqual(dados[0]['id'], self.contrato.pk)
+        self.assertIn('João Locatário', dados[0]['label'])
+
+        outro = Imovel.objects.create(proprietario=self.imovel.proprietario, tipo='casa',
+                                      endereco='Rua B', cidade='Maringá')
+        resp = self.client.get(reverse('contratos_por_imovel_json', args=[outro.pk]))
+        self.assertEqual(resp.json()['contratos'], [])
+
+    def test_laudo_create_renderiza_checklist_do_catalogo(self):
+        # L4 — o GET de "Novo Laudo" exibe as 32 linhas do catálogo seedado
+        resp = self.client.get(reverse('laudo_create'))
+        self.assertEqual(resp.status_code, 200)
+        item_formset = resp.context['item_formset']
+        self.assertEqual(item_formset.total_form_count(), 32)
+        self.assertContains(resp, 'Sala')
+        self.assertContains(resp, 'Cozinha')
+
+    def test_laudo_anexar_arquivo(self):
+        # L6 — anexo do laudo assinado enviado a partir do detail
+        laudo = LaudoVistoria.objects.create(
+            imovel=self.imovel, contrato=self.contrato, tipo='entrada',
+            data=date(2026, 7, 1), responsavel='Carlos',
+        )
+        arquivo = SimpleUploadedFile('laudo_assinado.pdf', b'%PDF-1.4 fake', 'application/pdf')
+        resp = self.client.post(reverse('laudo_anexar_arquivo', args=[laudo.pk]), {'arquivo': arquivo})
+        self.assertRedirects(resp, reverse('laudo_detail', args=[laudo.pk]))
+        laudo.refresh_from_db()
+        self.assertTrue(laudo.arquivo)
+        laudo.arquivo.delete(save=False)
 
 
 class GeracaoPdfViewTests(TestCase):
@@ -188,17 +379,6 @@ class GeracaoPdfViewTests(TestCase):
         self.user = User.objects.create_user('tester', password='x')
         self.client.force_login(self.user)
         _, self.imovel, self.inquilino, self.contrato = criar_base()
-
-    def test_recibo_create_gera_pdf_e_anexa(self):
-        resp = self.client.post(reverse('recibo_create'), {
-            'quem_pagou': 'Fulano', 'quantia': '1500.00', 'valor_aluguel': '1500.00',
-        })
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp['Content-Type'], 'application/pdf')
-        self.assertTrue(resp.content.startswith(b'%PDF-'))
-        recibo = Recibo.objects.latest('criado_em')
-        self.assertTrue(recibo.arquivo)
-        recibo.arquivo.delete(save=False)
 
     def test_contrato_gerar_pdf_view(self):
         resp = self.client.get(reverse('contrato_gerar_pdf', args=[self.contrato.pk]))
@@ -220,6 +400,17 @@ class GeracaoPdfViewTests(TestCase):
         laudo.refresh_from_db()
         self.assertTrue(laudo.documento_gerado)
         laudo.documento_gerado.delete(save=False)
+
+    def test_recibo_gerar_pdf_view(self):
+        recibo = Recibo.objects.create(imovel=self.imovel, contrato=self.contrato,
+                                       quantia=Decimal('1500.00'))
+        resp = self.client.get(reverse('recibo_gerar_pdf', args=[recibo.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertTrue(resp.content.startswith(b'%PDF-'))
+        recibo.refresh_from_db()
+        self.assertTrue(recibo.arquivo)
+        recibo.arquivo.delete(save=False)
 
     def test_gerar_pdf_exige_login(self):
         self.client.logout()
@@ -252,15 +443,13 @@ class GeracaoPdfViewTests(TestCase):
             data[f'itens-{i}-observacao'] = 'obs teste' if i == 0 else ''
 
         resp = self.client.post(reverse('laudo_create'), data)
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp['Content-Type'], 'application/pdf')
-        self.assertTrue(resp.content.startswith(b'%PDF-'))
         laudo = LaudoVistoria.objects.latest('criado_em')
+        # G4 — sem download automático de PDF: redireciona para o detail
+        self.assertRedirects(resp, reverse('laudo_detail', args=[laudo.pk]))
         self.assertEqual(laudo.itens.count(), 3)
         self.assertEqual(laudo.resumo_vistoria(), {'total': 3, 'bom': 3, 'regular': 0, 'ruim': 0})
         self.assertEqual(laudo.testemunhas.count(), 1)
-        self.assertTrue(laudo.documento_gerado)
-        laudo.documento_gerado.delete(save=False)
+        self.assertFalse(laudo.documento_gerado)
 
     def test_ged_nao_quebra_com_documento_gerado_nulo(self):
         # Regressão: registros antigos têm documento_gerado NULL (não '') e o

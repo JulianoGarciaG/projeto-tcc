@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
-    FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato, Saida, Entrada,
+    FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato,
     Recibo, ComodoTemplate, ItemVistoriaTemplate, ItemVistoria, TestemunhaLaudo,
 )
 
@@ -19,7 +19,7 @@ class FotoImovelInline(admin.TabularInline):
 
 @admin.register(Imovel)
 class ImovelAdmin(admin.ModelAdmin):
-    list_display = ['endereco', 'tipo', 'categoria', 'status', 'proprietario', 'valor_aluguel']
+    list_display = ['endereco', 'tipo', 'categoria', 'status', 'proprietario']
     list_filter = ['status', 'tipo', 'categoria']
     search_fields = ['endereco', 'bairro', 'cidade']
     inlines = [FotoImovelInline]
@@ -61,20 +61,6 @@ class RenovacaoContratoAdmin(admin.ModelAdmin):
 class DistratoAdmin(admin.ModelAdmin):
     list_display = ['contrato', 'tipo', 'data_distrato']
     list_filter = ['tipo']
-
-
-@admin.register(Saida)
-class SaidaAdmin(admin.ModelAdmin):
-    list_display = ['imovel', 'tipo', 'valor', 'data', 'pago_por']
-    list_filter = ['tipo', 'pago_por']
-    search_fields = ['imovel__endereco']
-
-
-@admin.register(Entrada)
-class EntradaAdmin(admin.ModelAdmin):
-    list_display = ['imovel', 'tipo', 'valor', 'data']
-    list_filter = ['tipo']
-    search_fields = ['imovel__endereco']
 
 
 class ItemVistoriaInline(admin.TabularInline):

@@ -7,38 +7,6 @@
 
 <div class="row g-4">
 
-  <!-- Contratos -->
-  <div class="col-12">
-    <div class="section-card">
-      <div class="section-card-header">
-        <i class="bi bi-file-earmark-text-fill text-primary me-1"></i> Contratos com Arquivo
-        <span class="badge bg-primary ms-2">{{ contratos.count }}</span>
-      </div>
-      <div class="table-responsive">
-        <table class="table mb-0 small">
-          <thead><tr><th>Inquilino</th><th>Imóvel</th><th>Período</th><th>Status</th><th>Arquivo</th></tr></thead>
-          <tbody>
-            {% for c in contratos %}
-            <tr>
-              <td>{{ c.inquilino.nome }}</td>
-              <td>{{ c.imovel.endereco|truncatechars:35 }}</td>
-              <td>{{ c.data_inicio|date:"d/m/Y" }} → {{ c.data_fim|date:"d/m/Y" }}</td>
-              <td><span class="status-badge badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
-              <td>
-                <a href="{{ c.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                  <i class="bi bi-file-earmark-pdf me-1"></i> Abrir PDF
-                </a>
-              </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="5" class="text-center text-muted py-3">Nenhum contrato com arquivo anexado.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
   <!-- Laudos -->
   <div class="col-md-6">
     <div class="section-card h-100">

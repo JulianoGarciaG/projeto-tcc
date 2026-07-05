@@ -47,17 +47,17 @@
 </p>
 {% endif %}
 
-<div class="assinatura">
+<div class="assinatura assinatura-laudo">
   <div class="linha-assinatura">{{ laudo.locador_nome }} — Locador(a)</div>
 </div>
-<div class="assinatura">
+<div class="assinatura assinatura-laudo">
   <div class="linha-assinatura">{{ laudo.locatario_nome }} — Locatário(a)</div>
 </div>
 
 {% if testemunhas %}
 <h2 class="secao" style="margin-top:30px;">Testemunhas</h2>
 {% for t in testemunhas %}
-<div class="assinatura">
+<div class="assinatura assinatura-laudo">
   <div class="linha-assinatura">{{ t.nome }}{% if t.cpf %} — CPF: {{ t.cpf }}{% endif %}</div>
 </div>
 {% endfor %}

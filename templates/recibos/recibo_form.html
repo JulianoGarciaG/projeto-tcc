@@ -12,11 +12,11 @@
       {% csrf_token %}
 
       <div class="section-card mb-4">
-        <div class="section-card-header"><i class="bi bi-link-45deg me-1"></i> Vínculos (opcional)</div>
+        <div class="section-card-header"><i class="bi bi-link-45deg me-1"></i> Vínculos</div>
         <div class="section-card-body">
           <div class="row g-3">
-            <div class="col-md-6"><label class="form-label">Imóvel</label>{{ form.imovel }}</div>
-            <div class="col-md-6"><label class="form-label">Contrato</label>{{ form.contrato }}</div>
+            <div class="col-md-6"><label class="form-label">Imóvel *</label>{{ form.imovel }}</div>
+            <div class="col-md-6"><label class="form-label">Contrato *</label>{{ form.contrato }}</div>
           </div>
         </div>
       </div>
@@ -42,9 +42,9 @@
         <div class="section-card-body">
           <div class="row g-3">
             <div class="col-md-6"><label class="form-label">Quem Pagou</label>{{ form.quem_pagou }}</div>
-            <div class="col-md-6"><label class="form-label">Proveniente do Sítio</label>{{ form.proveniente_sitio }}</div>
-            <div class="col-md-6"><label class="form-label">Correspondente ao Período de</label>{{ form.periodo_referente }}</div>
             <div class="col-md-6"><label class="form-label">Vencido em</label>{{ form.vencido_em }}</div>
+            <div class="col-md-6"><label class="form-label">Período — Início</label>{{ form.periodo_inicio }}</div>
+            <div class="col-md-6"><label class="form-label">Período — Fim</label>{{ form.periodo_fim }}</div>
           </div>
         </div>
       </div>
@@ -69,7 +69,7 @@
 
       <div class="d-flex gap-2 justify-content-end mb-4">
         <a href="{% url 'recibo_list' %}" class="btn btn-outline-secondary">Cancelar</a>
-        <button type="submit" class="btn btn-primary"><i class="bi bi-file-earmark-pdf me-1"></i> Salvar e Gerar PDF</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Salvar</button>
       </div>
     </form>
   </div>
