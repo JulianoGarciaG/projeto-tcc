@@ -15,25 +15,25 @@
 
 {% block doc_meta %}LAUDO Nº <strong>{{ laudo.pk }}</strong><br>Emitido em {{ laudo.criado_em|date:"d/m/Y" }}{% endblock %}
 
-{% block titulo_doc %}Laudo de Vistoria — {% if laudo.tipo == 'entrada' %}Entrada{% else %}Saída{% endif %}{% endblock %}
+{% block titulo_doc %}LAUDO DE VISTORIA — {% if laudo.tipo == 'entrada' %}ENTRADA{% else %}SAÍDA{% endif %}{% endblock %}
 
 {% block conteudo %}
 <!-- 1. Identificação -->
-<div class="sec">Identificação</div>
+<div class="sec">IDENTIFICAÇÃO</div>
 <table class="fields avoid-break">
   <tr>
-    <td class="pad" width="50%"><div class="flabel">Tipo de vistoria</div><div class="fval">{{ laudo.get_tipo_display }}</div></td>
-    <td width="50%"><div class="flabel">Data da vistoria</div><div class="fval">{{ laudo.data|date:"d/m/Y" }}</div></td>
+    <td class="pad" width="50%"><div class="flabel">TIPO DE VISTORIA</div><div class="fval">{{ laudo.get_tipo_display }}</div></td>
+    <td width="50%"><div class="flabel">DATA DA VISTORIA</div><div class="fval">{{ laudo.data|date:"d/m/Y" }}</div></td>
   </tr>
   <tr>
-    <td colspan="2"><div class="flabel">Endereço do imóvel</div><div class="fval">{{ laudo.imovel.endereco }}{% if laudo.imovel.numero %}, {{ laudo.imovel.numero }}{% endif %}{% if laudo.imovel.complemento %}, {{ laudo.imovel.complemento }}{% endif %}{% if laudo.imovel.bairro %} — {{ laudo.imovel.bairro }}{% endif %}{% if laudo.imovel.cidade %}{% if laudo.imovel.bairro %}, {% else %} — {% endif %}{{ laudo.imovel.cidade }}{% endif %}</div></td>
+    <td colspan="2"><div class="flabel">ENDEREÇO DO IMÓVEL</div><div class="fval">{{ laudo.imovel.endereco }}{% if laudo.imovel.numero %}, {{ laudo.imovel.numero }}{% endif %}{% if laudo.imovel.complemento %}, {{ laudo.imovel.complemento }}{% endif %}{% if laudo.imovel.bairro %} — {{ laudo.imovel.bairro }}{% endif %}{% if laudo.imovel.cidade %}{% if laudo.imovel.bairro %}, {% else %} — {% endif %}{{ laudo.imovel.cidade }}{% endif %}</div></td>
   </tr>
   <tr>
-    <td class="pad"><div class="flabel">Locador</div><div class="fval">{{ laudo.locador_nome }}</div></td>
-    <td><div class="flabel">Locatário</div><div class="fval">{{ laudo.locatario_nome }}</div></td>
+    <td class="pad"><div class="flabel">LOCADOR</div><div class="fval">{{ laudo.locador_nome }}</div></td>
+    <td><div class="flabel">LOCATÁRIO</div><div class="fval">{{ laudo.locatario_nome }}</div></td>
   </tr>
   <tr>
-    <td class="pad"><div class="flabel">Responsável pela vistoria</div><div class="fval">{{ laudo.responsavel }}</div></td>
+    <td class="pad"><div class="flabel">RESPONSÁVEL PELA VISTORIA</div><div class="fval">{{ laudo.responsavel }}</div></td>
     <td></td>
   </tr>
 </table>
@@ -51,12 +51,13 @@
 <div class="avoid-break">
   <div style="font-size: 12px; font-weight: bold; color: #3A3A3A; margin: 16px 0 6px 0;">{{ grupo.comodo }}</div>
   <table class="data-table">
-    <tr><th width="34%">Item</th><th width="20%">Estado</th><th>Observação</th></tr>
+    <tr><th width="34%">ITEM</th><th width="20%">ESTADO</th><th>OBSERVAÇÃO</th></tr>
     {% for item in grupo.itens %}
     <tr{% if forloop.counter|divisibleby:2 %} class="row-alt"{% endif %}>
       <td style="border-left: 3px solid {% if item.estado == 'bom' %}#2E7D32{% elif item.estado == 'regular' %}#9A6B00{% else %}#C62828{% endif %};">{{ item.item }}</td>
       <td><span class="badge {% if item.estado == 'bom' %}badge-bom{% elif item.estado == 'regular' %}badge-reg{% else %}badge-ruim{% endif %}">{{ item.get_estado_display|upper }}</span></td>
-      <td style="color: #888888;">{{ item.observacao }}</td>
+      {# xhtml2pdf não desenha border/fundo em <td> vazio: garante conteúdo mínimo #}
+      <td style="color: #888888;">{{ item.observacao }}{% if not item.observacao %}&nbsp;{% endif %}</td>
     </tr>
     {% endfor %}
   </table>
@@ -64,20 +65,20 @@
 {% endfor %}
 
 <!-- Resumo -->
-<div class="sec">Resumo da Vistoria</div>
+<div class="sec">RESUMO DA VISTORIA</div>
 <table class="cards avoid-break">
   <tr>
-    <td width="25%"><div class="card"><div class="card-label">Total de itens</div><div class="card-value">{{ resumo.total }}</div></div></td>
-    <td width="25%"><div class="card" style="border-top: 3px solid #2E7D32;"><div class="card-label">Bom</div><div class="card-value" style="color: #2E7D32;">{{ resumo.bom }}</div></div></td>
-    <td width="25%"><div class="card" style="border-top: 3px solid #9A6B00;"><div class="card-label">Regular</div><div class="card-value" style="color: #9A6B00;">{{ resumo.regular }}</div></div></td>
-    <td width="25%"><div class="card" style="border-top: 3px solid #C62828;"><div class="card-label">Ruim</div><div class="card-value" style="color: #C62828;">{{ resumo.ruim }}</div></div></td>
+    <td width="25%"><div class="card-label">TOTAL DE ITENS</div><div class="card-value">{{ resumo.total }}</div></td>
+    <td width="25%" style="border-top: 3px solid #2E7D32;"><div class="card-label">BOM</div><div class="card-value" style="color: #2E7D32;">{{ resumo.bom }}</div></td>
+    <td width="25%" style="border-top: 3px solid #9A6B00;"><div class="card-label">REGULAR</div><div class="card-value" style="color: #9A6B00;">{{ resumo.regular }}</div></td>
+    <td width="25%" style="border-top: 3px solid #C62828;"><div class="card-label">RUIM</div><div class="card-value" style="color: #C62828;">{{ resumo.ruim }}</div></td>
   </tr>
 </table>
 {% endif %}
 
 {% if laudo.observacoes %}
 <!-- Observações gerais -->
-<div class="sec">Observações Gerais</div>
+<div class="sec">OBSERVAÇÕES GERAIS</div>
 <div class="note-box avoid-break">{{ laudo.observacoes|linebreaksbr }}</div>
 {% endif %}
 
@@ -102,7 +103,7 @@
 
 {% if testemunhas %}
 <!-- Testemunhas -->
-<div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #888888; margin-top: 44px; margin-bottom: 8px;">Testemunhas</div>
+<div style="font-size: 9px; letter-spacing: 1px; color: #888888; margin-top: 44px; margin-bottom: 8px;">TESTEMUNHAS</div>
 <table class="sign-table avoid-break" style="margin-top: 36px;">
   {% for t in testemunhas %}
   {% if forloop.counter0|divisibleby:2 %}

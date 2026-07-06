@@ -210,16 +210,16 @@ class ContratoPdfTests(TestCase):
 
     def test_pf_exibe_cpf_e_nao_cnpj(self):
         html = render_to_string('documentos/contrato_pdf.html', {'contrato': self.contrato})
-        self.assertIn('Pessoa Física', html)
+        self.assertIn('PESSOA FÍSICA', html)
         self.assertIn(self.inquilino.cpf, html)
-        self.assertNotIn('Razão Social', html)
+        self.assertNotIn('RAZÃO SOCIAL', html)
         self.assertNotIn(self.inquilino.cnpj, html)
 
     def test_pj_exibe_cnpj(self):
         self.contrato.tipo_contrato = 'PJ'
         html = render_to_string('documentos/contrato_pdf.html', {'contrato': self.contrato})
-        self.assertIn('Pessoa Jurídica', html)
-        self.assertIn('Razão Social', html)
+        self.assertIn('PESSOA JURÍDICA', html)
+        self.assertIn('RAZÃO SOCIAL', html)
         self.assertIn(self.inquilino.cnpj, html)
 
 
@@ -294,8 +294,8 @@ class LaudoTests(TestCase):
         self.assertIn('Sala', html)
         self.assertIn('Piso novo', html)
         # Resumo em cards (redesign) — total e badge do estado do item
-        self.assertIn('Resumo da Vistoria', html)
-        self.assertIn('Total de itens', html)
+        self.assertIn('RESUMO DA VISTORIA', html)
+        self.assertIn('TOTAL DE ITENS', html)
         self.assertIn('badge-bom', html)
         self.assertIn('Testemunha Um', html)
         # Assinaturas do redesign (sign-table com espaço de 80px do mockup)

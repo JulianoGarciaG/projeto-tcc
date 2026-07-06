@@ -35,7 +35,18 @@
       "Bash(venv/Scripts/python manage.py test imoveis)",
       "Bash(venv/Scripts/python manage.py runserver 127.0.0.1:8000 --noreload)",
       "Bash(echo \"started with pid $!\")",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "Bash(venv/Scripts/python --version)",
+      "Bash(rm -f \"C:/Users/Pichau/AppData/Local/Temp/claude/c--Users-Pichau-projeto-tcc/f1a45682-3382-42a9-96e1-ace329e59eac/scratchpad/test_render\"*.py \"C:/Users/Pichau/AppData/Local/Temp/claude/c--Users-Pichau-projeto-tcc/f1a45682-3382-42a9-96e1-ace329e59eac/scratchpad/test_out\"*.pdf \"C:/Users/Pichau/AppData/Local/Temp/claude/c--Users-Pichau-projeto-tcc/f1a45682-3382-42a9-96e1-ace329e59eac/scratchpad/quotetest.txt\" \"C:/Users/Pichau/AppData/Local/Temp/claude/c--Users-Pichau-projeto-tcc/f1a45682-3382-42a9-96e1-ace329e59eac/scratchpad/accenttest.txt\" 2>/dev/null; echo done)",
+      "Read(//c/Users/Pichau/projeto-tcc/**)",
+      "Bash(venv/Scripts/python -c ' *)",
+      "Bash(netstat -ano)",
+      "Bash(tasklist //FI \"IMAGENAME eq python.exe\")",
+      "Bash(taskkill //PID 3432 //F)",
+      "Bash(taskkill //PID 5100 //F)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Pichau\\AppData\\Local\\Temp\\claude\\c--Users-Pichau-projeto-tcc\\f1a45682-3382-42a9-96e1-ace329e59eac\\scratchpad"
     ]
   }
 }

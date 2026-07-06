@@ -10,7 +10,7 @@
 
 {% block doc_meta %}RECIBO Nº <strong>{{ recibo.pk }}</strong><br>Emitido em {{ recibo.criado_em|date:"d/m/Y" }}{% endblock %}
 
-{% block titulo_doc %}Recibo{% if recibo.parcela_atual and recibo.parcela_total %} — Parcela {{ recibo.parcela_atual }}/{{ recibo.parcela_total }}{% endif %}{% endblock %}
+{% block titulo_doc %}RECIBO{% if recibo.parcela_atual and recibo.parcela_total %} — PARCELA {{ recibo.parcela_atual }}/{{ recibo.parcela_total }}{% endif %}{% endblock %}
 
 {% block titulo_underline %}{% endblock %}
 
@@ -21,7 +21,7 @@
   <tr>
     <td style="width: 5px; background-color: #F2B441; font-size: 1px;">&nbsp;</td>
     <td style="padding: 16px 22px;">
-      <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #9A6B00; font-weight: bold;">Quantia recebida</div>
+      <div style="font-size: 9px; letter-spacing: 1.5px; color: #9A6B00; font-weight: bold;">QUANTIA RECEBIDA</div>
       <div style="font-size: 32px; font-weight: bold; color: #3A3A3A; margin-top: 4px;">R$ {{ recibo.quantia|brl }}</div>
     </td>
   </tr>
@@ -30,16 +30,16 @@
 
 <!-- 2. Dados do recibo -->
 <table class="fields avoid-break" style="margin-top: 22px;">
-  {% if recibo.imovel %}<tr><td colspan="2"><div class="flabel">Imóvel</div><div class="fval">{{ recibo.imovel.endereco }}{% if recibo.imovel.numero %}, {{ recibo.imovel.numero }}{% endif %}{% if recibo.imovel.complemento %}, {{ recibo.imovel.complemento }}{% endif %}{% if recibo.imovel.bairro %} — {{ recibo.imovel.bairro }}{% endif %}{% if recibo.imovel.cidade %}{% if recibo.imovel.bairro %}, {% else %} — {% endif %}{{ recibo.imovel.cidade }}{% endif %}</div></td></tr>{% endif %}
+  {% if recibo.imovel %}<tr><td colspan="2"><div class="flabel">IMÓVEL</div><div class="fval">{{ recibo.imovel.endereco }}{% if recibo.imovel.numero %}, {{ recibo.imovel.numero }}{% endif %}{% if recibo.imovel.complemento %}, {{ recibo.imovel.complemento }}{% endif %}{% if recibo.imovel.bairro %} — {{ recibo.imovel.bairro }}{% endif %}{% if recibo.imovel.cidade %}{% if recibo.imovel.bairro %}, {% else %} — {% endif %}{{ recibo.imovel.cidade }}{% endif %}</div></td></tr>{% endif %}
   {% if recibo.quem_pagou or recibo.periodo_inicio and recibo.periodo_fim %}
   <tr>
-    <td class="pad" width="50%">{% if recibo.quem_pagou %}<div class="flabel">Recebemos de</div><div class="fval">{{ recibo.quem_pagou }}</div>{% endif %}</td>
-    <td width="50%">{% if recibo.periodo_inicio and recibo.periodo_fim %}<div class="flabel">Período correspondente</div><div class="fval">{{ recibo.periodo_inicio|date:"d/m/Y" }} a {{ recibo.periodo_fim|date:"d/m/Y" }}</div>{% endif %}</td>
+    <td class="pad" width="50%">{% if recibo.quem_pagou %}<div class="flabel">RECEBEMOS DE</div><div class="fval">{{ recibo.quem_pagou }}</div>{% endif %}</td>
+    <td width="50%">{% if recibo.periodo_inicio and recibo.periodo_fim %}<div class="flabel">PERÍODO CORRESPONDENTE</div><div class="fval">{{ recibo.periodo_inicio|date:"d/m/Y" }} a {{ recibo.periodo_fim|date:"d/m/Y" }}</div>{% endif %}</td>
   </tr>
   {% endif %}
   {% if recibo.vencido_em %}
   <tr>
-    <td class="pad" width="50%"><div class="flabel">Vencimento</div><div class="fval">{{ recibo.vencido_em|date:"d/m/Y" }}</div></td>
+    <td class="pad" width="50%"><div class="flabel">VENCIMENTO</div><div class="fval">{{ recibo.vencido_em|date:"d/m/Y" }}</div></td>
     <td width="50%"></td>
   </tr>
   {% endif %}
@@ -47,7 +47,7 @@
 
 {% if recibo.valor_aluguel or recibo.valor_impostos or recibo.valor_seguros or recibo.valor_condominio %}
 <!-- 3. Composição do valor -->
-<div class="sec">Composição do Valor</div>
+<div class="sec">COMPOSIÇÃO DO VALOR</div>
 <table style="width: 100%; border-collapse: collapse; font-size: 11px;" class="avoid-break">
   {% if recibo.valor_aluguel %}<tr><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0;">Aluguel</td><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0; text-align: right;">R$ {{ recibo.valor_aluguel|brl }}</td></tr>{% endif %}
   {% if recibo.valor_impostos %}<tr><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0;">Impostos (IPTU)</td><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0; text-align: right;">R$ {{ recibo.valor_impostos|brl }}</td></tr>{% endif %}

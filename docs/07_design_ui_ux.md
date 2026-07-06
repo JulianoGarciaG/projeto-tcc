@@ -302,7 +302,8 @@ Os três PDFs gerados pelo sistema (Contrato, Laudo de Vistoria, Recibo) foram r
 
 - **Logo:** sempre `{% static 'assets/Shelter_LOGO.jpg' %}` (versão rasterizada compatível com xhtml2pdf).
 - **Cabeçalho:** usa `{{ objeto.pk }}` + data de criação (não há campo de "número de documento" formatado nos models).
-- **CSS comum em `base_pdf.html`:** `.doc-header`, `.doc-logo`, `.doc-meta`, `.brand-rule`, `.doc-title-wrap`/`.doc-title`/`.doc-title-underline`, `.sec`, `.fields`/`.flabel`/`.fval`, `.cards`/`.card`/`.card-label`/`.card-value`, `.note-box`, `.sign-table`/`.sign-cell`/`.sign-line`/`.sign-role`, `.doc-footer`, `.avoid-break`.
+- **CSS comum em `base_pdf.html`:** `.doc-header`, `.doc-logo`, `.doc-meta`, `.brand-rule`, `.doc-title-wrap`/`.doc-title`/`.doc-title-underline` (+ `.doc-title-underline-table`), `.sec`, `.fields`/`.flabel`/`.fval`, `.cards`/`.card-label`/`.card-value`, `.note-box`, `.sign-table`/`.sign-cell`/`.sign-line`/`.sign-role`, `.doc-footer`, `.avoid-break`. A classe `.card` (wrapper singular) **não existe mais**: o `border`/`padding` do cartão vive agora em `.cards td` (o xhtml2pdf desenhava uma borda por filho block-level quando a borda ficava no `<div class="card">`, produzindo efeito de grade — mover para a `<td>` usa o comando `BOX` do `TableStyle` e trata a célula como caixa única).
+- **Limitações do xhtml2pdf tratadas nos templates:** `text-transform: uppercase` é ignorado pelo motor — os textos estáticos são escritos literalmente em CAIXA ALTA e os valores dinâmicos usam o filtro `|upper`; as regras CSS `text-transform` permanecem como documentação da intenção. `margin: ... auto ...` também não é suportado — a barra `.doc-title-underline` é centralizada via `<table align="center">` em vez de `margin: auto`.
 - **CSS exclusivo por documento (no template filho):**
   - Laudo: `.data-table`, `.badge`/`.badge-bom`/`.badge-reg`/`.badge-ruim`, `.row-alt`.
   - Recibo: caixa de destaque da quantia.

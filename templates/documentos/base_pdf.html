@@ -14,6 +14,14 @@
     Token novo específico de PDF (não documentado na paleta): #9A6B00 —
     dourado escuro usado nos filhos (badge "Regular" do laudo e rótulo da
     quantia do recibo).
+
+    IMPORTANTE (xhtml2pdf não suporta text-transform):
+    as regras text-transform: uppercase abaixo (.doc-title, .sec, .flabel,
+    .card-label, .data-table th) NÃO têm efeito no PDF gerado — a propriedade
+    é ignorada silenciosamente pelo motor. Os templates filhos (contrato/laudo/
+    recibo) devem escrever o texto já em caixa alta (literal, para conteúdo
+    estático) ou aplicar o filtro upper (para valores dinâmicos). As regras
+    CSS foram mantidas como documentação da intenção visual.
   */
   @page { size: A4; margin: 2cm; }
   body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; line-height: 1.5; color: #3A3A3A; margin: 0; }
@@ -25,16 +33,16 @@
   .brand-rule { height: 3px; background-color: #F2B441; margin-top: 12px; font-size: 1px; }
   .doc-title-wrap { text-align: center; margin: 30px 0 4px 0; }
   .doc-title { font-size: 18px; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; color: #3A3A3A; }
-  .doc-title-underline { width: 54px; height: 2px; background-color: #F2B441; margin: 10px auto 0 auto; font-size: 1px; }
+  .doc-title-underline-table { margin-top: 10px; }
+  .doc-title-underline { width: 54pt; height: 2px; background-color: #F2B441; font-size: 1px; line-height: 1px; }
   .sec { background-color: #F7F3EA; border-left: 4px solid #F2B441; padding: 7px 12px; margin: 22px 0 8px 0; font-size: 10px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: #3A3A3A; }
   .fields { width: 100%; border-collapse: collapse; }
   .fields td { padding: 5px 0; vertical-align: top; }
   .fields td.pad { padding-right: 14px; }
   .flabel { font-size: 8px; letter-spacing: 0.5px; color: #888888; text-transform: uppercase; }
   .fval { font-size: 11px; color: #3A3A3A; }
-  .cards { width: 100%; border-collapse: collapse; text-align: center; }
-  .cards td { padding: 2px; }
-  .card { border: 1px solid #E0E0E0; padding: 10px 6px; }
+  .cards { width: 100%; border-collapse: separate; border-spacing: 2px; text-align: center; }
+  .cards td { border: 1px solid #E0E0E0; padding: 10px 6px; }
   .card-label { font-size: 8px; letter-spacing: 0.5px; color: #888888; text-transform: uppercase; }
   .card-value { font-size: 14px; font-weight: bold; color: #3A3A3A; margin-top: 4px; }
   .note-box { background-color: #FCF8EF; border-left: 3px solid #F2B441; padding: 10px 14px; font-size: 10.5px; color: #3A3A3A; }
@@ -59,7 +67,11 @@
 
   <div class="doc-title-wrap">
     <div class="doc-title">{% block titulo_doc %}{% endblock %}</div>
-    {% block titulo_underline %}<div class="doc-title-underline"></div>{% endblock %}
+    {% block titulo_underline %}
+    <table align="center" class="doc-title-underline-table"><tr>
+      <td class="doc-title-underline">&nbsp;</td>
+    </tr></table>
+    {% endblock %}
   </div>
 
   {% block conteudo %}{% endblock %}
