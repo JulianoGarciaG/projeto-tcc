@@ -2,23 +2,46 @@ from django import forms
 from django.forms import inlineformset_factory
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
-    FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato, Saida, Entrada,
+    FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato,
+    Recibo, ItemVistoria, TestemunhaLaudo,
 )
 
 _ctrl = {'class': 'form-control'}
 _sel = {'class': 'form-select'}
 
 
+def _date_widget():
+    """Input de data com Flatpickr (dd/mm/aaaa) — init centralizada em static/js/masks.js."""
+    return forms.DateInput(
+        format='%d/%m/%Y',
+        attrs={**_ctrl, 'data-flatpickr': 'true', 'placeholder': 'dd/mm/aaaa', 'autocomplete': 'off'},
+    )
+
+
+def _moeda_widget():
+    """Input monetário com máscara IMask (data-mask="moeda"); requer campo localized."""
+    return forms.TextInput(attrs={**_ctrl, 'data-mask': 'moeda', 'inputmode': 'decimal',
+                                  'placeholder': '0,00'})
+
+
+_telefone_attrs = {**_ctrl, 'data-mask': 'telefone', 'placeholder': '(00) 00000-0000'}
+
+
+class DashboardFiltroForm(forms.Form):
+    """Filtro de período do Dashboard — datas em dd/mm/aaaa (Flatpickr)."""
+    data_inicio = forms.DateField(required=False, widget=_date_widget())
+    data_fim = forms.DateField(required=False, widget=_date_widget())
+
+
 class ProprietarioForm(forms.ModelForm):
     class Meta:
         model = Proprietario
-        fields = ['nome', 'cpf_cnpj', 'email', 'telefone', 'endereco']
+        fields = ['nome', 'cpf_cnpj', 'email', 'telefone']
         widgets = {
             'nome': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome completo'}),
             'cpf_cnpj': forms.TextInput(attrs={**_ctrl, 'placeholder': '000.000.000-00 ou 00.000.000/0000-00'}),
             'email': forms.EmailInput(attrs={**_ctrl, 'placeholder': 'email@exemplo.com'}),
-            'telefone': forms.TextInput(attrs={**_ctrl, 'placeholder': '(00) 00000-0000'}),
-            'endereco': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Rua, número, bairro, cidade'}),
+            'telefone': forms.TextInput(attrs=_telefone_attrs),
         }
 
 
@@ -27,8 +50,8 @@ class ImovelForm(forms.ModelForm):
         model = Imovel
         fields = [
             'proprietario', 'tipo', 'categoria', 'status',
-            'endereco', 'bairro', 'cidade',
-            'valor_aluguel', 'area_m2', 'descricao',
+            'endereco', 'numero', 'complemento', 'bairro', 'cidade',
+            'area_m2', 'descricao',
             'matricula', 'data_aquisicao', 'valor_aquisicao',
             # Urbano
             'cadastro_prefeitura', 'planta_projeto',
@@ -40,14 +63,14 @@ class ImovelForm(forms.ModelForm):
             'tipo': forms.Select(attrs=_sel),
             'categoria': forms.Select(attrs=_sel),
             'status': forms.Select(attrs=_sel),
-            'endereco': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Rua e número'}),
+            'endereco': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Rua/Logradouro'}),
+            'numero': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nº'}),
+            'complemento': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Apto, bloco, sala...'}),
             'bairro': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Bairro'}),
             'cidade': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Cidade'}),
-            'valor_aluguel': forms.NumberInput(attrs={**_ctrl, 'placeholder': '0,00', 'step': '0.01'}),
             'area_m2': forms.NumberInput(attrs={**_ctrl, 'placeholder': 'm²', 'step': '0.01'}),
             'descricao': forms.Textarea(attrs={**_ctrl, 'rows': 3}),
             'matricula': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Número da matrícula'}),
-            'data_aquisicao': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
             'valor_aquisicao': forms.NumberInput(attrs={**_ctrl, 'step': '0.01'}),
             'cadastro_prefeitura': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nº cadastro prefeitura'}),
             'planta_projeto': forms.ClearableFileInput(attrs=_ctrl),
@@ -55,6 +78,10 @@ class ImovelForm(forms.ModelForm):
             'incra': forms.TextInput(attrs={**_ctrl, 'placeholder': 'INCRA'}),
             'car': forms.TextInput(attrs={**_ctrl, 'placeholder': 'CAR'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['data_aquisicao'].widget = _date_widget()
 
 
 class FotoImovelForm(forms.ModelForm):
@@ -78,7 +105,8 @@ FotoImovelFormSet = inlineformset_factory(
 class InquilinoForm(forms.ModelForm):
     class Meta:
         model = Inquilino
-        fields = ['nome', 'cpf', 'cnpj', 'rg', 'qualificacao', 'email', 'telefone', 'profissao', 'renda_mensal']
+        fields = ['nome', 'cpf', 'cnpj', 'rg', 'qualificacao', 'email', 'telefone',
+                  'profissao', 'faixa_renda', 'observacoes']
         widgets = {
             'nome': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome completo'}),
             'cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': '000.000.000-00'}),
@@ -86,9 +114,10 @@ class InquilinoForm(forms.ModelForm):
             'rg': forms.TextInput(attrs={**_ctrl, 'placeholder': 'RG'}),
             'qualificacao': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Ex: solteiro, brasileiro, empresário'}),
             'email': forms.EmailInput(attrs={**_ctrl, 'placeholder': 'email@exemplo.com'}),
-            'telefone': forms.TextInput(attrs={**_ctrl, 'placeholder': '(00) 00000-0000'}),
+            'telefone': forms.TextInput(attrs=_telefone_attrs),
             'profissao': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Profissão'}),
-            'renda_mensal': forms.NumberInput(attrs={**_ctrl, 'placeholder': '0,00', 'step': '0.01'}),
+            'faixa_renda': forms.Select(attrs=_sel),
+            'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 3}),
         }
 
 
@@ -96,37 +125,45 @@ class ContratoForm(forms.ModelForm):
     class Meta:
         model = Contrato
         fields = [
-            'imovel', 'inquilino', 'tipo_contrato', 'status',
+            'imovel', 'inquilino', 'tipo_contrato', 'finalidade', 'status',
             'data_inicio', 'data_fim', 'valor_mensal', 'dia_vencimento',
-            'arquivo', 'comprovante_renda', 'contrato_social',
-            'recibo_chaves', 'comprovante_anual', 'observacoes',
+            'local_assinatura', 'data_assinatura', 'observacoes',
         ]
         widgets = {
             'imovel': forms.Select(attrs=_sel),
             'inquilino': forms.Select(attrs=_sel),
             'tipo_contrato': forms.Select(attrs=_sel),
+            'finalidade': forms.Select(attrs=_sel),
             'status': forms.Select(attrs=_sel),
-            'data_inicio': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
-            'data_fim': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
             'valor_mensal': forms.NumberInput(attrs={**_ctrl, 'step': '0.01'}),
             'dia_vencimento': forms.NumberInput(attrs={**_ctrl, 'min': 1, 'max': 31}),
-            'arquivo': forms.ClearableFileInput(attrs=_ctrl),
-            'comprovante_renda': forms.ClearableFileInput(attrs=_ctrl),
-            'contrato_social': forms.ClearableFileInput(attrs=_ctrl),
-            'recibo_chaves': forms.ClearableFileInput(attrs=_ctrl),
-            'comprovante_anual': forms.ClearableFileInput(attrs=_ctrl),
+            'local_assinatura': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Cidade da assinatura'}),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['data_inicio'].widget = _date_widget()
+        self.fields['data_fim'].widget = _date_widget()
+        self.fields['data_assinatura'].widget = _date_widget()
 
 
 class FiadorForm(forms.ModelForm):
     class Meta:
         model = Fiador
-        fields = ['nome', 'qualificacao', 'rg_cpf', 'certidao_onus', 'garantia']
+        fields = ['nome', 'qualificacao', 'rg_cpf', 'rg', 'cpf', 'endereco',
+                  'conjuge_nome', 'conjuge_rg', 'conjuge_cpf',
+                  'certidao_onus', 'garantia']
         widgets = {
             'nome': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome completo'}),
             'qualificacao': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Ex: casado, brasileiro, comerciante'}),
             'rg_cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': 'RG ou CPF'}),
+            'rg': forms.TextInput(attrs={**_ctrl, 'placeholder': 'RG'}),
+            'cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': 'CPF'}),
+            'endereco': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Endereço completo'}),
+            'conjuge_nome': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome do cônjuge'}),
+            'conjuge_rg': forms.TextInput(attrs={**_ctrl, 'placeholder': 'RG do cônjuge'}),
+            'conjuge_cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': 'CPF do cônjuge'}),
             'certidao_onus': forms.ClearableFileInput(attrs=_ctrl),
             'garantia': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Ex: imóvel próprio, caução'}),
         }
@@ -143,16 +180,77 @@ FiadorFormSet = inlineformset_factory(
 class LaudoVistoriaForm(forms.ModelForm):
     class Meta:
         model = LaudoVistoria
-        fields = ['imovel', 'contrato', 'tipo', 'data', 'responsavel', 'observacoes', 'arquivo']
+        fields = ['imovel', 'contrato', 'tipo', 'data', 'responsavel',
+                  'local_assinatura', 'data_assinatura', 'observacoes']
         widgets = {
             'imovel': forms.Select(attrs=_sel),
             'contrato': forms.Select(attrs=_sel),
             'tipo': forms.Select(attrs=_sel),
-            'data': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
             'responsavel': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome do vistoriador'}),
+            'local_assinatura': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Cidade da assinatura'}),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 4}),
-            'arquivo': forms.ClearableFileInput(attrs=_ctrl),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['data'].widget = _date_widget()
+        self.fields['data_assinatura'].widget = _date_widget()
+        # Contrato depende do imóvel (L1): o servidor restringe as opções ao
+        # imóvel escolhido; o JS do template popula o select dinamicamente.
+        imovel_id = None
+        if self.data:
+            imovel_id = self.data.get(self.add_prefix('imovel')) or None
+        elif self.instance.pk:
+            imovel_id = self.instance.imovel_id
+        if imovel_id:
+            self.fields['contrato'].queryset = Contrato.objects.filter(imovel_id=imovel_id)
+        else:
+            self.fields['contrato'].queryset = Contrato.objects.none()
+
+
+class ItemVistoriaForm(forms.ModelForm):
+    class Meta:
+        model = ItemVistoria
+        fields = ['comodo', 'item', 'estado', 'observacao', 'ordem']
+        widgets = {
+            'comodo': forms.HiddenInput(),
+            'item': forms.HiddenInput(),
+            'ordem': forms.HiddenInput(),
+            'estado': forms.Select(attrs=_sel),
+            'observacao': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Observação (opcional)'}),
+        }
+
+
+def item_vistoria_formset_factory(extra=0):
+    """Formset de itens do laudo. Em laudos novos, `extra` deve ser o tamanho do
+    catálogo para as linhas de `initial` renderizarem (L4)."""
+    return inlineformset_factory(
+        LaudoVistoria, ItemVistoria,
+        form=ItemVistoriaForm,
+        extra=extra,
+        can_delete=True,
+    )
+
+
+ItemVistoriaFormSet = item_vistoria_formset_factory()
+
+
+class TestemunhaLaudoForm(forms.ModelForm):
+    class Meta:
+        model = TestemunhaLaudo
+        fields = ['nome', 'cpf']
+        widgets = {
+            'nome': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome completo'}),
+            'cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': '000.000.000-00'}),
+        }
+
+
+TestemunhaFormSet = inlineformset_factory(
+    LaudoVistoria, TestemunhaLaudo,
+    form=TestemunhaLaudoForm,
+    extra=2,
+    can_delete=True,
+)
 
 
 class LancamentoForm(forms.ModelForm):
@@ -164,11 +262,14 @@ class LancamentoForm(forms.ModelForm):
             'tipo': forms.Select(attrs=_sel),
             'status': forms.Select(attrs=_sel),
             'valor': forms.NumberInput(attrs={**_ctrl, 'step': '0.01'}),
-            'data_vencimento': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
-            'data_pagamento': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
             'comprovante': forms.ClearableFileInput(attrs=_ctrl),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['data_vencimento'].widget = _date_widget()
+        self.fields['data_pagamento'].widget = _date_widget()
 
 
 class NotificacaoForm(forms.ModelForm):
@@ -179,12 +280,15 @@ class NotificacaoForm(forms.ModelForm):
             'imovel': forms.Select(attrs=_sel),
             'tipo': forms.Select(attrs=_sel),
             'titulo': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Título da notificação'}),
-            'data_recebimento': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
-            'data_resposta': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
             'arquivo': forms.ClearableFileInput(attrs=_ctrl),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 3}),
             'status': forms.Select(attrs=_sel),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['data_recebimento'].widget = _date_widget()
+        self.fields['data_resposta'].widget = _date_widget()
 
 
 class RenovacaoContratoForm(forms.ModelForm):
@@ -193,10 +297,13 @@ class RenovacaoContratoForm(forms.ModelForm):
         fields = ['tipo', 'data_renovacao', 'novo_valor_mensal', 'observacoes']
         widgets = {
             'tipo': forms.Select(attrs=_sel),
-            'data_renovacao': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
             'novo_valor_mensal': forms.NumberInput(attrs={**_ctrl, 'step': '0.01'}),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['data_renovacao'].widget = _date_widget()
 
 
 class DistratoForm(forms.ModelForm):
@@ -205,39 +312,52 @@ class DistratoForm(forms.ModelForm):
         fields = ['tipo', 'data_distrato', 'recibo_chaves', 'laudo_saida', 'observacoes']
         widgets = {
             'tipo': forms.Select(attrs=_sel),
-            'data_distrato': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
             'recibo_chaves': forms.ClearableFileInput(attrs=_ctrl),
             'laudo_saida': forms.Select(attrs=_sel),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 3}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['data_distrato'].widget = _date_widget()
 
-class SaidaForm(forms.ModelForm):
+
+class ReciboForm(forms.ModelForm):
     class Meta:
-        model = Saida
-        fields = ['imovel', 'tipo', 'descricao', 'valor', 'data', 'pago_por', 'comprovante', 'observacoes']
+        model = Recibo
+        fields = [
+            'imovel', 'contrato', 'parcela_atual', 'parcela_total',
+            'valor_aluguel', 'valor_impostos', 'valor_seguros', 'valor_condominio',
+            'quem_pagou', 'periodo_inicio', 'periodo_fim', 'vencido_em',
+            'quantia', 'assinante_nome', 'assinante_cpf', 'data_assinatura',
+        ]
+        # Campos monetários aceitam vírgula como separador decimal ("1500,00"),
+        # em par com a máscara data-mask="moeda".
+        localized_fields = ['quantia', 'valor_aluguel', 'valor_impostos',
+                            'valor_seguros', 'valor_condominio']
         widgets = {
             'imovel': forms.Select(attrs=_sel),
-            'tipo': forms.Select(attrs=_sel),
-            'descricao': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Descrição'}),
-            'valor': forms.NumberInput(attrs={**_ctrl, 'step': '0.01'}),
-            'data': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
-            'pago_por': forms.Select(attrs=_sel),
-            'comprovante': forms.ClearableFileInput(attrs=_ctrl),
-            'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 2}),
+            'contrato': forms.Select(attrs=_sel),
+            'parcela_atual': forms.NumberInput(attrs={**_ctrl, 'min': 1, 'placeholder': 'Nº'}),
+            'parcela_total': forms.NumberInput(attrs={**_ctrl, 'min': 1, 'placeholder': 'Total'}),
+            'quem_pagou': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome de quem pagou'}),
+            'assinante_nome': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome completo'}),
+            'assinante_cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': '000.000.000-00'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for campo in self.Meta.localized_fields:
+            widget = _moeda_widget()
+            widget.is_localized = True  # renderiza valores iniciais com vírgula
+            self.fields[campo].widget = widget
+        for campo in ('periodo_inicio', 'periodo_fim', 'vencido_em', 'data_assinatura'):
+            self.fields[campo].widget = _date_widget()
 
-class EntradaForm(forms.ModelForm):
-    class Meta:
-        model = Entrada
-        fields = ['imovel', 'tipo', 'descricao', 'valor', 'data', 'comprovante', 'observacoes']
-        widgets = {
-            'imovel': forms.Select(attrs=_sel),
-            'tipo': forms.Select(attrs=_sel),
-            'descricao': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Descrição'}),
-            'valor': forms.NumberInput(attrs={**_ctrl, 'step': '0.01'}),
-            'data': forms.DateInput(attrs={**_ctrl, 'type': 'date'}),
-            'comprovante': forms.ClearableFileInput(attrs=_ctrl),
-            'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 2}),
-        }
+    def clean(self):
+        cleaned = super().clean()
+        conteudo = [v for campo, v in cleaned.items()
+                    if campo not in ('imovel', 'contrato') and v not in (None, '')]
+        if not conteudo:
+            raise forms.ValidationError('Preencha ao menos um campo para emitir o recibo.')
+        return cleaned

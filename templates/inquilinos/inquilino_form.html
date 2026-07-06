@@ -19,7 +19,8 @@
             <div class="col-md-6"><label class="form-label">Telefone</label>{{ form.telefone }}</div>
             <div class="col-md-6"><label class="form-label">Email</label>{{ form.email }}</div>
             <div class="col-md-8"><label class="form-label">Profissão</label>{{ form.profissao }}</div>
-            <div class="col-md-4"><label class="form-label">Renda Mensal (R$)</label>{{ form.renda_mensal }}</div>
+            <div class="col-md-4"><label class="form-label">Faixa de Renda</label>{{ form.faixa_renda }}</div>
+            <div class="col-12"><label class="form-label">Observações</label>{{ form.observacoes }}</div>
           </div>
           {% if form.errors %}<div class="alert alert-danger mt-3 small">{% for f in form %}{% for e in f.errors %}<div>{{ f.label }}: {{ e }}</div>{% endfor %}{% endfor %}</div>{% endif %}
           <div class="d-flex gap-2 justify-content-end mt-4">

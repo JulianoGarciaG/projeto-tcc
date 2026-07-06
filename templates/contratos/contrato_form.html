@@ -19,41 +19,15 @@
             <div class="col-md-6"><label class="form-label">Imóvel *</label>{{ form.imovel }}</div>
             <div class="col-md-6"><label class="form-label">Inquilino / Locatário *</label>{{ form.inquilino }}</div>
             <div class="col-md-4"><label class="form-label">Tipo de Contrato *</label>{{ form.tipo_contrato }}</div>
+            <div class="col-md-4"><label class="form-label">Finalidade *</label>{{ form.finalidade }}</div>
             <div class="col-md-4"><label class="form-label">Status *</label>{{ form.status }}</div>
             <div class="col-md-4"><label class="form-label">Dia de Vencimento *</label>{{ form.dia_vencimento }}</div>
             <div class="col-md-4"><label class="form-label">Data de Início *</label>{{ form.data_inicio }}</div>
             <div class="col-md-4"><label class="form-label">Data de Término *</label>{{ form.data_fim }}</div>
             <div class="col-md-4"><label class="form-label">Valor Mensal (R$) *</label>{{ form.valor_mensal }}</div>
+            <div class="col-md-4"><label class="form-label">Local da Assinatura</label>{{ form.local_assinatura }}</div>
+            <div class="col-md-4"><label class="form-label">Data da Assinatura</label>{{ form.data_assinatura }}</div>
             <div class="col-12"><label class="form-label">Observações</label>{{ form.observacoes }}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Documentos GED -->
-      <div class="section-card mb-4">
-        <div class="section-card-header"><i class="bi bi-folder2-open me-1"></i> Documentos (GED)</div>
-        <div class="section-card-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Arquivo do Contrato (PDF)</label>
-              {{ form.arquivo }}
-            </div>
-            <div class="col-md-6 campo-pf">
-              <label class="form-label">Comprovante de Renda <span class="badge bg-info text-dark small">PF</span></label>
-              {{ form.comprovante_renda }}
-            </div>
-            <div class="col-md-6 campo-pj" style="display:none;">
-              <label class="form-label">Contrato Social <span class="badge bg-warning text-dark small">PJ</span></label>
-              {{ form.contrato_social }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Recibo de Entrega de Chaves</label>
-              {{ form.recibo_chaves }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Comprovante Anual de Pagamento</label>
-              {{ form.comprovante_anual }}
-            </div>
           </div>
         </div>
       </div>
@@ -65,11 +39,19 @@
           {{ fiador_formset.management_form }}
           {% for ff in fiador_formset %}
           <div class="row g-2 mb-3 pb-3 border-bottom fiador-row">
+            <!-- Linha 1 — identificação -->
             <div class="col-md-4"><label class="form-label small">Nome *</label>{{ ff.nome }}</div>
             <div class="col-md-4"><label class="form-label small">Qualificação</label>{{ ff.qualificacao }}</div>
-            <div class="col-md-3"><label class="form-label small">RG/CPF *</label>{{ ff.rg_cpf }}</div>
-            <div class="col-md-4"><label class="form-label small">Certidão de Ônus</label>{{ ff.certidao_onus }}</div>
-            <div class="col-md-4"><label class="form-label small">Garantia</label>{{ ff.garantia }}</div>
+            <div class="col-md-2"><label class="form-label small">RG/CPF *</label>{{ ff.rg_cpf }}</div>
+            <div class="col-md-2"><label class="form-label small">RG</label>{{ ff.rg }}</div>
+            <div class="col-md-2"><label class="form-label small">CPF</label>{{ ff.cpf }}</div>
+            <div class="col-md-5"><label class="form-label small">Certidão de Ônus</label>{{ ff.certidao_onus }}</div>
+            <div class="col-md-5"><label class="form-label small">Garantia</label>{{ ff.garantia }}</div>
+            <!-- Linha 2 — endereço e cônjuge -->
+            <div class="col-md-4"><label class="form-label small">Endereço Completo</label>{{ ff.endereco }}</div>
+            <div class="col-md-3"><label class="form-label small">Nome do Cônjuge</label>{{ ff.conjuge_nome }}</div>
+            <div class="col-md-2"><label class="form-label small">RG do Cônjuge</label>{{ ff.conjuge_rg }}</div>
+            <div class="col-md-2"><label class="form-label small">CPF do Cônjuge</label>{{ ff.conjuge_cpf }}</div>
             <div class="col-md-1 d-flex align-items-end">
               {% if ff.instance.pk %}
               <div class="form-check">
@@ -98,23 +80,4 @@
     </form>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-(function () {
-  const tipoSelect = document.getElementById('{{ form.tipo_contrato.id_for_label }}');
-  const camposPF = document.querySelectorAll('.campo-pf');
-  const camposPJ = document.querySelectorAll('.campo-pj');
-
-  function toggleTipo() {
-    const isPJ = tipoSelect.value === 'PJ';
-    camposPF.forEach(el => el.style.display = isPJ ? 'none' : '');
-    camposPJ.forEach(el => el.style.display = isPJ ? '' : 'none');
-  }
-
-  toggleTipo();
-  tipoSelect.addEventListener('change', toggleTipo);
-})();
-</script>
 {% endblock %}

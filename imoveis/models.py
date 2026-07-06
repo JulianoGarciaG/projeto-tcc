@@ -1,12 +1,19 @@
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+from .validators import (
+    validate_cpf, validate_cnpj, validate_cpf_cnpj, validate_rg,
+    validate_rg_cpf, validate_telefone,
+)
 
 
 class Proprietario(models.Model):
     nome = models.CharField(max_length=200)
-    cpf_cnpj = models.CharField(max_length=20, unique=True, verbose_name='CPF/CNPJ')
+    cpf_cnpj = models.CharField(max_length=20, unique=True, validators=[validate_cpf_cnpj],
+                                verbose_name='CPF/CNPJ')
     email = models.EmailField(blank=True)
-    telefone = models.CharField(max_length=20, blank=True)
-    endereco = models.CharField(max_length=300, blank=True)
+    telefone = models.CharField(max_length=20, blank=True, validators=[validate_telefone])
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -41,9 +48,10 @@ class Imovel(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='vago')
     categoria = models.CharField(max_length=10, choices=CATEGORIA_CHOICES, default='urbano', verbose_name='Categoria')
     endereco = models.CharField(max_length=300)
+    numero = models.CharField(max_length=20, blank=True, verbose_name='Número')
+    complemento = models.CharField(max_length=100, blank=True, verbose_name='Complemento')
     bairro = models.CharField(max_length=100, blank=True)
     cidade = models.CharField(max_length=100, default='')
-    valor_aluguel = models.DecimalField(max_digits=10, decimal_places=2)
     area_m2 = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, verbose_name='Área (m²)')
     descricao = models.TextField(blank=True)
     # Campos comuns urbano/rural
@@ -84,16 +92,27 @@ class FotoImovel(models.Model):
 
 
 class Inquilino(models.Model):
+    FAIXA_RENDA_CHOICES = [
+        ('ate_2k', '< R$ 2k'),
+        ('2_4k', 'R$ 2k - R$ 3.9k'),
+        ('4_7k', 'R$ 4k - R$ 6.9k'),
+        ('7_10k', 'R$ 7k - R$ 9.9k'),
+        ('10_16k', 'R$ 10k - R$ 15.9k'),
+        ('acima_16k', 'R$ 16k +'),
+    ]
+
     nome = models.CharField(max_length=200)
-    cpf = models.CharField(max_length=14, unique=True, verbose_name='CPF')
-    cnpj = models.CharField(max_length=18, blank=True, verbose_name='CNPJ')
+    cpf = models.CharField(max_length=14, unique=True, validators=[validate_cpf], verbose_name='CPF')
+    cnpj = models.CharField(max_length=18, blank=True, validators=[validate_cnpj], verbose_name='CNPJ')
     email = models.EmailField(blank=True)
-    telefone = models.CharField(max_length=20, blank=True)
-    rg = models.CharField(max_length=20, blank=True, verbose_name='RG')
+    telefone = models.CharField(max_length=20, blank=True, validators=[validate_telefone])
+    rg = models.CharField(max_length=20, blank=True, validators=[validate_rg], verbose_name='RG')
     qualificacao = models.CharField(max_length=300, blank=True, verbose_name='Qualificação',
                                     help_text='Estado civil, profissão, nacionalidade')
     profissao = models.CharField(max_length=100, blank=True, verbose_name='Profissão')
-    renda_mensal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    faixa_renda = models.CharField(max_length=20, choices=FAIXA_RENDA_CHOICES, blank=True,
+                                   verbose_name='Faixa de Renda')
+    observacoes = models.TextField(blank=True, verbose_name='Observações')
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -115,17 +134,24 @@ class Contrato(models.Model):
         ('PF', 'Pessoa Física'),
         ('PJ', 'Pessoa Jurídica'),
     ]
+    FINALIDADE_CHOICES = [
+        ('residencial', 'Residencial'),
+        ('comercial', 'Comercial'),
+    ]
 
     imovel = models.ForeignKey(Imovel, on_delete=models.PROTECT, related_name='contratos')
     inquilino = models.ForeignKey(Inquilino, on_delete=models.PROTECT, related_name='contratos')
     tipo_contrato = models.CharField(max_length=2, choices=TIPO_CONTRATO_CHOICES, default='PF',
                                      verbose_name='Tipo de Contrato')
+    finalidade = models.CharField(max_length=12, choices=FINALIDADE_CHOICES,
+                                  default='residencial', verbose_name='Finalidade')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ativo')
     data_inicio = models.DateField(verbose_name='Data de Início')
     data_fim = models.DateField(verbose_name='Data de Término')
     valor_mensal = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Valor Mensal')
-    dia_vencimento = models.PositiveSmallIntegerField(default=10, verbose_name='Dia de Vencimento')
-    arquivo = models.FileField(upload_to='contratos/', blank=True, null=True, verbose_name='Arquivo do Contrato')
+    dia_vencimento = models.PositiveSmallIntegerField(
+        default=10, verbose_name='Dia de Vencimento',
+        validators=[MinValueValidator(1), MaxValueValidator(31)])
     # Documentos GED vinculados ao contrato
     comprovante_renda = models.FileField(upload_to='comprovantes_renda/', blank=True, null=True,
                                          verbose_name='Comprovante de Renda (PF)')
@@ -135,7 +161,13 @@ class Contrato(models.Model):
                                      verbose_name='Recibo de Entrega de Chaves')
     comprovante_anual = models.FileField(upload_to='contratos/comprovante_anual/', blank=True, null=True,
                                          verbose_name='Comprovante Anual de Pagamento')
+    documento_gerado = models.FileField(upload_to='contratos/gerados/', blank=True, null=True,
+                                        verbose_name='Contrato gerado (PDF)')
     observacoes = models.TextField(blank=True, verbose_name='Observações')
+    local_assinatura = models.CharField(max_length=200, blank=True,
+                                        verbose_name='Local da Assinatura')
+    data_assinatura = models.DateField(null=True, blank=True,
+                                       verbose_name='Data da Assinatura')
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -150,8 +182,21 @@ class Contrato(models.Model):
 class Fiador(models.Model):
     contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='fiadores')
     nome = models.CharField(max_length=200)
-    qualificacao = models.CharField(max_length=300, blank=True, verbose_name='Qualificação')
-    rg_cpf = models.CharField(max_length=20, verbose_name='RG/CPF')
+    qualificacao = models.CharField(max_length=300, blank=True, verbose_name='Qualificação',
+                                    help_text='Estado civil, profissão, nacionalidade')
+    rg_cpf = models.CharField(max_length=20, validators=[validate_rg_cpf], verbose_name='RG/CPF')
+    rg = models.CharField(max_length=20, blank=True, validators=[validate_rg],
+                          verbose_name='RG')
+    cpf = models.CharField(max_length=14, blank=True, validators=[validate_cpf],
+                           verbose_name='CPF')
+    endereco = models.CharField(max_length=300, blank=True,
+                                verbose_name='Endereço Completo')
+    conjuge_nome = models.CharField(max_length=200, blank=True,
+                                    verbose_name='Nome do Cônjuge')
+    conjuge_rg = models.CharField(max_length=20, blank=True, validators=[validate_rg],
+                                  verbose_name='RG do Cônjuge')
+    conjuge_cpf = models.CharField(max_length=14, blank=True, validators=[validate_cpf],
+                                   verbose_name='CPF do Cônjuge')
     certidao_onus = models.FileField(upload_to='certidoes/', blank=True, null=True,
                                      verbose_name='Certidão de Ônus')
     garantia = models.CharField(max_length=200, blank=True, verbose_name='Garantia')
@@ -168,16 +213,19 @@ class LaudoVistoria(models.Model):
     TIPO_CHOICES = [
         ('entrada', 'Vistoria de Entrada'),
         ('saida', 'Vistoria de Saída'),
-        ('periodica', 'Vistoria Periódica'),
     ]
 
     imovel = models.ForeignKey(Imovel, on_delete=models.CASCADE, related_name='laudos')
-    contrato = models.ForeignKey(Contrato, on_delete=models.SET_NULL, null=True, blank=True, related_name='laudos')
+    contrato = models.ForeignKey(Contrato, on_delete=models.PROTECT, related_name='laudos')
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
     data = models.DateField()
     responsavel = models.CharField(max_length=200, verbose_name='Responsável pela Vistoria')
     observacoes = models.TextField(blank=True, verbose_name='Observações')
+    local_assinatura = models.CharField(max_length=200, blank=True, verbose_name='Local da Assinatura')
+    data_assinatura = models.DateField(null=True, blank=True, verbose_name='Data da Assinatura')
     arquivo = models.FileField(upload_to='laudos/', blank=True, null=True, verbose_name='Laudo em PDF')
+    documento_gerado = models.FileField(upload_to='laudos/gerados/', blank=True, null=True,
+                                        verbose_name='Laudo gerado (PDF)')
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -185,8 +233,90 @@ class LaudoVistoria(models.Model):
         verbose_name_plural = 'Laudos de Vistoria'
         ordering = ['-data']
 
+    def resumo_vistoria(self):
+        """Resumo automático calculado a partir dos itens (nunca digitado)."""
+        itens = self.itens.all()
+        return {
+            'total': itens.count(),
+            'bom': itens.filter(estado='bom').count(),
+            'regular': itens.filter(estado='regular').count(),
+            'ruim': itens.filter(estado='ruim').count(),
+        }
+
+    def locador_nome(self):
+        return self.imovel.proprietario.nome
+
+    def locatario_nome(self):
+        return self.contrato.inquilino.nome
+
     def __str__(self):
         return f'{self.get_tipo_display()} — {self.imovel} ({self.data})'
+
+
+class ComodoTemplate(models.Model):
+    """Catálogo configurável de cômodos padrão da vistoria (editável no admin)."""
+    nome = models.CharField(max_length=100)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Cômodo (Modelo de Vistoria)'
+        verbose_name_plural = 'Cômodos (Modelo de Vistoria)'
+        ordering = ['ordem', 'nome']
+
+    def __str__(self):
+        return self.nome
+
+
+class ItemVistoriaTemplate(models.Model):
+    """Item avaliável de um cômodo do catálogo (ex: paredes e pintura)."""
+    comodo = models.ForeignKey(ComodoTemplate, on_delete=models.CASCADE, related_name='itens')
+    nome = models.CharField(max_length=150)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Item (Modelo de Vistoria)'
+        verbose_name_plural = 'Itens (Modelo de Vistoria)'
+        ordering = ['comodo__ordem', 'ordem', 'nome']
+
+    def __str__(self):
+        return f'{self.comodo.nome} — {self.nome}'
+
+
+class ItemVistoria(models.Model):
+    """Item avaliado em um laudo (snapshot do catálogo na data da vistoria)."""
+    ESTADO_CHOICES = [
+        ('bom', 'Bom'),
+        ('regular', 'Regular'),
+        ('ruim', 'Ruim'),
+    ]
+
+    laudo = models.ForeignKey(LaudoVistoria, on_delete=models.CASCADE, related_name='itens')
+    comodo = models.CharField(max_length=100, verbose_name='Cômodo')
+    item = models.CharField(max_length=150, verbose_name='Item')
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES)
+    observacao = models.CharField(max_length=300, blank=True, verbose_name='Observação')
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Item de Vistoria'
+        verbose_name_plural = 'Itens de Vistoria'
+        ordering = ['ordem', 'pk']
+
+    def __str__(self):
+        return f'{self.comodo} — {self.item} ({self.get_estado_display()})'
+
+
+class TestemunhaLaudo(models.Model):
+    laudo = models.ForeignKey(LaudoVistoria, on_delete=models.CASCADE, related_name='testemunhas')
+    nome = models.CharField(max_length=200)
+    cpf = models.CharField(max_length=14, blank=True, validators=[validate_cpf], verbose_name='CPF')
+
+    class Meta:
+        verbose_name = 'Testemunha do Laudo'
+        verbose_name_plural = 'Testemunhas do Laudo'
+
+    def __str__(self):
+        return f'{self.nome} (Testemunha do Laudo #{self.laudo_id})'
 
 
 class Lancamento(models.Model):
@@ -305,60 +435,134 @@ class Distrato(models.Model):
         return f'{self.get_tipo_display()} — Contrato #{self.contrato_id}'
 
 
-class Saida(models.Model):
-    TIPO_CHOICES = [
-        ('tributos', 'Pagamento de Tributos (IPTU/ITR)'),
-        ('reforma', 'Reforma/Adequação'),
-        ('construcao_inicial', 'Construção Inicial'),
-        ('consumos', 'Consumos (água/energia/condom.)'),
-        ('despesas_juridicas', 'Despesas Jurídicas'),
-        ('previsao_despesas', 'Previsão de Despesas'),
-    ]
-    PAGO_POR_CHOICES = [
-        ('inquilino', 'Inquilino'),
-        ('administradora', 'Administradora'),
-    ]
+class Recibo(models.Model):
+    """Recibo de pagamento — imóvel/contrato obrigatórios, demais campos opcionais.
 
-    imovel = models.ForeignKey(Imovel, on_delete=models.CASCADE, related_name='saidas')
-    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
-    descricao = models.CharField(max_length=300, blank=True, verbose_name='Descrição')
-    valor = models.DecimalField(max_digits=10, decimal_places=2)
-    data = models.DateField()
-    pago_por = models.CharField(max_length=15, choices=PAGO_POR_CHOICES, verbose_name='Pago Por')
-    comprovante = models.FileField(upload_to='saidas/', blank=True, null=True)
-    observacoes = models.TextField(blank=True, verbose_name='Observações')
+    No PDF aparecem apenas os campos preenchidos. `quantia` é o valor total
+    recebido; os valores de aluguel/impostos/seguros/condomínio são as
+    parcelas que compõem esse total (ver somatorio()).
+    """
+    imovel = models.ForeignKey(Imovel, on_delete=models.PROTECT, related_name='recibos')
+    contrato = models.ForeignKey(Contrato, on_delete=models.PROTECT, related_name='recibos')
+    parcela_atual = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='Parcela Atual')
+    parcela_total = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='Total de Parcelas')
+    valor_aluguel = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                        verbose_name='Aluguel')
+    valor_impostos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                         verbose_name='Impostos')
+    valor_seguros = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                        verbose_name='Seguros')
+    valor_condominio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                           verbose_name='Condomínio')
+    quem_pagou = models.CharField(max_length=200, blank=True, verbose_name='Quem Pagou')
+    periodo_inicio = models.DateField(null=True, blank=True, verbose_name='Período — Início')
+    periodo_fim = models.DateField(null=True, blank=True, verbose_name='Período — Fim')
+    vencido_em = models.DateField(null=True, blank=True, verbose_name='Vencido em')
+    quantia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                  verbose_name='Quantia de')
+    assinante_nome = models.CharField(max_length=200, blank=True, verbose_name='Nome de Quem Assinou')
+    assinante_cpf = models.CharField(max_length=14, blank=True, validators=[validate_cpf],
+                                     verbose_name='CPF de Quem Assinou')
+    data_assinatura = models.DateField(null=True, blank=True, verbose_name='Data da Assinatura')
+    arquivo = models.FileField(upload_to='recibos/', blank=True, null=True, verbose_name='Recibo gerado (PDF)')
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Saída'
-        verbose_name_plural = 'Saídas'
-        ordering = ['-data']
+        verbose_name = 'Recibo'
+        verbose_name_plural = 'Recibos'
+        ordering = ['-criado_em']
+
+    def somatorio(self):
+        """Soma das parcelas preenchidas que constituem a quantia."""
+        valores = [self.valor_aluguel, self.valor_impostos, self.valor_seguros, self.valor_condominio]
+        return sum(v for v in valores if v)
 
     def __str__(self):
-        return f'{self.get_tipo_display()} — R$ {self.valor} ({self.imovel})'
+        return f'Recibo #{self.pk} — {self.imovel}'
 
 
-class Entrada(models.Model):
+def documento_gerado_upload_to(instance, filename):
+    """Caminho determinístico por origem/versão.
+
+    Vira a key do objeto quando o storage for trocado para S3 (ver STORAGES em
+    core/settings.py) — por isso não depende de nada além de tipo, pk da
+    origem e número da versão.
+    """
+    return f'ged/{instance.tipo}/{instance.origem_pk}/v{instance.numero_versao}/{filename}'
+
+
+class DocumentoGerado(models.Model):
+    """Versão imutável de um PDF gerado pelo sistema (GED versionado).
+
+    Um registro por geração — nunca atualizado após criado (save() bloqueia
+    updates). O "documento atual" de uma origem é a versão de numero_versao
+    mais alto. Os campos legados Contrato.documento_gerado /
+    LaudoVistoria.documento_gerado / Recibo.arquivo são mantidos apenas como
+    espelhos da última versão, sincronizados por imoveis.pdf.gerar_e_anexar().
+
+    A origem é modelada com 3 FKs explícitas (uma por tipo) + campo `tipo`,
+    em vez de GenericForeignKey: o conjunto de origens é fixo (Contrato,
+    Laudo, Recibo), permite select_related e constraints reais no banco, e
+    segue o estilo de modelagem explícita do restante do projeto.
+    """
     TIPO_CHOICES = [
-        ('recibo_imovel', 'Recibo por Imóvel'),
-        ('recibo_periodo', 'Recibo por Período'),
-        ('previsao_mes', 'Previsão de Recebíveis (Mês)'),
-        ('previsao_ano', 'Previsão de Recebíveis (Ano)'),
+        ('contrato', 'Contrato'),
+        ('laudo', 'Laudo de Vistoria'),
+        ('recibo', 'Recibo'),
     ]
 
-    imovel = models.ForeignKey(Imovel, on_delete=models.CASCADE, related_name='entradas')
-    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
-    descricao = models.CharField(max_length=300, blank=True, verbose_name='Descrição')
-    valor = models.DecimalField(max_digits=10, decimal_places=2)
-    data = models.DateField()
-    comprovante = models.FileField(upload_to='entradas/', blank=True, null=True)
-    observacoes = models.TextField(blank=True, verbose_name='Observações')
-    criado_em = models.DateTimeField(auto_now_add=True)
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
+    contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, null=True, blank=True,
+                                 related_name='documentos_gerados')
+    laudo = models.ForeignKey(LaudoVistoria, on_delete=models.CASCADE, null=True, blank=True,
+                              related_name='documentos_gerados')
+    recibo = models.ForeignKey(Recibo, on_delete=models.CASCADE, null=True, blank=True,
+                               related_name='documentos_gerados')
+    numero_versao = models.PositiveIntegerField(verbose_name='Versão')
+    arquivo = models.FileField(upload_to=documento_gerado_upload_to, verbose_name='Arquivo (PDF)')
+    sha256 = models.CharField(max_length=64, verbose_name='SHA-256')
+    gerado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name='documentos_gerados',
+                                   verbose_name='Gerado por')
+    gerado_em = models.DateTimeField(auto_now_add=True, verbose_name='Gerado em')
 
     class Meta:
-        verbose_name = 'Entrada'
-        verbose_name_plural = 'Entradas'
-        ordering = ['-data']
+        verbose_name = 'Documento Gerado (GED)'
+        verbose_name_plural = 'Documentos Gerados (GED)'
+        ordering = ['-gerado_em', '-pk']
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(contrato__isnull=False, laudo__isnull=True, recibo__isnull=True)
+                    | models.Q(contrato__isnull=True, laudo__isnull=False, recibo__isnull=True)
+                    | models.Q(contrato__isnull=True, laudo__isnull=True, recibo__isnull=False)
+                ),
+                name='documentogerado_origem_unica',
+            ),
+            models.UniqueConstraint(fields=['contrato', 'numero_versao'],
+                                    condition=models.Q(contrato__isnull=False),
+                                    name='documentogerado_versao_unica_contrato'),
+            models.UniqueConstraint(fields=['laudo', 'numero_versao'],
+                                    condition=models.Q(laudo__isnull=False),
+                                    name='documentogerado_versao_unica_laudo'),
+            models.UniqueConstraint(fields=['recibo', 'numero_versao'],
+                                    condition=models.Q(recibo__isnull=False),
+                                    name='documentogerado_versao_unica_recibo'),
+        ]
+
+    @property
+    def origem(self):
+        """Registro de negócio que originou o documento."""
+        return self.contrato or self.laudo or self.recibo
+
+    @property
+    def origem_pk(self):
+        return self.contrato_id or self.laudo_id or self.recibo_id
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError('DocumentoGerado é imutável — gere uma nova versão em vez de editar.')
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'{self.get_tipo_display()} — R$ {self.valor} ({self.imovel})'
+        return f'{self.get_tipo_display()} #{self.origem_pk} — v{self.numero_versao}'

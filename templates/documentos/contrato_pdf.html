@@ -1,0 +1,152 @@
+{% extends 'documentos/base_pdf.html' %}
+{% load imoveis_tags %}
+
+{% block estilos_extra %}
+  /*
+    CSS exclusivo do contrato juridico (preambulo + 21 clausulas).
+    Texto corrido justificado; o numero da clausula e inline (negrito),
+    portanto nunca fica separado do corpo. NAO usar page-break-inside:
+    avoid em clausulas longas (risco de pagina em branco no xhtml2pdf) —
+    o texto flui naturalmente entre paginas.
+  */
+  .preambulo { text-align: justify; font-size: 11px; margin-top: 16px; }
+  .clausula-texto { text-align: justify; font-size: 11px; margin: 10px 0 0 0; }
+  .clausula-num { font-weight: bold; }
+  .paragrafo { text-align: justify; font-size: 11px; margin: 4px 0 0 28px; }
+  .fechamento { text-align: justify; font-size: 11px; margin: 14px 0 0 0; }
+  .local-data { text-align: center; font-size: 11px; margin: 18px 0 0 0; }
+  .sign-space { height: 46px; }
+{% endblock %}
+
+{% block doc_meta %}CONTRATO Nº <strong>{{ contrato.pk }}</strong><br>Emitido em {{ contrato.criado_em|date:"d/m/Y" }}{% endblock %}
+
+{% block titulo_doc %}CONTRATO DE LOCAÇÃO {% if contrato.finalidade == 'comercial' %}COMERCIAL{% else %}RESIDENCIAL{% endif %}{% endblock %}
+
+{% block conteudo %}
+<!-- Preâmbulo — LOCADOR fixo (Shelter) + LOCATÁRIO -->
+<p class="preambulo">Pelo presente instrumento particular, de um lado denominado <strong>LOCADOR</strong>, <strong>{{ locador.razao_social }}</strong> gestora e administradora de bens imóveis, CNPJ {{ locador.cnpj }}, representada neste ato por seu sócio-Diretor <strong>{{ locador.representante_nome }}</strong>, brasileiro, Engenheiro, RG {{ locador.representante_rg }} e CPF nº {{ locador.representante_cpf }}, com escritório na {{ locador.endereco }}, Telefone {{ locador.telefone }} e de outro lado, como <strong>LOCATÁRIO</strong> <strong>{{ contrato.inquilino.nome|upper }}</strong>{% if contrato.tipo_contrato == 'PJ' %}, pessoa jurídica inscrita no CNPJ nº {{ contrato.inquilino.cnpj }}, neste ato representada por seu responsável legal{% if contrato.inquilino.qualificacao %}, {{ contrato.inquilino.qualificacao }}{% endif %}, CPF nº {{ contrato.inquilino.cpf }}{% if contrato.inquilino.rg %}, RG {{ contrato.inquilino.rg }}{% endif %}{% else %}{% if contrato.inquilino.qualificacao %} {{ contrato.inquilino.qualificacao }},{% endif %} maior e capaz, CPF {{ contrato.inquilino.cpf }}{% if contrato.inquilino.rg %}, RG {{ contrato.inquilino.rg }}{% endif %}{% endif %}. LOCADOR E LOCATÁRIO têm justo e contratado o seguinte, que mutuamente aceitam e outorgam, em conformidade com as seguintes cláusulas, a saber:</p>
+
+<!-- Cláusula I — objeto -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA I</span> – O LOCADOR é proprietário do imóvel, localizado em {{ contrato.imovel.endereco }}{% if contrato.imovel.numero %}, {{ contrato.imovel.numero }}{% endif %}{% if contrato.imovel.complemento %}, {{ contrato.imovel.complemento }}{% endif %}{% if contrato.imovel.bairro %} – {{ contrato.imovel.bairro }}{% endif %} – {{ contrato.imovel.cidade|upper }}{% if contrato.imovel.cadastro_prefeitura %} (Código Cadastral {{ contrato.imovel.cadastro_prefeitura }}){% endif %}, e o entrega à locação ao LOCATÁRIO, para que dele possam se utilizar com observância das disposições do presente contrato.</p>
+
+<!-- Cláusula II — prazo -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA II</span> – O prazo do presente contrato é de {{ prazo_meses }} ({{ prazo_meses|meses_extenso|upper }}), com início em {{ contrato.data_inicio|date:"j \d\e F \d\e Y" }} e término em {{ contrato.data_fim|date:"j \d\e F \d\e Y" }}, ocasião em que o LOCATÁRIO se obriga a restituir o imóvel completamente desocupado, nas mesmas condições estabelecidas neste instrumento, ressalvada a hipótese de continuidade locatícia, através de novo instrumento contratual.</p>
+
+<!-- Cláusula III — aluguel -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA III</span> – O aluguel mensal estabelecido inicialmente para a presente locação é de <strong>R$ {{ contrato.valor_mensal|brl }} ({{ contrato.valor_mensal|valor_extenso }})</strong> mensais, corrigidos anualmente pelo IPCA, IGPM ou outro índice que eventualmente o substitua como indexador inflacionário, a critério e escolha exclusiva do LOCADOR.</p>
+<p class="paragrafo"><strong>Parágrafo primeiro</strong> - Vencido o prazo previsto na cláusula II deste contrato, caso haja interesse das partes na renovação da locação, o valor do aluguel, bem como as novas condições serão estudadas na ocasião, devendo ser renovado, se de interesse das partes, somente por escrito. Todavia, em caso de desocupação, anterior à vigência deste contrato, fica o LOCATÁRIO obrigado a notificar ao LOCADOR com 30 (trinta) dias de antecedência mínima, sob pena de incorrer na multa contratual da cláusula IX, a seguir.</p>
+<p class="paragrafo"><strong>Parágrafo segundo</strong> - Não havendo acordo, o aluguel mensal será reajustado anualmente de acordo com as disposições legais vigentes à época do reajuste, sempre utilizando-se o índice mais favorável ao LOCADOR, até que este se pronuncie a respeito ou que se devolva o imóvel em questão, nas mesmas condições de entrega.</p>
+
+<!-- Cláusula IV — pagamento -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA IV</span> – Os aluguéis ajustados e devidos por esta locação, deverão ser pagos pelo LOCATÁRIO, até o dia do vencimento, todo dia {{ contrato.dia_vencimento }}º ({{ contrato.dia_vencimento|dia_extenso }}) de cada mês, no ENDEREÇO: {{ locador.endereco }}, Telefone {{ locador.telefone }}, podendo tal pagamento ser efetuado através transmissão eletrônica na chave pix CNPJ {{ locador.pix_chave }}, ou pagamento em espécie, desde que de emissão do LOCATÁRIO, não sendo aceito em nenhuma hipótese pagamentos de terceiros. Comprovação de pagamento por meio eletrônico deverá ser fornecido, sem o qual não será considerado quitado o respectivo aluguel;</p>
+<p class="paragrafo"><strong>Parágrafo primeiro</strong> - O pagamento em atraso do aluguel e de outros encargos da locação, acarretará em acréscimos de juros de mora conforme o que determina a legislação, ficando estipulado no importe de 2% (dois por cento) até 5 (cinco) dias da data do vencimento, e a partir do 6º (sexto) dia da data do vencimento, multa de 10% (dez por cento) acrescido de mora diária de 0,2% (dois décimos por cento) sobre os alugueis e encargos devidos ao LOCADOR.</p>
+<p class="paragrafo"><strong>Parágrafo segundo</strong> - Havendo a necessidade de cobrança judicial ou extrajudicial, responderá o LOCATÁRIO pelos honorários em 20% (vinte por cento) sobre o valor do débito ou atribuído à causa, conforme o caso, mais custas judiciais oriundas da ação.</p>
+<p class="paragrafo"><strong>Parágrafo terceiro</strong> - Concordam e aceitam as partes que todas as despesas com eventuais tarifas bancárias decorrentes da cobrança dos aluguéis e encargos recairão sobre o LOCATÁRIO.</p>
+<p class="paragrafo"><strong>Parágrafo quarto</strong> - Não terão validade os pagamentos realizados em comprovantes e ordens de pagamento que não sejam de emissão do LOCATÁRIO, do imóvel objeto do presente contrato, podendo este proceder o estorno da quantia depositada, colocando-a a disposição do LOCADOR.</p>
+
+<!-- Cláusula V — sublocação -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA V</span> – É expressamente vedada a SUBLOCAÇÃO, CESSÃO ou TRANSFERÊNCIA do imóvel, no todo ou em parte sem prévia anuência, por escrito, do LOCADOR, sendo que, notificado o LOCADOR para este fim, o eventual silêncio em nenhuma hipótese caracterizará consentimento tácito.</p>
+
+<!-- Cláusula VI — finalidade -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA VI</span> – O imóvel objeto do presente contrato deverá ser usado para fins {% if contrato.finalidade == 'comercial' %}COMERCIAIS{% else %}RESIDENCIAIS{% endif %}, exclusivamente, vedada a alteração da destinação do imóvel sem a prévia autorização, por escrito, do LOCADOR, autorização, esta, necessária para a implementação de benfeitorias e outras alterações, como reformas, alterações de qualquer natureza e cobrança de qualquer natureza vinculada à atividade;</p>
+
+<!-- Cláusula VII — conservação -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA VII</span> – O LOCATÁRIO vistoriou o imóvel objeto dessa locação, aceitando-o nas condições atuais, e pelo qual obriga-se a MANTER A CONSERVAÇÃO DO IMÓVEL durante o período de vigência contratual. Acompanha este instrumento um laudo de vistoria, assinado por ambas as partes, sendo o estado final o parâmetro para assim devolvê-lo finda a locação, ainda que com as melhorias eventuais que a atividade fim do LOCATÁRIO exija, sem direito a indenização e/ou retenção de quaisquer tipos e natureza;</p>
+<p class="paragrafo"><strong>Parágrafo único</strong> - Qualquer modificação, reforma ou benfeitoria, que o LOCATÁRIO pretenda efetuar no imóvel deverá ser solicitada, por escrito, para prévia autorização, também por escrito, do LOCADOR, sendo que quando autorizadas ficarão incorporadas no imóvel e dele fazendo parte, devendo assim o imóvel ser devolvido quando finda a locação, sem o direito de retenção ou indenização, a qualquer título, por quaisquer benfeitorias, mesmo que necessárias, úteis ou voluptuárias, autorizadas ou não, ressalvada a obrigação de restituição às condições anteriores, se assim o LOCADOR desejar.</p>
+
+<!-- Cláusula VIII — vistorias -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA VIII</span> – O LOCATÁRIO desde já, obriga-se a permitir ao LOCADOR, examinar, vistoriar o imóvel locado sempre que este entender conveniente e o anunciar previamente ao LOCATÁRIO, ajustando ocasião, data e horário para tais verificações.</p>
+
+<!-- Cláusula IX — multa contratual -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA IX</span> – Fica estipulada a multa correspondente a 20% dos aluguéis remanescentes à quitação do contrato, vigentes à época da ocorrência na qual incorrer a parte que infringir quaisquer das cláusulas deste contrato, ressalvada a parte inocente, a faculdade de considerar simultaneamente rescindida a locação, independentemente de qualquer formalidade. A multa estende-se até a entrega definitiva das chaves, e com o imóvel conforme entrega projetada e programada.</p>
+
+<!-- Cláusula X — isenção de responsabilidade por atividades -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA X</span> – Nenhuma punição, sanção, multa ou ônus será imputada ao LOCADOR decorrente de atividades no local de residência do LOCATÁRIO, sendo estas inerentes ou não à atividade fim, sob sua responsabilidade, ou não.</p>
+
+<!-- Cláusula XI — desapropriação -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA XI</span> – No caso de desapropriação do imóvel, ficará o LOCADOR, exonerado de toda e qualquer responsabilidade decorrente deste contrato, ressalvado ao LOCATÁRIO a faculdade tão somente de agir contra o poder expropriante.</p>
+
+<!-- Cláusula XII — intimações -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA XII</span> – Nenhuma intimação dos Poderes Públicos, ou de terceiros será motivo para o LOCATÁRIO abandonar o imóvel ou pedir a rescisão deste contrato, salvo prévia vistoria judicial, que prove estar o prédio e/ou as instalações ameaçados de ruir, obrigando-se, levar ao conhecimento do LOCADOR, quaisquer turbações de terceiros e bem assim encaminhar a este quaisquer intimações, comunicações ou avisos recebidos, referente ao imóvel locado, principalmente de impostos e taxas, ficando sob sua responsabilidade a perda de descontos, a ocorrência de juros de mora, multas e outras despesas decorrentes de sua demora.</p>
+<p class="paragrafo"><strong>Parágrafo único</strong> - Obriga-se o LOCATÁRIO, ainda, a satisfazer a todas as exigências dos poderes públicos a que derem causa.</p>
+
+<!-- Cláusula XIII — abandono -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA XIII</span> – Fica, desde a data estipulada neste contrato, o LOCADOR autorizado a ocupar, independentemente da Ação de Emissão de Posse, sem qualquer formalidade e sem prejuízo das demais cláusulas ou disposições legais, o imóvel objeto da presente locação, caso venha a ser abandonado pelo LOCATÁRIO, estando este em mora com os aluguéis.</p>
+
+<!-- Cláusula XIV — foro -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA XIV</span> – Tudo quanto for devido em razão desse contrato e não comportar a forma sumária será cobrado pelo processo executivo, sem prejuízo de ação ou procedimento judicial ou extrajudicial, qualquer que seja o rito processual, no FORO DA {{ locador.foro|upper }}, com renúncia a qualquer outro, por mais privilegiado que seja. No caso de ação judicial, correrão por conta do devedor, além da multa contratual e de todas as despesas judiciais e extrajudiciais que se verificarem, os honorários de advogado que o credor constituir para garantir seus direitos.</p>
+
+<!-- Cláusula XV — taxas e impostos -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA XV</span> – Todas as taxas, impostos, seguros, contas de consumo de telefone/internet, abastecimento e energia, cotas de condomínio, despesas ordinárias de condomínio ou outras que incidam ou venham a incidir sobre o imóvel e sua destinação, ficam sob a responsabilidade exclusiva do LOCATÁRIO, inclusive IPTU (Imposto Predial e Territorial Urbano) ou outro que eventualmente o substitua, bem como taxas de incêndio e outras que eventualmente surjam no decorrer da ocupação. Eventuais taxas, tributos e emolumentos que incidam no imóvel por conta da atividade deverão ser de responsabilidade exclusiva do LOCATÁRIO, desde sua inscrição e pagamento, quanto baixa e desoneração.</p>
+<p class="paragrafo"><strong>Parágrafo único</strong> - O LOCATÁRIO declara ter conhecimento de que, de posse do contrato de locação, devidamente assinado pelas partes, fica obrigado a transferir ou pedir a ligação de energia elétrica, em SEU NOME, bem como a ligação do fornecimento de água e serviço de esgoto, também em SEU NOME, arcando com as eventuais despesas, sob pena de incorrer em infração contratual de natureza grave, dando ensejo à retomada do imóvel.</p>
+
+<!-- Cláusula XVI — danos -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA XVI</span> – O LOCADOR fica isento de qualquer responsabilidade por danos pessoais ou patrimoniais, ocorrente a pessoas que ocupam o imóvel ou terceiros e seus bens, decorrentes de incêndio, inundações, acidentes ou outros eventos, mesmo os ligados à atividade e à ocupação estabelecida do LOCATÁRIO, qualquer que seja a causa.</p>
+
+<!-- Cláusula XVII — vizinhança -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA XVII</span> – O LOCATÁRIO deverá atender as regras de boa vizinhança, respeitando os horários estabelecidos na mesma, sendo certo que o não atendimento a esta resultará na multa prevista na cláusula IX, com a consequente rescisão contratual, correndo por conta do LOCATÁRIO todas as despesas decorrentes de tais atos.</p>
+<p class="paragrafo"><strong>Parágrafo único</strong> - DA PERTURBAÇÃO DO SOSSEGO E DO DIREITO DE VIZINHANÇA: O LOCATÁRIO se obriga a se submeter a todas as normas civis relativas ao direito de vizinhança, especialmente às de direito municipal, relativas à perturbação do sossego alheio, de modo que TODAS e QUAISQUER RECLAMAÇÕES DA VIZINHANÇA que denunciem MAU USO DO IMÓVEL ou mesmo ABUSO DE DIREITO DE HABITAÇÃO (ou condutas congêneres), das quais DECORRAM APENAMENTO FINANCEIRO, serão suportadas exclusivamente pelo LOCATÁRIO e sua respectiva FIADORA. O eventual pagamento, por parte do LOCADOR, das penalidades sofridas pelo LOCATÁRIO, as quais implicam obrigação <em>propter rem</em>, será imediatamente cobrado do LOCADOR e de sua GARANTIDORA, acrescido da respectiva MULTA CONTRATUAL, estipulada para esta finalidade em 20% (vinte inteiros por cento) do correspondente a 12 (doze) meses de contrato, sem prejuízo dos eventuais honorários advocatícios, devidos pela interpelação extrajudicial ou mesmo judicial, estabelecidos para todos os fins desta avença em 20% (vinte inteiros por cento) do valor devido.</p>
+
+<!-- Cláusula XVIII — exigências de órgãos competentes -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA XVIII</span> – Sendo a locação comercial ajustada no presente contrato, o LOCADOR fica exonerado de qualquer responsabilidade pelo atendimento a exigências que venham a ser feitas pelos órgãos competentes, para a instalação no ramo de atividade do LOCATÁRIO, sendo que a não autorização de órgão(ãos) competente(s) para o início de atividades e/ou a instalação do negócio do LOCATÁRIO, qualquer que seja o motivo, não será capaz para ensejar a rescisão do contrato.</p>
+
+<!-- Cláusula XIX — entrega das chaves -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA XIX</span> – Finda a ocupação, juntamente com os comprovantes de pagamento dos aluguéis o LOCATÁRIO obriga-se a apresentar ao LOCADOR pagamentos de abastecimento de água e esgoto, energia elétrica e impostos dos 6 (seis) meses imediatamente anteriores, devidamente pagas, e, na entrega das chaves quando finda a locação, o LOCATÁRIO deverá apresentar quitadas as contas dos referidos encargos, sob pena de pagar os valores estimados pelas contas apresentadas, sujeitando-se também a cobrança da diferença ou devolução do excesso.</p>
+
+{% if contrato.fiadores.all %}
+<!-- Cláusula XX — fiadores (qualificação completa; fallback rg_cpf legado) -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA XX – FIADORES:</span> Assinam também o presente instrumento, solidariamente com o LOCATÁRIO, como FIADORES E CAUCIONANTES, por todas as obrigações exaradas neste contrato:</p>
+{% for f in contrato.fiadores.all %}
+<p class="paragrafo"><strong>{{ f.nome|upper }}</strong>{% if f.qualificacao %}, {{ f.qualificacao }}{% endif %}, {% if f.rg and f.cpf %}portador(a) da Cédula de Identidade RG n.º {{ f.rg }} e inscrito(a) no CPF/MF sob n.º {{ f.cpf }}{% else %}portador(a) do RG/CPF n.º {{ f.rg_cpf }}{% endif %}{% if f.conjuge_nome %}, casado(a) com <strong>{{ f.conjuge_nome|upper }}</strong>{% if f.conjuge_rg %}, portador(a) da Cédula de Identidade RG n.º {{ f.conjuge_rg }}{% endif %}{% if f.conjuge_cpf %} e inscrito(a) no CPF/MF sob n.º {{ f.conjuge_cpf }}{% endif %}{% endif %}{% if f.endereco %}, residente e domiciliado(a) em {{ f.endereco }}{% endif %}.</p>
+{% endfor %}
+{% endif %}
+
+<!-- Cláusula XXI — aceitação -->
+<p class="clausula-texto"><span class="clausula-num">CLÁUSULA XXI – DA ACEITAÇÃO:</span> As partes manifestam sua aceitação total e irrestrita a todas as cláusulas do presente instrumento (arts. 112 e 113, do código civil), para que a locação aqui contratada flua de forma livre e desembaraçada, atingindo a todos os seus legais e possíveis efeitos, declarando, outrossim, e sob as penas da lei, que a vontade aqui expressa está em conformidade com o sistema jurídico, e apta a produzir todos os resultados jurídicos por elas modulados e pretendidos, vedado que estará a invocação de nulidades absolutas ou relativas, ou vícios de quaisquer das estipulações aqui contidas, sob pena de litigância de má-fé.</p>
+
+<p class="fechamento">E assim, justos e contratados, assinam o presente em 02 (duas) vias de igual teor, juntamente com as testemunhas abaixo, declarando haverem lido minuciosamente todas as cláusulas impressas neste contrato e com tudo estarem de pleno acordo.</p>
+
+<p class="local-data">{% if contrato.local_assinatura %}{{ contrato.local_assinatura }}{% else %}______________________________{% endif %}, {% if contrato.data_assinatura %}{{ contrato.data_assinatura|date:"j \d\e F \d\e Y" }}{% else %}______ de ______________ de ________{% endif %}.</p>
+
+<!-- Assinaturas — Locador fixo (Shelter) + Locatário -->
+<table class="sign-table avoid-break" style="margin-top: 24px;">
+  <tr><td colspan="3" class="sign-space">&nbsp;</td></tr>
+  <tr>
+    <td class="sign-cell" width="45%">
+      <div class="sign-line">{{ locador.razao_social }}<br>{{ locador.representante_nome }}</div>
+      <div class="sign-role">LOCADOR • CNPJ {{ locador.cnpj }}</div>
+    </td>
+    <td width="10%">&nbsp;</td>
+    <td class="sign-cell" width="45%">
+      <div class="sign-line">{{ contrato.inquilino.nome|upper }}</div>
+      <div class="sign-role">LOCATÁRIO • {% if contrato.tipo_contrato == 'PJ' and contrato.inquilino.cnpj %}CNPJ {{ contrato.inquilino.cnpj }}{% else %}CPF {{ contrato.inquilino.cpf }}{% endif %}</div>
+    </td>
+  </tr>
+</table>
+
+{% if contrato.fiadores.all %}
+<!-- Assinaturas — Fiador(es), um por linha -->
+{% for f in contrato.fiadores.all %}
+<table align="center" width="60%" class="sign-table avoid-break">
+  <tr><td class="sign-space">&nbsp;</td></tr>
+  <tr>
+    <td class="sign-cell">
+      <div class="sign-line">{{ f.nome|upper }}</div>
+      <div class="sign-role">FIADOR(A){% if f.cpf %} • CPF {{ f.cpf }}{% elif f.rg_cpf %} • RG/CPF {{ f.rg_cpf }}{% endif %}</div>
+    </td>
+  </tr>
+</table>
+{% endfor %}
+{% endif %}
+
+<!-- Testemunhas -->
+<table class="sign-table avoid-break">
+  <tr><td colspan="3" style="padding-top: 24px; font-size: 11px;"><strong>Testemunhas:</strong></td></tr>
+  <tr><td colspan="3" class="sign-space">&nbsp;</td></tr>
+  <tr>
+    <td class="sign-cell" width="45%"><div class="sign-line">&nbsp;</div></td>
+    <td width="10%">&nbsp;</td>
+    <td class="sign-cell" width="45%"><div class="sign-line">&nbsp;</div></td>
+  </tr>
+</table>
+{% endblock %}

@@ -95,7 +95,49 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Armazenamento de arquivos (uploads) — plugável via .env, no mesmo padrão do
+# DB_ENGINE acima: FileSystemStorage em dev, S3 no futuro sem mudar código de
+# aplicação (todos os FileFields usam o storage "default" do STORAGES).
+#
+# Passo futuro para habilitar S3 (NÃO implementado nesta rodada — boto3 e
+# django-storages NÃO devem ser instalados agora):
+#   1. pip install django-storages boto3 (e adicionar ao requirements.txt)
+#   2. No .env: STORAGE_BACKEND=s3 + AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+#      AWS_STORAGE_BUCKET_NAME e AWS_S3_REGION_NAME
+#   3. Trocar o backend do ramo 's3' abaixo por
+#      'storages.backends.s3.S3Storage' (lendo as credenciais do .env)
+STORAGE_BACKEND = os.getenv('STORAGE_BACKEND', 'filesystem')
+
+if STORAGE_BACKEND == 's3':
+    # Placeholder: falha explícita até django-storages/boto3 serem adicionados
+    # (mesmo comportamento do DB_ENGINE=mysql sem mysqlclient instalado).
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        'STORAGE_BACKEND=s3 requer django-storages e boto3 — '
+        'ver o passo a passo comentado em core/settings.py.'
+    )
+
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Dados fixos do locador jurídico (Shelter) — usados no PDF de contrato
+# (imoveis/views.py:_gerar_pdf_contrato). O locador do contrato gerado é
+# sempre a Shelter, independentemente do Proprietario cadastrado do imóvel.
+SHELTER_LOCADOR = {
+    'razao_social': 'SHELTER ADMINISTRADORA DE BENS PRÓPRIOS LTDA.',
+    'cnpj': '65.764.617/0001-29',
+    'representante_nome': 'JOSÉ MÍLTON GARCIA',
+    'representante_rg': '19.249.055',
+    'representante_cpf': '493.583.406-49',
+    'endereco': 'Rua São Paulo, 134, Centro, Poços de Caldas/MG',
+    'telefone': '035-3722-1838',
+    'pix_chave': '65.764.617/0001-29',
+    'foro': 'Comarca de Poços de Caldas, MG',
+}
 
 # Autenticação
 LOGIN_URL = '/login/'

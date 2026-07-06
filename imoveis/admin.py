@@ -1,7 +1,9 @@
 from django.contrib import admin
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
-    FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato, Saida, Entrada,
+    FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato,
+    Recibo, ComodoTemplate, ItemVistoriaTemplate, ItemVistoria, TestemunhaLaudo,
+    DocumentoGerado,
 )
 
 
@@ -18,7 +20,7 @@ class FotoImovelInline(admin.TabularInline):
 
 @admin.register(Imovel)
 class ImovelAdmin(admin.ModelAdmin):
-    list_display = ['endereco', 'tipo', 'categoria', 'status', 'proprietario', 'valor_aluguel']
+    list_display = ['endereco', 'tipo', 'categoria', 'status', 'proprietario']
     list_filter = ['status', 'tipo', 'categoria']
     search_fields = ['endereco', 'bairro', 'cidade']
     inlines = [FotoImovelInline]
@@ -62,27 +64,57 @@ class DistratoAdmin(admin.ModelAdmin):
     list_filter = ['tipo']
 
 
-@admin.register(Saida)
-class SaidaAdmin(admin.ModelAdmin):
-    list_display = ['imovel', 'tipo', 'valor', 'data', 'pago_por']
-    list_filter = ['tipo', 'pago_por']
-    search_fields = ['imovel__endereco']
+class ItemVistoriaInline(admin.TabularInline):
+    model = ItemVistoria
+    extra = 0
 
 
-@admin.register(Entrada)
-class EntradaAdmin(admin.ModelAdmin):
-    list_display = ['imovel', 'tipo', 'valor', 'data']
-    list_filter = ['tipo']
-    search_fields = ['imovel__endereco']
+class TestemunhaLaudoInline(admin.TabularInline):
+    model = TestemunhaLaudo
+    extra = 0
 
 
 @admin.register(LaudoVistoria)
 class LaudoVistoriaAdmin(admin.ModelAdmin):
     list_display = ['imovel', 'tipo', 'data', 'responsavel']
     list_filter = ['tipo']
+    inlines = [ItemVistoriaInline, TestemunhaLaudoInline]
+
+
+class ItemVistoriaTemplateInline(admin.TabularInline):
+    model = ItemVistoriaTemplate
+    extra = 1
+
+
+@admin.register(ComodoTemplate)
+class ComodoTemplateAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'ordem']
+    inlines = [ItemVistoriaTemplateInline]
+
+
+@admin.register(Recibo)
+class ReciboAdmin(admin.ModelAdmin):
+    list_display = ['pk', 'imovel', 'quem_pagou', 'quantia', 'data_assinatura', 'criado_em']
+    search_fields = ['quem_pagou', 'assinante_nome', 'imovel__endereco']
 
 
 @admin.register(Lancamento)
 class LancamentoAdmin(admin.ModelAdmin):
     list_display = ['contrato', 'tipo', 'status', 'valor', 'data_vencimento', 'data_pagamento']
     list_filter = ['status', 'tipo']
+
+
+@admin.register(DocumentoGerado)
+class DocumentoGeradoAdmin(admin.ModelAdmin):
+    """Registro imutável: consulta apenas — criação só pela geração de PDF."""
+    list_display = ['pk', 'tipo', 'origem', 'numero_versao', 'gerado_por', 'gerado_em']
+    list_filter = ['tipo']
+    date_hierarchy = 'gerado_em'
+    readonly_fields = ['tipo', 'contrato', 'laudo', 'recibo', 'numero_versao',
+                       'arquivo', 'sha256', 'gerado_por', 'gerado_em']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

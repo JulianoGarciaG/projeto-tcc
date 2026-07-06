@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}Laudo #{{ laudo.pk }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-clipboard-check me-2"></i>Laudo de Vistoria #{{ laudo.pk }}{% endblock %}
+{% block nav_laudos %}active{% endblock %}
+
+{% block content %}
+<div class="mb-3 d-flex gap-2 flex-wrap">
+  <a href="{% url 'laudo_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a>
+  <a href="{% url 'laudo_edit' laudo.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i> Editar</a>
+  <a href="{% url 'laudo_gerar_pdf' laudo.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Regerar PDF</a>
+  {% if laudo.documento_gerado %}
+  <a href="{{ laudo.documento_gerado.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i> Laudo Gerado (PDF)</a>
+  {% endif %}
+  {% if laudo.arquivo %}
+  <a href="{{ laudo.arquivo.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-paperclip me-1"></i> Anexo Manual</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-info-circle me-1"></i> Identificação</div>
+      <div class="section-card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-muted">Tipo</dt><dd class="col-7">{{ laudo.get_tipo_display }}</dd>
+          <dt class="col-5 text-muted">Imóvel</dt><dd class="col-7">{{ laudo.imovel.endereco }}</dd>
+          <dt class="col-5 text-muted">Locador(a)</dt><dd class="col-7">{{ laudo.locador_nome }}</dd>
+          <dt class="col-5 text-muted">Locatário(a)</dt><dd class="col-7">{{ laudo.locatario_nome }}</dd>
+          <dt class="col-5 text-muted">Data</dt><dd class="col-7">{{ laudo.data|date:"d/m/Y" }}</dd>
+          <dt class="col-5 text-muted">Responsável</dt><dd class="col-7">{{ laudo.responsavel }}</dd>
+          {% if laudo.local_assinatura %}
+          <dt class="col-5 text-muted">Local Assinatura</dt><dd class="col-7">{{ laudo.local_assinatura }}</dd>
+          {% endif %}
+          {% if laudo.data_assinatura %}
+          <dt class="col-5 text-muted">Data Assinatura</dt><dd class="col-7">{{ laudo.data_assinatura|date:"d/m/Y" }}</dd>
+          {% endif %}
+          {% if laudo.observacoes %}
+          <dt class="col-5 text-muted">Observações</dt><dd class="col-7">{{ laudo.observacoes }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-bar-chart me-1"></i> Resumo da Vistoria</div>
+      <div class="section-card-body small">
+        {% if resumo.total %}
+        <strong>{{ resumo.total }}</strong> ite{{ resumo.total|pluralize:"m,ns" }} vistoriado{{ resumo.total|pluralize }} —
+        <span class="text-success">{{ resumo.bom }} bom</span>,
+        <span class="text-warning">{{ resumo.regular }} regular</span>,
+        <span class="text-danger">{{ resumo.ruim }} ruim</span>.
+        {% else %}
+        <span class="text-muted">Nenhum item vistoriado.</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if laudo.documentos_gerados.all %}
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-file-earmark-pdf me-1"></i> Versões do PDF gerado</div>
+      <div class="section-card-body small">
+        <ul class="list-unstyled mb-0">
+          {% for d in laudo.documentos_gerados.all %}
+          <li>
+            <a href="{{ d.arquivo.url }}" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i>Versão {{ d.numero_versao }}</a>
+            <span class="text-muted">— {{ d.gerado_em|date:"d/m/Y H:i" }}{% if d.gerado_por %} — {{ d.gerado_por.username }}{% endif %}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-paperclip me-1"></i> Anexo (laudo assinado)</div>
+      <div class="section-card-body small">
+        {% if laudo.arquivo %}
+        <p class="mb-2"><a href="{{ laudo.arquivo.url }}" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i>Ver anexo atual</a></p>
+        {% else %}
+        <p class="text-muted mb-2">Nenhum anexo enviado. Após a assinatura, anexe aqui o laudo digitalizado.</p>
+        {% endif %}
+        <form method="post" action="{% url 'laudo_anexar_arquivo' laudo.pk %}" enctype="multipart/form-data" class="d-flex gap-2">
+          {% csrf_token %}
+          <input type="file" name="arquivo" class="form-control form-control-sm" accept="application/pdf,image/*">
+          <button type="submit" class="btn btn-primary btn-sm flex-shrink-0"><i class="bi bi-upload me-1"></i>Enviar</button>
+        </form>
+      </div>
+    </div>
+
+    {% if testemunhas %}
+    <div class="section-card mb-3">
+      <div class="section-card-header"><i class="bi bi-people me-1"></i> Testemunhas</div>
+      <div class="section-card-body small">
+        {% for t in testemunhas %}
+        <div{% if not forloop.last %} class="border-bottom pb-2 mb-2"{% endif %}>
+          <strong>{{ t.nome }}</strong>{% if t.cpf %}<br>CPF: {{ t.cpf }}{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-md-7">
+    <div class="section-card">
+      <div class="section-card-header"><i class="bi bi-house-check me-1"></i> Cômodos e Itens Vistoriados</div>
+      <div class="table-responsive">
+        <table class="table mb-0 small">
+          <tbody>
+            {% for grupo in grupos %}
+            <tr class="table-light"><th colspan="3">{{ grupo.comodo }}</th></tr>
+            {% for item in grupo.itens %}
+            <tr>
+              <td>{{ item.item }}</td>
+              <td>
+                <span class="badge {% if item.estado == 'bom' %}bg-success{% elif item.estado == 'regular' %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ item.get_estado_display }}</span>
+              </td>
+              <td class="text-muted">{{ item.observacao|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+            {% empty %}
+            <tr><td class="text-center text-muted py-3">Nenhum item registrado.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
