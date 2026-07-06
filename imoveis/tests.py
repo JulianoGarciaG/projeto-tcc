@@ -1,3 +1,4 @@
+import hashlib
 from datetime import date
 from decimal import Decimal
 
@@ -10,9 +11,21 @@ from django.urls import reverse
 
 from .forms import ContratoForm, LaudoVistoriaForm, ReciboForm
 from .models import (
-    Contrato, Imovel, Inquilino, ItemVistoria, Lancamento, LaudoVistoria,
-    Proprietario, Recibo, TestemunhaLaudo,
+    Contrato, DocumentoGerado, Imovel, Inquilino, ItemVistoria, Lancamento,
+    LaudoVistoria, Proprietario, Recibo, TestemunhaLaudo,
 )
+
+
+def limpar_arquivos_gerados():
+    """Remove do storage os PDFs criados durante os testes (versões + espelhos)."""
+    for doc in DocumentoGerado.objects.all():
+        doc.arquivo.delete(save=False)
+    for c in Contrato.objects.exclude(documento_gerado='').exclude(documento_gerado__isnull=True):
+        c.documento_gerado.delete(save=False)
+    for l in LaudoVistoria.objects.exclude(documento_gerado='').exclude(documento_gerado__isnull=True):
+        l.documento_gerado.delete(save=False)
+    for r in Recibo.objects.exclude(arquivo='').exclude(arquivo__isnull=True):
+        r.arquivo.delete(save=False)
 from .validators import (
     validate_cpf, validate_cnpj, validate_cpf_cnpj,
     validate_rg_cpf, validate_telefone,
@@ -174,12 +187,12 @@ class ReciboTests(TestCase):
                         quantia=Decimal('100.00'),
                         periodo_inicio=date(2026, 6, 1), periodo_fim=date(2026, 6, 30))
         html = render_to_string('documentos/recibo_pdf.html', {'recibo': recibo})
-        self.assertIn('Rua A, 100 — Fundos', html)
-        self.assertIn('de 01/06/2026 a 30/06/2026', html)
+        self.assertIn('Rua A, 100, Fundos — Maringá', html)
+        self.assertIn('01/06/2026 a 30/06/2026', html)
 
         recibo.periodo_fim = None
         html = render_to_string('documentos/recibo_pdf.html', {'recibo': recibo})
-        self.assertNotIn('Correspondente ao Período', html)
+        self.assertNotIn('Período correspondente', html)
 
 
 class ContratoPdfTests(TestCase):
@@ -280,10 +293,13 @@ class LaudoTests(TestCase):
         self.assertIn('João Locatário', html)
         self.assertIn('Sala', html)
         self.assertIn('Piso novo', html)
-        self.assertIn('1 item vistoriado', html)
+        # Resumo em cards (redesign) — total e badge do estado do item
+        self.assertIn('Resumo da Vistoria', html)
+        self.assertIn('Total de itens', html)
+        self.assertIn('badge-bom', html)
         self.assertIn('Testemunha Um', html)
-        # L5 — espaço extra acima das linhas de assinatura do laudo
-        self.assertIn('assinatura-laudo', html)
+        # Assinaturas do redesign (sign-table com espaço de 80px do mockup)
+        self.assertIn('sign-line', html)
         # Sem observações gerais preenchidas, a seção não aparece
         self.assertNotIn('Observações Gerais', html)
 
@@ -383,6 +399,9 @@ class GeracaoPdfViewTests(TestCase):
         self.client.force_login(self.user)
         _, self.imovel, self.inquilino, self.contrato = criar_base()
 
+    def tearDown(self):
+        limpar_arquivos_gerados()
+
     def test_contrato_gerar_pdf_view(self):
         resp = self.client.get(reverse('contrato_gerar_pdf', args=[self.contrato.pk]))
         self.assertEqual(resp.status_code, 200)
@@ -455,12 +474,86 @@ class GeracaoPdfViewTests(TestCase):
         self.assertFalse(laudo.documento_gerado)
 
     def test_ged_nao_quebra_com_documento_gerado_nulo(self):
-        # Regressão: registros antigos têm documento_gerado NULL (não '') e o
-        # exclude('') do Django mantém NULLs — o GED não pode listá-los.
+        # Regressão: contrato sem PDF gerado (documento_gerado NULL) não pode
+        # aparecer no GED — que agora lista versões de DocumentoGerado.
         self.assertIsNone(self.contrato.documento_gerado.name)
         resp = self.client.get(reverse('documentos'))
         self.assertEqual(resp.status_code, 200)
-        self.assertNotIn(self.contrato, resp.context['contratos_gerados'])
+        self.assertEqual(resp.context['contratos_gerados'].count(), 0)
+
+
+class DocumentoGeradoTests(TestCase):
+    """GED versionado — DocumentoGerado (versões imutáveis por geração de PDF)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester', password='x')
+        self.client.force_login(self.user)
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+
+    def tearDown(self):
+        limpar_arquivos_gerados()
+
+    def test_gerar_pdf_cria_versao_com_hash_e_autor(self):
+        resp = self.client.get(reverse('contrato_gerar_pdf', args=[self.contrato.pk]))
+        doc = DocumentoGerado.objects.get(contrato=self.contrato)
+        self.assertEqual(doc.tipo, 'contrato')
+        self.assertEqual(doc.numero_versao, 1)
+        self.assertEqual(doc.gerado_por, self.user)
+        self.assertEqual(doc.sha256, hashlib.sha256(resp.content).hexdigest())
+        with doc.arquivo.open('rb') as f:
+            self.assertEqual(f.read(), resp.content)
+
+    def test_versoes_incrementam_por_origem(self):
+        self.client.get(reverse('contrato_gerar_pdf', args=[self.contrato.pk]))
+        self.client.get(reverse('contrato_gerar_pdf', args=[self.contrato.pk]))
+        recibo = Recibo.objects.create(imovel=self.imovel, contrato=self.contrato,
+                                       quantia=Decimal('100.00'))
+        self.client.get(reverse('recibo_gerar_pdf', args=[recibo.pk]))
+        versoes_contrato = list(
+            DocumentoGerado.objects.filter(contrato=self.contrato)
+            .order_by('numero_versao').values_list('numero_versao', flat=True))
+        self.assertEqual(versoes_contrato, [1, 2])
+        # A sequência é independente por origem: o recibo começa em 1
+        doc_recibo = DocumentoGerado.objects.get(recibo=recibo)
+        self.assertEqual(doc_recibo.numero_versao, 1)
+        self.assertEqual(doc_recibo.tipo, 'recibo')
+
+    def test_laudo_gerar_pdf_cria_versao(self):
+        laudo = LaudoVistoria.objects.create(
+            imovel=self.imovel, contrato=self.contrato, tipo='entrada',
+            data=date(2026, 7, 1), responsavel='Carlos',
+        )
+        self.client.get(reverse('laudo_gerar_pdf', args=[laudo.pk]))
+        doc = DocumentoGerado.objects.get(laudo=laudo)
+        self.assertEqual((doc.tipo, doc.numero_versao), ('laudo', 1))
+
+    def test_registro_imutavel(self):
+        self.client.get(reverse('contrato_gerar_pdf', args=[self.contrato.pk]))
+        doc = DocumentoGerado.objects.get(contrato=self.contrato)
+        doc.sha256 = 'x' * 64
+        with self.assertRaises(ValueError):
+            doc.save()
+
+    def test_campo_legado_espelha_ultima_versao(self):
+        self.client.get(reverse('contrato_gerar_pdf', args=[self.contrato.pk]))
+        self.client.get(reverse('contrato_gerar_pdf', args=[self.contrato.pk]))
+        self.contrato.refresh_from_db()
+        self.assertTrue(self.contrato.documento_gerado)
+        ultima = (DocumentoGerado.objects.filter(contrato=self.contrato)
+                  .order_by('-numero_versao').first())
+        self.assertEqual(ultima.numero_versao, 2)
+        with self.contrato.documento_gerado.open('rb') as f:
+            conteudo_legado = f.read()
+        self.assertEqual(hashlib.sha256(conteudo_legado).hexdigest(), ultima.sha256)
+
+    def test_ged_lista_todas_as_versoes(self):
+        self.client.get(reverse('contrato_gerar_pdf', args=[self.contrato.pk]))
+        self.client.get(reverse('contrato_gerar_pdf', args=[self.contrato.pk]))
+        resp = self.client.get(reverse('documentos'))
+        self.assertEqual(resp.status_code, 200)
+        docs = list(resp.context['contratos_gerados'])
+        self.assertEqual(len(docs), 2)
+        self.assertEqual(sorted(d.numero_versao for d in docs), [1, 2])
 
 
 class ValidateRgCpfTests(TestCase):

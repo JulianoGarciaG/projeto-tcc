@@ -1,65 +1,125 @@
 {% extends 'documentos/base_pdf.html' %}
 
-{% block titulo_doc %}Laudo de Vistoria — {{ laudo.get_tipo_display }}{% endblock %}
+{% block estilos_extra %}
+  /* CSS exclusivo do laudo (docs/pdf-models/laudo_vistoria.html) */
+  .card-value { font-size: 16px; font-weight: bold; color: #3A3A3A; margin-top: 4px; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .data-table th { background-color: #3A3A3A; color: #ffffff; text-align: left; padding: 6px 10px; font-size: 8px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: bold; }
+  .data-table td { padding: 6px 10px; border-bottom: 1px solid #E0E0E0; }
+  .row-alt td { background-color: #FBFBFB; }
+  .badge { font-weight: bold; padding: 2px 7px; font-size: 9px; }
+  .badge-bom  { background-color: #E8F2E9; color: #2E7D32; }
+  .badge-reg  { background-color: #FDF1DA; color: #9A6B00; }
+  .badge-ruim { background-color: #F7E5E5; color: #C62828; }
+{% endblock %}
+
+{% block doc_meta %}LAUDO Nº <strong>{{ laudo.pk }}</strong><br>Emitido em {{ laudo.criado_em|date:"d/m/Y" }}{% endblock %}
+
+{% block titulo_doc %}Laudo de Vistoria — {% if laudo.tipo == 'entrada' %}Entrada{% else %}Saída{% endif %}{% endblock %}
 
 {% block conteudo %}
-<h2 class="secao">Identificação</h2>
-<table class="dados">
-  <tr><td class="rotulo">Tipo de Vistoria</td><td>{{ laudo.get_tipo_display }}</td></tr>
-  <tr><td class="rotulo">Imóvel</td><td>{{ laudo.imovel.endereco }}{% if laudo.imovel.bairro %}, {{ laudo.imovel.bairro }}{% endif %}{% if laudo.imovel.cidade %} — {{ laudo.imovel.cidade }}{% endif %}</td></tr>
-  <tr><td class="rotulo">Locador(a)</td><td>{{ laudo.locador_nome }}</td></tr>
-  <tr><td class="rotulo">Locatário(a)</td><td>{{ laudo.locatario_nome }}</td></tr>
-  <tr><td class="rotulo">Data da Vistoria</td><td>{{ laudo.data|date:"d/m/Y" }}</td></tr>
-  <tr><td class="rotulo">Responsável pela Vistoria</td><td>{{ laudo.responsavel }}</td></tr>
+<!-- 1. Identificação -->
+<div class="sec">Identificação</div>
+<table class="fields avoid-break">
+  <tr>
+    <td class="pad" width="50%"><div class="flabel">Tipo de vistoria</div><div class="fval">{{ laudo.get_tipo_display }}</div></td>
+    <td width="50%"><div class="flabel">Data da vistoria</div><div class="fval">{{ laudo.data|date:"d/m/Y" }}</div></td>
+  </tr>
+  <tr>
+    <td colspan="2"><div class="flabel">Endereço do imóvel</div><div class="fval">{{ laudo.imovel.endereco }}{% if laudo.imovel.numero %}, {{ laudo.imovel.numero }}{% endif %}{% if laudo.imovel.complemento %}, {{ laudo.imovel.complemento }}{% endif %}{% if laudo.imovel.bairro %} — {{ laudo.imovel.bairro }}{% endif %}{% if laudo.imovel.cidade %}{% if laudo.imovel.bairro %}, {% else %} — {% endif %}{{ laudo.imovel.cidade }}{% endif %}</div></td>
+  </tr>
+  <tr>
+    <td class="pad"><div class="flabel">Locador</div><div class="fval">{{ laudo.locador_nome }}</div></td>
+    <td><div class="flabel">Locatário</div><div class="fval">{{ laudo.locatario_nome }}</div></td>
+  </tr>
+  <tr>
+    <td class="pad"><div class="flabel">Responsável pela vistoria</div><div class="fval">{{ laudo.responsavel }}</div></td>
+    <td></td>
+  </tr>
 </table>
 
 {% if grupos %}
-<h2 class="secao">Cômodos Vistoriados</h2>
+<!-- Legenda -->
+<div style="margin: 14px 0 4px 0; font-size: 8px;">
+  <span class="badge badge-bom">BOM</span>&nbsp;
+  <span class="badge badge-reg">REGULAR</span>&nbsp;
+  <span class="badge badge-ruim">RUIM</span>
+</div>
+
 {% for grupo in grupos %}
-<table class="grade">
-  <tr><th colspan="3">{{ grupo.comodo }}</th></tr>
-  <tr><th style="width:45%;">Item</th><th style="width:15%;">Estado</th><th>Observação</th></tr>
-  {% for item in grupo.itens %}
-  <tr>
-    <td>{{ item.item }}</td>
-    <td>{{ item.get_estado_display }}</td>
-    <td>{% if item.observacao %}{{ item.observacao }}{% endif %}</td>
-  </tr>
-  {% endfor %}
-</table>
+<!-- Cômodo: {{ grupo.comodo }} -->
+<div class="avoid-break">
+  <div style="font-size: 12px; font-weight: bold; color: #3A3A3A; margin: 16px 0 6px 0;">{{ grupo.comodo }}</div>
+  <table class="data-table">
+    <tr><th width="34%">Item</th><th width="20%">Estado</th><th>Observação</th></tr>
+    {% for item in grupo.itens %}
+    <tr{% if forloop.counter|divisibleby:2 %} class="row-alt"{% endif %}>
+      <td style="border-left: 3px solid {% if item.estado == 'bom' %}#2E7D32{% elif item.estado == 'regular' %}#9A6B00{% else %}#C62828{% endif %};">{{ item.item }}</td>
+      <td><span class="badge {% if item.estado == 'bom' %}badge-bom{% elif item.estado == 'regular' %}badge-reg{% else %}badge-ruim{% endif %}">{{ item.get_estado_display|upper }}</span></td>
+      <td style="color: #888888;">{{ item.observacao }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
 {% endfor %}
 
-<div class="destaque">
-  <strong>Resumo da vistoria:</strong>
-  {{ resumo.total }} ite{{ resumo.total|pluralize:"m,ns" }} vistoriado{{ resumo.total|pluralize }} —
-  {{ resumo.bom }} bom, {{ resumo.regular }} regular, {{ resumo.ruim }} ruim.
-</div>
+<!-- Resumo -->
+<div class="sec">Resumo da Vistoria</div>
+<table class="cards avoid-break">
+  <tr>
+    <td width="25%"><div class="card"><div class="card-label">Total de itens</div><div class="card-value">{{ resumo.total }}</div></div></td>
+    <td width="25%"><div class="card" style="border-top: 3px solid #2E7D32;"><div class="card-label">Bom</div><div class="card-value" style="color: #2E7D32;">{{ resumo.bom }}</div></div></td>
+    <td width="25%"><div class="card" style="border-top: 3px solid #9A6B00;"><div class="card-label">Regular</div><div class="card-value" style="color: #9A6B00;">{{ resumo.regular }}</div></div></td>
+    <td width="25%"><div class="card" style="border-top: 3px solid #C62828;"><div class="card-label">Ruim</div><div class="card-value" style="color: #C62828;">{{ resumo.ruim }}</div></div></td>
+  </tr>
+</table>
 {% endif %}
 
 {% if laudo.observacoes %}
-<h2 class="secao">Observações Gerais</h2>
-<div class="destaque">{{ laudo.observacoes|linebreaksbr }}</div>
+<!-- Observações gerais -->
+<div class="sec">Observações Gerais</div>
+<div class="note-box avoid-break">{{ laudo.observacoes|linebreaksbr }}</div>
 {% endif %}
 
 {% if laudo.local_assinatura or laudo.data_assinatura %}
-<p style="margin-top:24px;">
-  {% if laudo.local_assinatura %}{{ laudo.local_assinatura }}{% endif %}{% if laudo.local_assinatura and laudo.data_assinatura %}, {% endif %}{% if laudo.data_assinatura %}{{ laudo.data_assinatura|date:"d \d\e F \d\e Y" }}{% endif %}.
-</p>
+<div style="font-size: 10px; color: #888888; margin-top: 18px;">{% if laudo.local_assinatura %}{{ laudo.local_assinatura }}{% endif %}{% if laudo.local_assinatura and laudo.data_assinatura %}, {% endif %}{% if laudo.data_assinatura %}{{ laudo.data_assinatura|date:"d \d\e F \d\e Y" }}{% endif %}.</div>
 {% endif %}
 
-<div class="assinatura assinatura-laudo">
-  <div class="linha-assinatura">{{ laudo.locador_nome }} — Locador(a)</div>
-</div>
-<div class="assinatura assinatura-laudo">
-  <div class="linha-assinatura">{{ laudo.locatario_nome }} — Locatário(a)</div>
-</div>
+<!-- Assinaturas -->
+<table class="sign-table avoid-break" style="margin-top: 80px;">
+  <tr>
+    <td class="sign-cell" width="45%">
+      <div class="sign-line">{{ laudo.locador_nome }}</div>
+      <div class="sign-role">Locador</div>
+    </td>
+    <td width="10%"></td>
+    <td class="sign-cell" width="45%">
+      <div class="sign-line">{{ laudo.locatario_nome }}</div>
+      <div class="sign-role">Locatário</div>
+    </td>
+  </tr>
+</table>
 
 {% if testemunhas %}
-<h2 class="secao" style="margin-top:30px;">Testemunhas</h2>
-{% for t in testemunhas %}
-<div class="assinatura assinatura-laudo">
-  <div class="linha-assinatura">{{ t.nome }}{% if t.cpf %} — CPF: {{ t.cpf }}{% endif %}</div>
-</div>
-{% endfor %}
+<!-- Testemunhas -->
+<div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #888888; margin-top: 44px; margin-bottom: 8px;">Testemunhas</div>
+<table class="sign-table avoid-break" style="margin-top: 36px;">
+  {% for t in testemunhas %}
+  {% if forloop.counter0|divisibleby:2 %}
+  <tr>
+    <td class="sign-cell" width="45%">
+      <div class="sign-line">{{ t.nome }}</div>
+      <div class="sign-role">{% if t.cpf %}CPF {{ t.cpf }}{% endif %}</div>
+    </td>
+    {% if forloop.last %}<td width="10%"></td><td width="45%"></td></tr>{% else %}<td width="10%"></td>{% endif %}
+  {% else %}
+    <td class="sign-cell" width="45%">
+      <div class="sign-line">{{ t.nome }}</div>
+      <div class="sign-role">{% if t.cpf %}CPF {{ t.cpf }}{% endif %}</div>
+    </td>
+  </tr>
+  {% endif %}
+  {% endfor %}
+</table>
 {% endif %}
 {% endblock %}

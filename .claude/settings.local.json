@@ -23,7 +23,19 @@
       "Bash(cp assets/Shelter_LOGO_white.jpg static/assets/Shelter_LOGO_white.jpg)",
       "Bash(venv/Scripts/pip list *)",
       "Bash(venv/Scripts/python -c \"import xhtml2pdf; print\\('xhtml2pdf importa OK'\\)\")",
-      "Bash(venv/Scripts/python *)"
+      "Bash(venv/Scripts/python *)",
+      "Bash(sed -i '3s/.*/Reescrever `templates\\\\/documentos\\\\/contrato_pdf.html` REPLICANDO FIELMENTE \\(1:1\\) o layout de/' 02-contrato-pdf.md)",
+      "Bash(sed -i '3s/.*/Reescrever `templates\\\\/documentos\\\\/laudo_pdf.html` REPLICANDO FIELMENTE \\(1:1\\) o layout de/' 03-laudo-pdf.md)",
+      "Bash(sed -i '3s/.*/Reescrever `templates\\\\/documentos\\\\/recibo_pdf.html` REPLICANDO FIELMENTE \\(1:1\\) o layout de/' 04-recibo-pdf.md)",
+      "Bash(python3 -)",
+      "Bash(ls venv/Scripts/python*.exe)",
+      "Bash(which python3 *)",
+      "Bash(\"C:/Users/Pichau/projeto-tcc/venv/Scripts/python.exe\" -)",
+      "Bash(venv/Scripts/python manage.py makemigrations --check --dry-run)",
+      "Bash(venv/Scripts/python manage.py test imoveis)",
+      "Bash(venv/Scripts/python manage.py runserver 127.0.0.1:8000 --noreload)",
+      "Bash(echo \"started with pid $!\")",
+      "Bash(git status *)"
     ]
   }
 }

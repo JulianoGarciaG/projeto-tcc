@@ -165,3 +165,5 @@ Na auditoria:
 - faça uma análise completa apenas quando realmente necessário.
 
 Seu objetivo é manter a documentação sempre sincronizada com o menor custo possível de contexto.
+
+Sempre após finalizar uma execução, gere uma mensagem de commit.

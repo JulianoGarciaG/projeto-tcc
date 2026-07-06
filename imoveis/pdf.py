@@ -4,11 +4,13 @@ Helpers reutilizados pelas seções Contrato, Laudo de Vistoria e Recibo.
 Toda a lógica de PDF vive aqui — as views apenas montam o contexto e chamam
 gerar_e_anexar() / pdf_download_response().
 """
+import hashlib
 import io
 import os
 
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.db.models import Max
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from xhtml2pdf import pisa
@@ -59,13 +61,46 @@ def pdf_download_response(pdf_bytes, filename):
 
 
 def save_pdf_to_field(instance, field_name, pdf_bytes, filename):
-    """Grava o PDF no FileField do registro (passa a aparecer no GED)."""
+    """Grava o PDF no FileField legado do registro (espelho da última versão)."""
     field = getattr(instance, field_name)
     field.save(filename, ContentFile(pdf_bytes), save=True)
 
 
-def gerar_e_anexar(instance, template_name, context, field_name, filename):
-    """Gera o PDF, anexa ao FileField do registro e retorna os bytes."""
+def registrar_documento_gerado(instance, pdf_bytes, filename, usuario=None):
+    """Cria a próxima versão imutável de DocumentoGerado para a origem.
+
+    Fonte de verdade do GED versionado: numero_versao sequencial por origem
+    (1, 2, 3...), hash SHA-256 do arquivo e autor da geração.
+    """
+    from .models import Contrato, DocumentoGerado, LaudoVistoria, Recibo
+
+    if isinstance(instance, Contrato):
+        tipo = 'contrato'
+    elif isinstance(instance, LaudoVistoria):
+        tipo = 'laudo'
+    elif isinstance(instance, Recibo):
+        tipo = 'recibo'
+    else:
+        raise ValueError(f'Origem não suportada para DocumentoGerado: {type(instance).__name__}')
+
+    ultima = (DocumentoGerado.objects.filter(**{tipo: instance})
+              .aggregate(m=Max('numero_versao'))['m']) or 0
+    doc = DocumentoGerado(
+        tipo=tipo,
+        numero_versao=ultima + 1,
+        sha256=hashlib.sha256(pdf_bytes).hexdigest(),
+        gerado_por=usuario if getattr(usuario, 'is_authenticated', False) else None,
+        **{tipo: instance},
+    )
+    doc.arquivo.save(filename, ContentFile(pdf_bytes), save=False)
+    doc.save()
+    return doc
+
+
+def gerar_e_anexar(instance, template_name, context, field_name, filename, usuario=None):
+    """Gera o PDF, registra uma versão imutável no GED (DocumentoGerado) e
+    espelha o arquivo no FileField legado do registro. Retorna os bytes."""
     pdf_bytes = render_pdf(template_name, context)
+    registrar_documento_gerado(instance, pdf_bytes, filename, usuario)
     save_pdf_to_field(instance, field_name, pdf_bytes, filename)
     return pdf_bytes

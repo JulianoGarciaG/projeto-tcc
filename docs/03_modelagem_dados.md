@@ -30,6 +30,11 @@ ComodoTemplate (catálogo de vistoria, seed na migração 0004)
 LaudoVistoria
     ├── ItemVistoria (CASCADE) [snapshot do catálogo no momento da vistoria]
     └── TestemunhaLaudo (CASCADE)
+
+DocumentoGerado (GED versionado — 1 registro imutável por geração de PDF)
+    ├── Contrato (CASCADE) [uma das 3 FKs preenchida]
+    ├── LaudoVistoria (CASCADE)
+    └── Recibo (CASCADE)
 ```
 
 > O módulo financeiro **não possui** mais os models `Entrada`/`Saida` (removidos na Rodada 2) — o único model financeiro é `Lancamento`, vinculado ao `Contrato` (não diretamente ao `Imovel`).
@@ -391,6 +396,45 @@ Recibo de pagamento. `imovel`/`contrato` obrigatórios (PROTECT); demais campos 
 
 ---
 
+### 2.17 DocumentoGerado
+Versão **imutável** de um PDF gerado pelo sistema (GED versionado). Um registro por geração de PDF — nunca atualizado após criado. O "documento atual" de uma origem é a versão de maior `numero_versao`. Introduzido na Rodada 4 (migração 0009; migração 0010 registra retroativamente os PDFs já existentes como versão 1).
+
+A origem é modelada com **três FKs explícitas** (uma por tipo) + campo `tipo`, em vez de `GenericForeignKey`: o conjunto de origens é fixo (Contrato, Laudo, Recibo), permite `select_related` e constraints reais no banco.
+
+| Campo | Tipo | Obrigatório | Observações |
+|---|---|---|---|
+| `id` | BigAutoField | — | PK automática |
+| `tipo` | CharField (10) | ✓ | Choices abaixo — identifica a origem |
+| `contrato` | ForeignKey → Contrato | — | CASCADE; `related_name='documentos_gerados'` |
+| `laudo` | ForeignKey → LaudoVistoria | — | CASCADE; `related_name='documentos_gerados'` |
+| `recibo` | ForeignKey → Recibo | — | CASCADE; `related_name='documentos_gerados'` |
+| `numero_versao` | PositiveIntegerField | ✓ | Sequencial **por origem** (começa em 1) |
+| `arquivo` | FileField | ✓ | `upload_to` determinístico — ver abaixo |
+| `sha256` | CharField (64) | ✓ | Hash SHA-256 do arquivo (vazio se ilegível na migração retroativa) |
+| `gerado_por` | ForeignKey → User | — | SET_NULL; autor da geração; `related_name='documentos_gerados'` |
+| `gerado_em` | DateTimeField | — | Auto now add |
+
+**Choices — tipo:**
+`contrato`, `laudo`, `recibo`
+
+**`upload_to` (`documento_gerado_upload_to`):** `ged/{tipo}/{origem_pk}/v{numero_versao}/{filename}` — caminho determinístico que independe de qualquer campo além de tipo, pk da origem e versão (vira a key do objeto quando o storage for trocado para S3).
+
+**Properties:**
+- `origem` — retorna o registro de negócio que originou o documento (`contrato or laudo or recibo`).
+- `origem_pk` — pk da origem.
+
+**Constraints (`Meta`):**
+- `CheckConstraint` `documentogerado_origem_unica` — exatamente **uma** das três FKs preenchida.
+- `UniqueConstraint` `documentogerado_versao_unica_{contrato,laudo,recibo}` — `numero_versao` único por origem (condicional à FK correspondente).
+
+**Imutabilidade:** o `save()` levanta `ValueError` se o registro não estiver sendo criado (`not self._state.adding`) — só permite inserção, nunca update. Para "atualizar" um documento, gera-se uma nova versão.
+
+**Ordenação:** `-gerado_em`, `-pk`
+
+> Os campos legados `Contrato.documento_gerado`, `LaudoVistoria.documento_gerado` e `Recibo.arquivo` são **mantidos**, mas deixam de ser fonte de verdade: passam a ser espelhos automáticos da última versão, sincronizados por `imoveis.pdf.gerar_e_anexar()`. Ver Regras de Negócio, seção 14.
+
+---
+
 ## 3. Caminhos de Upload (MEDIA_ROOT)
 
 | Entidade | Campo | Caminho |
@@ -409,3 +453,6 @@ Recibo de pagamento. `imovel`/`contrato` obrigatórios (PROTECT); demais campos 
 | Notificacao | `arquivo` | `notificacoes/` |
 | Distrato | `recibo_chaves` | `distratos/recibos/` |
 | Recibo | `arquivo` | `recibos/` |
+| DocumentoGerado | `arquivo` | `ged/{tipo}/{origem_pk}/v{numero_versao}/` |
+
+> Todos os `FileField` usam o storage `default` do `STORAGES` (Django 4.2+), plugável via `STORAGE_BACKEND` no `.env` (`filesystem` default; `s3` preparado, mas não ativado — ver Regras de Negócio, seção 14).

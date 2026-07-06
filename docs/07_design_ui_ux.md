@@ -37,6 +37,7 @@ O sistema deve transmitir uma experiência **moderna e limpa** — interface sem
 | `--color-text-light` | `#FFFFFF` | Texto sobre fundos escuros ou dourados |
 | `--color-text-muted` | `#888888` | Textos secundários, labels, placeholders |
 | `--color-border` | `#E0E0E0` | Bordas de inputs, divisores, separadores |
+| — | `#9A6B00` | Tom dourado escurecido — usado **apenas nos PDFs gerados** (títulos/detalhes de marca sobre fundo claro, onde o `#F2B441` teria contraste insuficiente para impressão) |
 
 ### Cores Semânticas (status)
 | Variável | Hex | Uso |
@@ -292,3 +293,18 @@ Padrão: pill arredondado (`border-radius: 999px`), padding `0.25rem 0.65rem`, G
 - **Painel direito:** fundo `#F7F7F7`, formulário centralizado com inputs estilizados
 - Border-radius do container: `8px` (desktop), sem radius (mobile)
 - No mobile: apenas o painel direito (formulário) é exibido
+
+---
+
+## 17. Documentos PDF Gerados (Rodada 4)
+
+Os três PDFs gerados pelo sistema (Contrato, Laudo de Vistoria, Recibo) foram redesenhados para replicar 1:1 os mockups estáticos em `docs/pdf-models/` (`contrato_locacao.html`, `laudo_vistoria.html`, `recibo_pagamento.html`), mantendo o motor **xhtml2pdf**.
+
+- **Logo:** sempre `{% static 'assets/Shelter_LOGO.jpg' %}` (versão rasterizada compatível com xhtml2pdf).
+- **Cabeçalho:** usa `{{ objeto.pk }}` + data de criação (não há campo de "número de documento" formatado nos models).
+- **CSS comum em `base_pdf.html`:** `.doc-header`, `.doc-logo`, `.doc-meta`, `.brand-rule`, `.doc-title-wrap`/`.doc-title`/`.doc-title-underline`, `.sec`, `.fields`/`.flabel`/`.fval`, `.cards`/`.card`/`.card-label`/`.card-value`, `.note-box`, `.sign-table`/`.sign-cell`/`.sign-line`/`.sign-role`, `.doc-footer`, `.avoid-break`.
+- **CSS exclusivo por documento (no template filho):**
+  - Laudo: `.data-table`, `.badge`/`.badge-bom`/`.badge-reg`/`.badge-ruim`, `.row-alt`.
+  - Recibo: caixa de destaque da quantia.
+- **Paleta dos PDFs:** cores de marca já documentadas (seção 2) — `#F2B441`, `#3A3A3A`, `#F7F3EA`, `#888888`, `#E0E0E0`, `#2E7D32` (estado bom), `#C62828` (estado ruim) — mais o tom `#9A6B00` para detalhes de marca sobre fundo claro.
+- **Fora de escopo:** valor por extenso no recibo (sem `num2words`).

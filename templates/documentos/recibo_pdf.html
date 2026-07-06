@@ -1,40 +1,75 @@
 {% extends 'documentos/base_pdf.html' %}
 {% load imoveis_tags %}
 
+{% block estilos_extra %}
+  /* CSS exclusivo do recibo (docs/pdf-models/recibo_pagamento.html) */
+  .doc-title-wrap { margin: 26px 0 4px 0; }
+  .sec { margin: 20px 0 8px 0; }
+  .sign-role { text-align: center; }
+{% endblock %}
+
+{% block doc_meta %}RECIBO Nº <strong>{{ recibo.pk }}</strong><br>Emitido em {{ recibo.criado_em|date:"d/m/Y" }}{% endblock %}
+
 {% block titulo_doc %}Recibo{% if recibo.parcela_atual and recibo.parcela_total %} — Parcela {{ recibo.parcela_atual }}/{{ recibo.parcela_total }}{% endif %}{% endblock %}
+
+{% block titulo_underline %}{% endblock %}
 
 {% block conteudo %}
 {% if recibo.quantia %}
-<div class="destaque" style="font-size:13pt;">
-  <strong>Quantia de: R$ {{ recibo.quantia|brl }}</strong>
-</div>
+<!-- 1. Quantia recebida (destaque) -->
+<table style="width: 100%; border-collapse: collapse; background-color: #F7F3EA; border: 1px solid #F2B441; margin-top: 20px;" class="avoid-break">
+  <tr>
+    <td style="width: 5px; background-color: #F2B441; font-size: 1px;">&nbsp;</td>
+    <td style="padding: 16px 22px;">
+      <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #9A6B00; font-weight: bold;">Quantia recebida</div>
+      <div style="font-size: 32px; font-weight: bold; color: #3A3A3A; margin-top: 4px;">R$ {{ recibo.quantia|brl }}</div>
+    </td>
+  </tr>
+</table>
 {% endif %}
 
-<table class="dados">
-  {% if recibo.imovel %}<tr><td class="rotulo">Imóvel</td><td>{{ recibo.imovel.endereco }}{% if recibo.imovel.numero %}, {{ recibo.imovel.numero }}{% endif %}{% if recibo.imovel.complemento %} — {{ recibo.imovel.complemento }}{% endif %}{% if recibo.imovel.cidade %} — {{ recibo.imovel.cidade }}{% endif %}</td></tr>{% endif %}
-  {% if recibo.quem_pagou %}<tr><td class="rotulo">Quem Pagou</td><td>{{ recibo.quem_pagou }}</td></tr>{% endif %}
-  {% if recibo.periodo_inicio and recibo.periodo_fim %}<tr><td class="rotulo">Correspondente ao Período</td><td>de {{ recibo.periodo_inicio|date:"d/m/Y" }} a {{ recibo.periodo_fim|date:"d/m/Y" }}</td></tr>{% endif %}
-  {% if recibo.vencido_em %}<tr><td class="rotulo">Vencido em</td><td>{{ recibo.vencido_em|date:"d/m/Y" }}</td></tr>{% endif %}
+<!-- 2. Dados do recibo -->
+<table class="fields avoid-break" style="margin-top: 22px;">
+  {% if recibo.imovel %}<tr><td colspan="2"><div class="flabel">Imóvel</div><div class="fval">{{ recibo.imovel.endereco }}{% if recibo.imovel.numero %}, {{ recibo.imovel.numero }}{% endif %}{% if recibo.imovel.complemento %}, {{ recibo.imovel.complemento }}{% endif %}{% if recibo.imovel.bairro %} — {{ recibo.imovel.bairro }}{% endif %}{% if recibo.imovel.cidade %}{% if recibo.imovel.bairro %}, {% else %} — {% endif %}{{ recibo.imovel.cidade }}{% endif %}</div></td></tr>{% endif %}
+  {% if recibo.quem_pagou or recibo.periodo_inicio and recibo.periodo_fim %}
+  <tr>
+    <td class="pad" width="50%">{% if recibo.quem_pagou %}<div class="flabel">Recebemos de</div><div class="fval">{{ recibo.quem_pagou }}</div>{% endif %}</td>
+    <td width="50%">{% if recibo.periodo_inicio and recibo.periodo_fim %}<div class="flabel">Período correspondente</div><div class="fval">{{ recibo.periodo_inicio|date:"d/m/Y" }} a {{ recibo.periodo_fim|date:"d/m/Y" }}</div>{% endif %}</td>
+  </tr>
+  {% endif %}
+  {% if recibo.vencido_em %}
+  <tr>
+    <td class="pad" width="50%"><div class="flabel">Vencimento</div><div class="fval">{{ recibo.vencido_em|date:"d/m/Y" }}</div></td>
+    <td width="50%"></td>
+  </tr>
+  {% endif %}
 </table>
 
 {% if recibo.valor_aluguel or recibo.valor_impostos or recibo.valor_seguros or recibo.valor_condominio %}
-<h2 class="secao">Composição do Valor</h2>
-<table class="grade">
-  <tr><th>Descrição</th><th style="width:30%;">Valor</th></tr>
-  {% if recibo.valor_aluguel %}<tr><td>Aluguel</td><td>R$ {{ recibo.valor_aluguel|brl }}</td></tr>{% endif %}
-  {% if recibo.valor_impostos %}<tr><td>Impostos</td><td>R$ {{ recibo.valor_impostos|brl }}</td></tr>{% endif %}
-  {% if recibo.valor_seguros %}<tr><td>Seguros</td><td>R$ {{ recibo.valor_seguros|brl }}</td></tr>{% endif %}
-  {% if recibo.valor_condominio %}<tr><td>Condomínio</td><td>R$ {{ recibo.valor_condominio|brl }}</td></tr>{% endif %}
-  <tr><th>Somatório</th><th>R$ {{ recibo.somatorio|brl }}</th></tr>
+<!-- 3. Composição do valor -->
+<div class="sec">Composição do Valor</div>
+<table style="width: 100%; border-collapse: collapse; font-size: 11px;" class="avoid-break">
+  {% if recibo.valor_aluguel %}<tr><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0;">Aluguel</td><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0; text-align: right;">R$ {{ recibo.valor_aluguel|brl }}</td></tr>{% endif %}
+  {% if recibo.valor_impostos %}<tr><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0;">Impostos (IPTU)</td><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0; text-align: right;">R$ {{ recibo.valor_impostos|brl }}</td></tr>{% endif %}
+  {% if recibo.valor_seguros %}<tr><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0;">Seguros</td><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0; text-align: right;">R$ {{ recibo.valor_seguros|brl }}</td></tr>{% endif %}
+  {% if recibo.valor_condominio %}<tr><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0;">Condomínio</td><td style="padding: 6px 2px; border-bottom: 1px solid #E0E0E0; text-align: right;">R$ {{ recibo.valor_condominio|brl }}</td></tr>{% endif %}
+  <tr style="background-color: #F7F3EA;">
+    <td style="padding: 8px 10px; font-weight: bold;">Somatório</td>
+    <td style="padding: 8px 10px; text-align: right; font-weight: bold; color: #3A3A3A;">R$ {{ recibo.somatorio|brl }}</td>
+  </tr>
 </table>
 {% endif %}
 
 {% if recibo.assinante_nome or recibo.assinante_cpf or recibo.data_assinatura %}
-{% if recibo.data_assinatura %}<p style="margin-top:24px;">Data: {{ recibo.data_assinatura|date:"d/m/Y" }}.</p>{% endif %}
-<div class="assinatura">
-  <div class="linha-assinatura">
-    {% if recibo.assinante_nome %}{{ recibo.assinante_nome }}{% else %}Assinatura{% endif %}{% if recibo.assinante_cpf %} — CPF: {{ recibo.assinante_cpf }}{% endif %}
-  </div>
-</div>
+<!-- 4. Assinatura -->
+<table class="sign-table avoid-break" style="margin-top: 56px;">
+  <tr>
+    <td style="text-align: center;">
+      {% if recibo.data_assinatura %}<div style="font-size: 10px; color: #888888; margin-bottom: 40px;">{{ recibo.data_assinatura|date:"d \d\e F \d\e Y" }}.</div>{% endif %}
+      <div style="width: 280px; margin: 0 auto; border-top: 1px solid #888888; padding-top: 6px; font-size: 10px;">{% if recibo.assinante_nome %}{{ recibo.assinante_nome }}{% else %}Assinatura{% endif %}</div>
+      {% if recibo.assinante_cpf %}<div class="sign-role">CPF {{ recibo.assinante_cpf }}</div>{% endif %}
+    </td>
+  </tr>
+</table>
 {% endif %}
 {% endblock %}

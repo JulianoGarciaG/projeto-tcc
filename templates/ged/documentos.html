@@ -70,16 +70,18 @@
       </div>
       <div class="table-responsive">
         <table class="table mb-0 small">
-          <thead><tr><th>Inquilino</th><th>Imóvel</th><th>Arquivo</th></tr></thead>
+          <thead><tr><th>Inquilino</th><th>Imóvel</th><th>Versão</th><th>Gerado em</th><th>Arquivo</th></tr></thead>
           <tbody>
-            {% for c in contratos_gerados %}
+            {% for d in contratos_gerados %}
             <tr>
-              <td>{{ c.inquilino.nome }}</td>
-              <td>{{ c.imovel.endereco|truncatechars:25 }}</td>
-              <td><a href="{{ c.documento_gerado.url }}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
+              <td>{{ d.contrato.inquilino.nome }}</td>
+              <td>{{ d.contrato.imovel.endereco|truncatechars:25 }}</td>
+              <td>v{{ d.numero_versao }}</td>
+              <td>{{ d.gerado_em|date:"d/m/Y H:i" }}</td>
+              <td><a href="{{ d.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="3" class="text-center text-muted py-3">Nenhum contrato gerado pelo sistema.</td></tr>
+            <tr><td colspan="5" class="text-center text-muted py-3">Nenhum contrato gerado pelo sistema.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -96,17 +98,18 @@
       </div>
       <div class="table-responsive">
         <table class="table mb-0 small">
-          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Data</th><th>Arquivo</th></tr></thead>
+          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Versão</th><th>Gerado em</th><th>Arquivo</th></tr></thead>
           <tbody>
-            {% for l in laudos_gerados %}
+            {% for d in laudos_gerados %}
             <tr>
-              <td>{{ l.imovel.endereco|truncatechars:25 }}</td>
-              <td>{{ l.get_tipo_display }}</td>
-              <td>{{ l.data|date:"d/m/Y" }}</td>
-              <td><a href="{{ l.documento_gerado.url }}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
+              <td>{{ d.laudo.imovel.endereco|truncatechars:25 }}</td>
+              <td>{{ d.laudo.get_tipo_display }}</td>
+              <td>v{{ d.numero_versao }}</td>
+              <td>{{ d.gerado_em|date:"d/m/Y H:i" }}</td>
+              <td><a href="{{ d.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-3">Nenhum laudo gerado pelo sistema.</td></tr>
+            <tr><td colspan="5" class="text-center text-muted py-3">Nenhum laudo gerado pelo sistema.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -123,17 +126,19 @@
       </div>
       <div class="table-responsive">
         <table class="table mb-0 small">
-          <thead><tr><th>#</th><th>Imóvel</th><th>Quem Pagou</th><th>Arquivo</th></tr></thead>
+          <thead><tr><th>#</th><th>Imóvel</th><th>Quem Pagou</th><th>Versão</th><th>Gerado em</th><th>Arquivo</th></tr></thead>
           <tbody>
-            {% for r in recibos %}
+            {% for d in recibos %}
             <tr>
-              <td>{{ r.pk }}</td>
-              <td>{{ r.imovel.endereco|default:"—"|truncatechars:25 }}</td>
-              <td>{{ r.quem_pagou|default:"—" }}</td>
-              <td><a href="{{ r.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-info"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
+              <td>{{ d.recibo.pk }}</td>
+              <td>{{ d.recibo.imovel.endereco|default:"—"|truncatechars:25 }}</td>
+              <td>{{ d.recibo.quem_pagou|default:"—" }}</td>
+              <td>v{{ d.numero_versao }}</td>
+              <td>{{ d.gerado_em|date:"d/m/Y H:i" }}</td>
+              <td><a href="{{ d.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-info"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-3">Nenhum recibo gerado.</td></tr>
+            <tr><td colspan="6" class="text-center text-muted py-3">Nenhum recibo gerado.</td></tr>
             {% endfor %}
           </tbody>
         </table>

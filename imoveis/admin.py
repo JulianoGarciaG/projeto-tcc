@@ -3,6 +3,7 @@ from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato,
     Recibo, ComodoTemplate, ItemVistoriaTemplate, ItemVistoria, TestemunhaLaudo,
+    DocumentoGerado,
 )
 
 
@@ -101,3 +102,19 @@ class ReciboAdmin(admin.ModelAdmin):
 class LancamentoAdmin(admin.ModelAdmin):
     list_display = ['contrato', 'tipo', 'status', 'valor', 'data_vencimento', 'data_pagamento']
     list_filter = ['status', 'tipo']
+
+
+@admin.register(DocumentoGerado)
+class DocumentoGeradoAdmin(admin.ModelAdmin):
+    """Registro imutável: consulta apenas — criação só pela geração de PDF."""
+    list_display = ['pk', 'tipo', 'origem', 'numero_versao', 'gerado_por', 'gerado_em']
+    list_filter = ['tipo']
+    date_hierarchy = 'gerado_em'
+    readonly_fields = ['tipo', 'contrato', 'laudo', 'recibo', 'numero_versao',
+                       'arquivo', 'sha256', 'gerado_por', 'gerado_em']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

@@ -97,15 +97,19 @@ Os documentos do contrato variam conforme o `tipo_contrato`:
 ## 8. GED — Gestão Eletrônica de Documentos
 
 - Todos os documentos do sistema são armazenados digitalmente, eliminando a dependência de pastas físicas.
-- A central GED (`/documentos/`) agrega automaticamente todos os arquivos anexados, agrupados por tipo (view `documentos` em `imoveis/views.py`):
-  - Contratos com PDF gerado (`Contrato.documento_gerado`)
-  - Laudos de vistoria com anexo assinado (`LaudoVistoria.arquivo`)
-  - Laudos com PDF gerado (`LaudoVistoria.documento_gerado`)
-  - Comprovantes de pagamento (`Lancamento.comprovante`)
-  - Recibos de entrega de chaves do contrato (`Contrato.recibo_chaves`)
-  - Comprovantes anuais de pagamento do contrato (`Contrato.comprovante_anual`)
-  - Recibos com PDF gerado (`Recibo.arquivo`)
-- Um documento só aparece na central GED se o campo de arquivo **não estiver vazio**.
+- A central GED (`/documentos/`) agrega os documentos agrupados por tipo (view `documentos` em `imoveis/views.py`). Há duas naturezas de documento:
+  - **PDFs gerados pelo sistema (versionados)** — consultados em `DocumentoGerado` (**todas** as versões, não só a última), filtrando por `tipo`:
+    - Contratos gerados (`tipo='contrato'`)
+    - Laudos gerados (`tipo='laudo'`)
+    - Recibos gerados (`tipo='recibo'`)
+  - **Anexos manuais (não versionados)** — vêm direto dos campos legados dos models de negócio:
+    - Laudos de vistoria com anexo assinado (`LaudoVistoria.arquivo`)
+    - Comprovantes de pagamento (`Lancamento.comprovante`)
+    - Recibos de entrega de chaves do contrato (`Contrato.recibo_chaves`)
+    - Comprovantes anuais de pagamento do contrato (`Contrato.comprovante_anual`)
+- Um anexo manual só aparece na central GED se o campo de arquivo **não estiver vazio**.
+
+Ver a seção 14 para as regras do GED versionado (`DocumentoGerado`).
 
 ---
 
@@ -169,3 +173,26 @@ Todos os validadores customizados aceitam o valor com ou sem máscara e removem 
 
 - A interface é responsiva e permite que vistoriadores realizem consultas e atualizações diretamente do local do imóvel via dispositivos móveis.
 - A sidebar é ocultada no mobile e acessada via toggle hamburger.
+
+---
+
+## 14. GED Versionado e Storage Plugável (Rodada 4)
+
+### Versionamento de PDFs (`DocumentoGerado`)
+
+- Cada geração de PDF de Contrato, Laudo ou Recibo cria **uma nova versão imutável** em `DocumentoGerado`. O modelo é a **fonte de verdade** dos documentos gerados pelo sistema.
+- **Numeração sequencial por origem:** `numero_versao` começa em 1 e incrementa **independentemente por origem** (calculado via `Max('numero_versao')` filtrado pela FK da origem, em `imoveis/pdf.py:registrar_documento_gerado`). Contratos, laudos e recibos têm sequências próprias.
+- **Imutabilidade:** o `save()` do model só permite inserção; qualquer tentativa de update levanta `ValueError`. Não se edita uma versão — gera-se outra.
+- **Integridade:** cada versão guarda o `sha256` do arquivo e a autoria (`gerado_por`).
+- **Autoria:** as views `contrato_gerar_pdf`, `laudo_gerar_pdf` e `recibo_gerar_pdf` passam `request.user` para `gerar_e_anexar()`, que o repassa a `registrar_documento_gerado()` (usuário não autenticado → `gerado_por` fica nulo).
+- **Campos legados como espelho:** `Contrato.documento_gerado`, `LaudoVistoria.documento_gerado` e `Recibo.arquivo` continuam existindo, porém deixam de ser fonte de verdade — `gerar_e_anexar()` os sincroniza automaticamente com a **última** versão via `save_pdf_to_field()`. Servem apenas como atalho para o PDF mais recente.
+- **Convenção mantida da Rodada 2:** o PDF continua sendo gerado **somente** pelas views `*_gerar_pdf` (botão "Regerar PDF") — nunca ao salvar create/edit. Cada clique gera uma nova versão.
+- **Migração retroativa:** a migração `0010_documentogerado_retroativo` registra os PDFs pré-existentes (nos campos legados) como versão 1 de `DocumentoGerado`, sem copiar o arquivo (apenas referenciando o nome já no storage; hash calculado se o arquivo for legível, senão fica vazio).
+- **Admin:** `DocumentoGeradoAdmin` é somente leitura (`has_add_permission`/`has_change_permission` retornam `False`) — o registro só nasce pela geração de PDF.
+
+### Storage plugável (`STORAGE_BACKEND`)
+
+- O armazenamento de arquivos usa a config `STORAGES` do Django 4.2+ (`core/settings.py`), controlada pela variável de ambiente `STORAGE_BACKEND`, seguindo o **mesmo padrão** já usado para `DB_ENGINE`:
+  - `filesystem` (default) → `FileSystemStorage`.
+  - `s3` → preparado, mas **não ativado** nesta rodada. Setar `STORAGE_BACKEND=s3` sem as libs instaladas levanta `ImproperlyConfigured` explicitamente (mesmo comportamento de `DB_ENGINE=mysql` sem `mysqlclient`).
+- `boto3`/`django-storages` **não** foram adicionados ao projeto — apenas a arquitetura está pronta. Todos os `FileField` usam o storage `default`, então a troca para S3 não exige mudança no código de aplicação. O `upload_to` determinístico de `DocumentoGerado` já serve como key de objeto S3.
