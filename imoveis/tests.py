@@ -2,6 +2,7 @@ import hashlib
 from datetime import date
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -9,10 +10,13 @@ from django.template.loader import render_to_string
 from django.test import TestCase
 from django.urls import reverse
 
-from .forms import ContratoForm, LaudoVistoriaForm, ReciboForm
+from .extenso import (
+    dia_ordinal_extenso, meses_entre, meses_por_extenso, valor_por_extenso,
+)
+from .forms import ContratoForm, FiadorForm, LaudoVistoriaForm, ReciboForm
 from .models import (
-    Contrato, DocumentoGerado, Imovel, Inquilino, ItemVistoria, Lancamento,
-    LaudoVistoria, Proprietario, Recibo, TestemunhaLaudo,
+    Contrato, DocumentoGerado, Fiador, Imovel, Inquilino, ItemVistoria,
+    Lancamento, LaudoVistoria, Proprietario, Recibo, TestemunhaLaudo,
 )
 
 
@@ -196,31 +200,105 @@ class ReciboTests(TestCase):
 
 
 class ContratoPdfTests(TestCase):
+    """Layout jurídico do PDF de contrato (preâmbulo + 21 cláusulas)."""
+
     def setUp(self):
         _, self.imovel, self.inquilino, self.contrato = criar_base()
 
-    def test_observacoes_aparecem_apenas_se_preenchidas(self):
-        html = render_to_string('documentos/contrato_pdf.html', {'contrato': self.contrato})
-        self.assertNotIn('Observações', html)
+    def render(self):
+        """Renderiza com o mesmo contexto de views._gerar_pdf_contrato."""
+        return render_to_string('documentos/contrato_pdf.html', {
+            'contrato': self.contrato,
+            'locador': settings.SHELTER_LOCADOR,
+            'prazo_meses': meses_entre(self.contrato.data_inicio, self.contrato.data_fim),
+        })
 
-        self.contrato.observacoes = 'Permitido animal de pequeno porte.'
-        html = render_to_string('documentos/contrato_pdf.html', {'contrato': self.contrato})
-        self.assertIn('Observações', html)
-        self.assertIn('Permitido animal de pequeno porte.', html)
+    def test_clausulas_presentes(self):
+        html = self.render()
+        for clausula in ('CLÁUSULA I', 'CLÁUSULA V', 'CLÁUSULA X', 'CLÁUSULA XI',
+                         'CLÁUSULA XV', 'CLÁUSULA XIX', 'CLÁUSULA XXI'):
+            self.assertIn(clausula, html)
+
+    def test_locador_e_sempre_shelter(self):
+        # O Proprietario cadastrado ("Maria Dona") NÃO aparece como locador.
+        html = self.render()
+        self.assertIn(settings.SHELTER_LOCADOR['razao_social'], html)
+        self.assertIn(settings.SHELTER_LOCADOR['cnpj'], html)
+        self.assertIn(settings.SHELTER_LOCADOR['representante_nome'], html)
+        self.assertNotIn('Maria Dona', html)
+
+    def test_titulo_por_finalidade(self):
+        html = self.render()
+        self.assertIn('CONTRATO DE LOCAÇÃO RESIDENCIAL', html)
+        self.assertIn('RESIDENCIAIS', html)  # cláusula VI
+
+        self.contrato.finalidade = 'comercial'
+        html = self.render()
+        self.assertIn('CONTRATO DE LOCAÇÃO COMERCIAL', html)
+        self.assertIn('COMERCIAIS', html)
+
+    def test_valores_por_extenso(self):
+        html = self.render()
+        # Valor: R$ 1.500,00 (mil e quinhentos reais)
+        self.assertIn('1.500,00', html)
+        self.assertIn('mil e quinhentos reais', html)
+        # Prazo: 12 meses (01/01/2026 a 01/01/2027)
+        self.assertIn('12 (DOZE MESES)', html)
+        # Vencimento dia 10: "10º (décimo)"
+        self.assertIn('10º (décimo)', html)
+        # Datas por extenso (filtro date nativo pt-br)
+        self.assertIn('1 de Janeiro de 2026', html)
+        self.assertIn('1 de Janeiro de 2027', html)
 
     def test_pf_exibe_cpf_e_nao_cnpj(self):
-        html = render_to_string('documentos/contrato_pdf.html', {'contrato': self.contrato})
-        self.assertIn('PESSOA FÍSICA', html)
+        html = self.render()
         self.assertIn(self.inquilino.cpf, html)
-        self.assertNotIn('RAZÃO SOCIAL', html)
         self.assertNotIn(self.inquilino.cnpj, html)
 
     def test_pj_exibe_cnpj(self):
         self.contrato.tipo_contrato = 'PJ'
-        html = render_to_string('documentos/contrato_pdf.html', {'contrato': self.contrato})
-        self.assertIn('PESSOA JURÍDICA', html)
-        self.assertIn('RAZÃO SOCIAL', html)
+        html = self.render()
         self.assertIn(self.inquilino.cnpj, html)
+        self.assertIn('pessoa jurídica', html)
+
+    def test_sem_fiador_omite_clausula_xx(self):
+        html = self.render()
+        self.assertNotIn('CLÁUSULA XX – FIADORES', html)
+        self.assertNotIn('FIADOR(A)', html)
+
+    def test_fiador_legado_fallback_rg_cpf(self):
+        # Fiador criado antes da migration 0011: só rg_cpf preenchido.
+        Fiador.objects.create(contrato=self.contrato, nome='Fiador Antigo',
+                              rg_cpf=CPF_VALIDO_2)
+        html = self.render()
+        self.assertIn('CLÁUSULA XX – FIADORES', html)
+        self.assertIn('FIADOR ANTIGO', html)
+        self.assertIn(f'RG/CPF n.º {CPF_VALIDO_2}', html)
+
+    def test_fiador_completo_exibe_qualificacao_e_conjuge(self):
+        Fiador.objects.create(
+            contrato=self.contrato, nome='Vanda Rolnik',
+            qualificacao='brasileira, casada', rg_cpf=CPF_VALIDO_2,
+            rg='5.932.125', cpf=CPF_VALIDO_2,
+            endereco='Avenida Liberdade, 3566, São Paulo - SP',
+            conjuge_nome='Francisco Marques', conjuge_rg='42.440.749',
+            conjuge_cpf=CPF_VALIDO,
+        )
+        html = self.render()
+        self.assertIn('VANDA ROLNIK', html)
+        self.assertIn('RG n.º 5.932.125', html)
+        self.assertIn(f'CPF/MF sob n.º {CPF_VALIDO_2}', html)
+        self.assertIn('FRANCISCO MARQUES', html)
+        self.assertIn('42.440.749', html)
+        self.assertIn('Avenida Liberdade, 3566, São Paulo - SP', html)
+        # Fallback legado não é usado quando rg/cpf discretos existem
+        self.assertNotIn('RG/CPF n.º', html)
+
+    def test_local_e_data_de_assinatura(self):
+        self.contrato.local_assinatura = 'Poços de Caldas'
+        self.contrato.data_assinatura = date(2026, 5, 28)
+        html = self.render()
+        self.assertIn('Poços de Caldas, 28 de Maio de 2026.', html)
 
 
 class LaudoTests(TestCase):
@@ -327,7 +405,7 @@ class FluxoViewTests(TestCase):
         # G4 + G7 — datas em dd/mm/yyyy aceitas
         resp = self.client.post(reverse('contrato_create'), {
             'imovel': str(self.imovel.pk), 'inquilino': str(self.inquilino.pk),
-            'tipo_contrato': 'PF', 'status': 'ativo',
+            'tipo_contrato': 'PF', 'finalidade': 'residencial', 'status': 'ativo',
             'data_inicio': '01/08/2026', 'data_fim': '01/08/2027',
             'valor_mensal': '2000.00', 'dia_vencimento': '10',
             'fiadores-TOTAL_FORMS': '1', 'fiadores-INITIAL_FORMS': '0',
@@ -693,3 +771,146 @@ class ContratoDocumentoTests(TestCase):
         self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
         self.contrato.refresh_from_db()
         self.assertFalse(self.contrato.recibo_chaves)
+
+
+class ExtensoTests(TestCase):
+    """Módulo 01 (contrato jurídico) — utilitários puros de imoveis/extenso.py."""
+
+    def test_valor_por_extenso_redondo(self):
+        self.assertEqual(valor_por_extenso(Decimal('1500.00')), 'mil e quinhentos reais')
+
+    def test_valor_por_extenso_com_centavos(self):
+        self.assertEqual(
+            valor_por_extenso(Decimal('1234.56')),
+            'mil, duzentos e trinta e quatro reais e cinquenta e seis centavos')
+
+    def test_valor_por_extenso_none_e_vazio(self):
+        self.assertEqual(valor_por_extenso(None), '')
+        self.assertEqual(valor_por_extenso(''), '')
+
+    def test_meses_entre_ano_cheio(self):
+        self.assertEqual(meses_entre(date(2026, 1, 1), date(2027, 1, 1)), 12)
+
+    def test_meses_entre_ajuste_de_dia(self):
+        self.assertEqual(meses_entre(date(2026, 1, 15), date(2027, 1, 10)), 11)
+
+    def test_meses_entre_30_meses(self):
+        self.assertEqual(meses_entre(date(2026, 6, 1), date(2028, 12, 1)), 30)
+
+    def test_meses_por_extenso_singular_e_plural(self):
+        self.assertEqual(meses_por_extenso(1), 'um mês')
+        self.assertEqual(meses_por_extenso(12), 'doze meses')
+        self.assertEqual(meses_por_extenso(30), 'trinta meses')
+
+    def test_dia_ordinal_extenso(self):
+        self.assertEqual(dia_ordinal_extenso(1), 'primeiro')
+        self.assertEqual(dia_ordinal_extenso(10), 'décimo')
+        self.assertEqual(dia_ordinal_extenso(31), 'trigésimo primeiro')
+
+    def test_dia_ordinal_extenso_none_nao_levanta(self):
+        self.assertEqual(dia_ordinal_extenso(None), '')
+
+
+class ContratoCamposNovosTests(TestCase):
+    """Módulo 03 (contrato jurídico) — finalidade/local_assinatura/data_assinatura."""
+
+    def setUp(self):
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+
+    def test_finalidade_default_residencial(self):
+        # criar_base() não define finalidade — assume o default
+        self.assertEqual(self.contrato.finalidade, 'residencial')
+        self.contrato.full_clean()  # não deve levantar
+
+    def test_finalidade_comercial_aceita(self):
+        self.contrato.finalidade = 'comercial'
+        self.contrato.full_clean()
+        self.contrato.save()
+        self.contrato.refresh_from_db()
+        self.assertEqual(self.contrato.get_finalidade_display(), 'Comercial')
+
+    def test_form_aceita_assinatura_ddmmyyyy(self):
+        form = ContratoForm(data={
+            'imovel': str(self.imovel.pk), 'inquilino': str(self.inquilino.pk),
+            'tipo_contrato': 'PF', 'finalidade': 'comercial', 'status': 'ativo',
+            'data_inicio': '01/06/2026', 'data_fim': '01/12/2028',
+            'valor_mensal': '890.00', 'dia_vencimento': '1',
+            'local_assinatura': 'Poços de Caldas', 'data_assinatura': '28/05/2026',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['data_assinatura'], date(2026, 5, 28))
+        self.assertEqual(form.cleaned_data['local_assinatura'], 'Poços de Caldas')
+
+    def test_data_assinatura_usa_flatpickr(self):
+        form = ContratoForm()
+        self.assertEqual(
+            form.fields['data_assinatura'].widget.attrs.get('data-flatpickr'), 'true')
+
+
+class FiadorCamposNovosTests(TestCase):
+    """Módulo 04 (contrato jurídico) — RG/CPF discretos, endereço e cônjuge."""
+
+    def setUp(self):
+        _, _, _, self.contrato = criar_base()
+
+    def test_fiador_completo_valido(self):
+        fiador = Fiador(
+            contrato=self.contrato, nome='Vanda Rolnik',
+            qualificacao='brasileira, casada', rg_cpf=CPF_VALIDO_2,
+            rg='5.932.125', cpf=CPF_VALIDO_2,
+            endereco='Avenida Liberdade, 3566, São Paulo - SP',
+            conjuge_nome='Francisco Marques', conjuge_rg='42.440.749',
+            conjuge_cpf=CPF_VALIDO,
+        )
+        fiador.full_clean()  # não deve levantar
+
+    def test_fiador_legado_somente_rg_cpf_valido(self):
+        fiador = Fiador(contrato=self.contrato, nome='Fiador Antigo', rg_cpf=CPF_VALIDO_2)
+        fiador.full_clean()  # campos novos vazios continuam válidos
+
+    def test_cpf_invalido_rejeitado(self):
+        fiador = Fiador(contrato=self.contrato, nome='Zé', rg_cpf=CPF_VALIDO_2,
+                        cpf=CPF_INVALIDO)
+        with self.assertRaises(ValidationError):
+            fiador.full_clean()
+
+    def test_conjuge_cpf_invalido_rejeitado(self):
+        fiador = Fiador(contrato=self.contrato, nome='Zé', rg_cpf=CPF_VALIDO_2,
+                        conjuge_cpf=CPF_INVALIDO)
+        with self.assertRaises(ValidationError):
+            fiador.full_clean()
+
+    def test_form_aceita_campos_novos(self):
+        form = FiadorForm(data={
+            'nome': 'Vanda Rolnik', 'qualificacao': 'brasileira, casada',
+            'rg_cpf': CPF_VALIDO_2, 'rg': '5.932.125', 'cpf': CPF_VALIDO_2,
+            'endereco': 'Avenida Liberdade, 3566, São Paulo - SP',
+            'conjuge_nome': 'Francisco Marques', 'conjuge_rg': '42.440.749',
+            'conjuge_cpf': CPF_VALIDO, 'garantia': 'imóvel próprio',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_formset_no_create_aceita_campos_novos(self):
+        # FiadorFormSet (extra=1) continua funcionando via contrato_create
+        user = User.objects.create_user('tester', password='x')
+        self.client.force_login(user)
+        resp = self.client.post(reverse('contrato_create'), {
+            'imovel': str(self.contrato.imovel.pk),
+            'inquilino': str(self.contrato.inquilino.pk),
+            'tipo_contrato': 'PF', 'finalidade': 'residencial', 'status': 'ativo',
+            'data_inicio': '01/08/2026', 'data_fim': '01/08/2027',
+            'valor_mensal': '2000.00', 'dia_vencimento': '10',
+            'fiadores-TOTAL_FORMS': '1', 'fiadores-INITIAL_FORMS': '0',
+            'fiadores-MIN_NUM_FORMS': '0', 'fiadores-MAX_NUM_FORMS': '1000',
+            'fiadores-0-nome': 'Vanda Rolnik', 'fiadores-0-rg_cpf': CPF_VALIDO_2,
+            'fiadores-0-rg': '5.932.125', 'fiadores-0-cpf': CPF_VALIDO_2,
+            'fiadores-0-endereco': 'Avenida Liberdade, 3566',
+            'fiadores-0-conjuge_nome': 'Francisco Marques',
+            'fiadores-0-conjuge_rg': '42.440.749',
+            'fiadores-0-conjuge_cpf': CPF_VALIDO,
+        })
+        contrato = Contrato.objects.latest('criado_em')
+        self.assertRedirects(resp, reverse('contrato_detail', args=[contrato.pk]))
+        fiador = contrato.fiadores.get()
+        self.assertEqual(fiador.cpf, CPF_VALIDO_2)
+        self.assertEqual(fiador.conjuge_nome, 'Francisco Marques')

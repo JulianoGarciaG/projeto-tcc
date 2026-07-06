@@ -125,17 +125,19 @@ class ContratoForm(forms.ModelForm):
     class Meta:
         model = Contrato
         fields = [
-            'imovel', 'inquilino', 'tipo_contrato', 'status',
+            'imovel', 'inquilino', 'tipo_contrato', 'finalidade', 'status',
             'data_inicio', 'data_fim', 'valor_mensal', 'dia_vencimento',
-            'observacoes',
+            'local_assinatura', 'data_assinatura', 'observacoes',
         ]
         widgets = {
             'imovel': forms.Select(attrs=_sel),
             'inquilino': forms.Select(attrs=_sel),
             'tipo_contrato': forms.Select(attrs=_sel),
+            'finalidade': forms.Select(attrs=_sel),
             'status': forms.Select(attrs=_sel),
             'valor_mensal': forms.NumberInput(attrs={**_ctrl, 'step': '0.01'}),
             'dia_vencimento': forms.NumberInput(attrs={**_ctrl, 'min': 1, 'max': 31}),
+            'local_assinatura': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Cidade da assinatura'}),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 3}),
         }
 
@@ -143,16 +145,25 @@ class ContratoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['data_inicio'].widget = _date_widget()
         self.fields['data_fim'].widget = _date_widget()
+        self.fields['data_assinatura'].widget = _date_widget()
 
 
 class FiadorForm(forms.ModelForm):
     class Meta:
         model = Fiador
-        fields = ['nome', 'qualificacao', 'rg_cpf', 'certidao_onus', 'garantia']
+        fields = ['nome', 'qualificacao', 'rg_cpf', 'rg', 'cpf', 'endereco',
+                  'conjuge_nome', 'conjuge_rg', 'conjuge_cpf',
+                  'certidao_onus', 'garantia']
         widgets = {
             'nome': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome completo'}),
             'qualificacao': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Ex: casado, brasileiro, comerciante'}),
             'rg_cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': 'RG ou CPF'}),
+            'rg': forms.TextInput(attrs={**_ctrl, 'placeholder': 'RG'}),
+            'cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': 'CPF'}),
+            'endereco': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Endereço completo'}),
+            'conjuge_nome': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome do cônjuge'}),
+            'conjuge_rg': forms.TextInput(attrs={**_ctrl, 'placeholder': 'RG do cônjuge'}),
+            'conjuge_cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': 'CPF do cônjuge'}),
             'certidao_onus': forms.ClearableFileInput(attrs=_ctrl),
             'garantia': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Ex: imóvel próprio, caução'}),
         }

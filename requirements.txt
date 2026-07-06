@@ -2,3 +2,4 @@ django>=5.2,<7.0
 python-dotenv>=1.0.0
 Pillow>=10.0.0
 xhtml2pdf>=0.2.16
+num2words>=0.5.13

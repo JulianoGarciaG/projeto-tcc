@@ -33,6 +33,7 @@
       <div class="section-card-body">
         <dl class="row mb-0 small">
           <dt class="col-5 text-muted">Tipo</dt><dd class="col-7">{{ contrato.get_tipo_contrato_display }}</dd>
+          <dt class="col-5 text-muted">Finalidade</dt><dd class="col-7">{{ contrato.get_finalidade_display }}</dd>
           <dt class="col-5 text-muted">Inquilino</dt><dd class="col-7">{{ contrato.inquilino.nome }}</dd>
           {% if contrato.inquilino.qualificacao %}
           <dt class="col-5 text-muted">Qualificação</dt><dd class="col-7">{{ contrato.inquilino.qualificacao }}</dd>
@@ -42,6 +43,12 @@
           <dt class="col-5 text-muted">Término</dt><dd class="col-7">{{ contrato.data_fim|date:"d/m/Y" }}</dd>
           <dt class="col-5 text-muted">Valor Mensal</dt><dd class="col-7"><strong>R$ {{ contrato.valor_mensal|brl }}</strong></dd>
           <dt class="col-5 text-muted">Vencimento</dt><dd class="col-7">Dia {{ contrato.dia_vencimento }}</dd>
+          {% if contrato.local_assinatura %}
+          <dt class="col-5 text-muted">Local Assinatura</dt><dd class="col-7">{{ contrato.local_assinatura }}</dd>
+          {% endif %}
+          {% if contrato.data_assinatura %}
+          <dt class="col-5 text-muted">Data Assinatura</dt><dd class="col-7">{{ contrato.data_assinatura|date:"d/m/Y" }}</dd>
+          {% endif %}
           {% if contrato.observacoes %}
           <dt class="col-5 text-muted">Observações</dt><dd class="col-7">{{ contrato.observacoes }}</dd>
           {% endif %}
@@ -140,6 +147,10 @@
         <div class="small {% if not forloop.last %}border-bottom pb-2 mb-2{% endif %}">
           <strong>{{ f.nome }}</strong>{% if f.qualificacao %} — {{ f.qualificacao }}{% endif %}<br>
           RG/CPF: {{ f.rg_cpf }}
+          {% if f.rg %}<br>RG: {{ f.rg }}{% endif %}
+          {% if f.cpf %}<br>CPF: {{ f.cpf }}{% endif %}
+          {% if f.endereco %}<br>Endereço: {{ f.endereco }}{% endif %}
+          {% if f.conjuge_nome %}<br>Cônjuge: {{ f.conjuge_nome }}{% if f.conjuge_rg %} — RG {{ f.conjuge_rg }}{% endif %}{% if f.conjuge_cpf %} — CPF {{ f.conjuge_cpf }}{% endif %}{% endif %}
           {% if f.garantia %}<br>Garantia: {{ f.garantia }}{% endif %}
           {% if f.certidao_onus %}<br><a href="{{ f.certidao_onus.url }}" target="_blank"><i class="bi bi-file-earmark me-1"></i>Certidão de Ônus</a>{% endif %}
         </div>

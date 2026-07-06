@@ -134,11 +134,17 @@ class Contrato(models.Model):
         ('PF', 'Pessoa Física'),
         ('PJ', 'Pessoa Jurídica'),
     ]
+    FINALIDADE_CHOICES = [
+        ('residencial', 'Residencial'),
+        ('comercial', 'Comercial'),
+    ]
 
     imovel = models.ForeignKey(Imovel, on_delete=models.PROTECT, related_name='contratos')
     inquilino = models.ForeignKey(Inquilino, on_delete=models.PROTECT, related_name='contratos')
     tipo_contrato = models.CharField(max_length=2, choices=TIPO_CONTRATO_CHOICES, default='PF',
                                      verbose_name='Tipo de Contrato')
+    finalidade = models.CharField(max_length=12, choices=FINALIDADE_CHOICES,
+                                  default='residencial', verbose_name='Finalidade')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ativo')
     data_inicio = models.DateField(verbose_name='Data de Início')
     data_fim = models.DateField(verbose_name='Data de Término')
@@ -158,6 +164,10 @@ class Contrato(models.Model):
     documento_gerado = models.FileField(upload_to='contratos/gerados/', blank=True, null=True,
                                         verbose_name='Contrato gerado (PDF)')
     observacoes = models.TextField(blank=True, verbose_name='Observações')
+    local_assinatura = models.CharField(max_length=200, blank=True,
+                                        verbose_name='Local da Assinatura')
+    data_assinatura = models.DateField(null=True, blank=True,
+                                       verbose_name='Data da Assinatura')
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -172,8 +182,21 @@ class Contrato(models.Model):
 class Fiador(models.Model):
     contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='fiadores')
     nome = models.CharField(max_length=200)
-    qualificacao = models.CharField(max_length=300, blank=True, verbose_name='Qualificação')
+    qualificacao = models.CharField(max_length=300, blank=True, verbose_name='Qualificação',
+                                    help_text='Estado civil, profissão, nacionalidade')
     rg_cpf = models.CharField(max_length=20, validators=[validate_rg_cpf], verbose_name='RG/CPF')
+    rg = models.CharField(max_length=20, blank=True, validators=[validate_rg],
+                          verbose_name='RG')
+    cpf = models.CharField(max_length=14, blank=True, validators=[validate_cpf],
+                           verbose_name='CPF')
+    endereco = models.CharField(max_length=300, blank=True,
+                                verbose_name='Endereço Completo')
+    conjuge_nome = models.CharField(max_length=200, blank=True,
+                                    verbose_name='Nome do Cônjuge')
+    conjuge_rg = models.CharField(max_length=20, blank=True, validators=[validate_rg],
+                                  verbose_name='RG do Cônjuge')
+    conjuge_cpf = models.CharField(max_length=14, blank=True, validators=[validate_cpf],
+                                   verbose_name='CPF do Cônjuge')
     certidao_onus = models.FileField(upload_to='certidoes/', blank=True, null=True,
                                      verbose_name='Certidão de Ônus')
     garantia = models.CharField(max_length=200, blank=True, verbose_name='Garantia')

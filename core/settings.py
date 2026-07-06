@@ -124,6 +124,21 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Dados fixos do locador jurídico (Shelter) — usados no PDF de contrato
+# (imoveis/views.py:_gerar_pdf_contrato). O locador do contrato gerado é
+# sempre a Shelter, independentemente do Proprietario cadastrado do imóvel.
+SHELTER_LOCADOR = {
+    'razao_social': 'SHELTER ADMINISTRADORA DE BENS PRÓPRIOS LTDA.',
+    'cnpj': '65.764.617/0001-29',
+    'representante_nome': 'JOSÉ MÍLTON GARCIA',
+    'representante_rg': '19.249.055',
+    'representante_cpf': '493.583.406-49',
+    'endereco': 'Rua São Paulo, 134, Centro, Poços de Caldas/MG',
+    'telefone': '035-3722-1838',
+    'pix_chave': '65.764.617/0001-29',
+    'foro': 'Comarca de Poços de Caldas, MG',
+}
+
 # Autenticação
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -17,6 +18,7 @@ from .forms import (
     ReciboForm, ItemVistoriaFormSet, TestemunhaFormSet, item_vistoria_formset_factory,
     DashboardFiltroForm,
 )
+from .extenso import meses_entre
 from .pdf import gerar_e_anexar, pdf_download_response
 
 
@@ -26,8 +28,13 @@ from .pdf import gerar_e_anexar, pdf_download_response
 
 def _gerar_pdf_contrato(contrato, usuario=None):
     filename = f'contrato_{contrato.pk}.pdf'
+    contexto = {
+        'contrato': contrato,
+        'locador': settings.SHELTER_LOCADOR,
+        'prazo_meses': meses_entre(contrato.data_inicio, contrato.data_fim),
+    }
     pdf_bytes = gerar_e_anexar(contrato, 'documentos/contrato_pdf.html',
-                               {'contrato': contrato}, 'documento_gerado', filename,
+                               contexto, 'documento_gerado', filename,
                                usuario=usuario)
     return pdf_download_response(pdf_bytes, filename)
 

@@ -44,10 +44,16 @@
       "Bash(tasklist //FI \"IMAGENAME eq python.exe\")",
       "Bash(taskkill //PID 3432 //F)",
       "Bash(taskkill //PID 5100 //F)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(venv/Scripts/python -c \"import num2words\")",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(cat >> *)",
+      "PowerShell(venv/Scripts/python manage.py test imoveis.tests.ContratoPdfTests -v 1)"
     ],
     "additionalDirectories": [
-      "C:\\Users\\Pichau\\AppData\\Local\\Temp\\claude\\c--Users-Pichau-projeto-tcc\\f1a45682-3382-42a9-96e1-ace329e59eac\\scratchpad"
+      "C:\\Users\\Pichau\\AppData\\Local\\Temp\\claude\\c--Users-Pichau-projeto-tcc\\f1a45682-3382-42a9-96e1-ace329e59eac\\scratchpad",
+      "\\tmp"
     ]
   }
 }
