@@ -25,7 +25,7 @@ management_form) e preservada -- o segmented e uma camada visual sobre o
   visual do select).
 
 - docs/07_design_ui_ux.md
-  Documentar o novo componente "segmented sobre select" (se o Engineer
+  Documentar o novo componente "segmented sobre select" (se quem implementar
   decidir registrar o padrao) na secao de componentes reutilizaveis.
 
 ---

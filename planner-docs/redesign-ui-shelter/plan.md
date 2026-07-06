@@ -101,8 +101,8 @@ os nomes de variavel e a tipografia mudam por completo (Montserrat para
 Inter; `--color-primary` para `--brand`; adicao de dark mode). Modulo 01
 detalha o conteudo; modulos seguintes trocam o link em `base.html` e
 `login.html` de `custom.css` para `shelter.css`. `custom.css` deixa de ser
-referenciado (decisao de manter ou apagar o arquivo fica com o Engineer/
-usuario -- o plano nao exige apaga-lo).
+referenciado (decisao de manter ou apagar o arquivo fica com quem
+implementar/usuario -- o plano nao exige apaga-lo).
 
 ## Decisao de arquitetura 3 - Dark mode
 
@@ -267,9 +267,10 @@ arquivo).
   tool (nunca Get-Content/Set-Content do PowerShell) -- vale para todos os
   modulos.
 - `templates/documentos/*` (PDFs) permanece intocado em todos os modulos.
-- Cada modulo e auto-contido: o Engineer deve conseguir implementa-lo lendo
-  apenas CLAUDE.md, este plan.md, o DESIGN_BRIEF.md (para a especificacao
-  visual da tela especifica) e o proprio modulo.
+- Cada modulo e auto-contido: deve ser possivel implementa-lo (numa janela de
+  contexto regular do Claude Code, sem subagente dedicado) lendo apenas
+  CLAUDE.md, este plan.md, o DESIGN_BRIEF.md (para a especificacao visual da
+  tela especifica) e o proprio modulo.
 - **Validacao shift-left:** a verificacao NAO fica concentrada so no fim. O
   modulo 02b e um gate de arquitetura logo apos a fundacao, e cada modulo de
   tela (03 a 13) so e dado por concluido apos um smoke check da propria tela

@@ -9,7 +9,7 @@ tratada como variacao do padrao de listagem em tabela.
 
 **Importante (dados aninhados sem mockup):** como o DESIGN_BRIEF nao tem
 mockup do GED, a FONTE DE LAYOUT desta tela e a **estrutura ja existente**
-de `templates/ged/documentos.html` -- o Engineer NAO deve inventar um
+de `templates/ged/documentos.html` -- quem implementar NAO deve inventar um
 arranjo novo. O trabalho e puramente de reskin: manter a mesma arvore de
 blocos (grid de cards -> card por origem -> tabela interna de versoes/itens),
 apenas trocando classes/estilos pelos componentes do modulo 01. O padrao
@@ -31,7 +31,7 @@ linguagem (header de card + lista de versoes com data/hora/usuario) aqui.
   Sem impacto (nenhuma regra de GED muda, apenas o visual da tela).
 
 - docs/07_design_ui_ux.md
-  Sem impacto direto (nao ha secao dedicada ao GED hoje; se o Engineer
+  Sem impacto direto (nao ha secao dedicada ao GED hoje; se quem implementar
   decidir documentar o padrao "grid de cards com tabela interna", registrar
   como nova sub-secao em Cards e Superficies).
 

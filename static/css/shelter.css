@@ -1,0 +1,551 @@
+/* ============================================================
+   Shelter - Redesign Visual (Modulo 01 - Fundacoes)
+   ------------------------------------------------------------
+   Fonte de verdade: planner-docs/redesign-ui-shelter/DESIGN_BRIEF.md
+   Estrategia de especificidade (Decisao 5 do plan.md):
+     1. Este arquivo e carregado DEPOIS do bundle do Bootstrap 5.3
+        (em empate de especificidade, o ultimo declarado vence).
+     2. Onde o Bootstrap expoe CSS var propria (--bs-*), a var e
+        redefinida com o token do Shelter em vez de brigar por peso.
+     3. Onde o seletor Bootstrap tem especificidade acima de classe
+        unica, o override espelha/supera essa especificidade - cada
+        bloco documenta em comentario qual regra ele neutraliza.
+     4. USO DE !important NESTE ARQUIVO: NENHUM. Os utilitarios
+        Bootstrap com !important proprio (.text-muted, .bg-light,
+        .text-secondary, .shadow-sm etc.) sao vencidos redefinindo
+        as vars que eles consomem (--bs-secondary-color,
+        --bs-light-rgb, --bs-secondary-rgb, --bs-box-shadow-sm...).
+     5. Nenhum @layer (o bundle CDN do Bootstrap nao esta em layer;
+        embrulhar so este arquivo o rebaixaria na cascata).
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ============================================================
+   1. TOKENS - TEMA CLARO (DESIGN_BRIEF.md secao 1)
+   ============================================================ */
+:root {
+  --canvas: #F4F5F7;
+  --surface: #FFFFFF;
+  --sunken: #EDEFF2;
+  --border: #DDE1E6;
+  --border-strong: #C4C9D0;
+  --ink: #1C2024;
+  --muted: #5B6270;
+  --brand: #E09915;
+  --brand-hover: #C8830B;
+  --brand-soft: #FBEFD3;
+  --brand-contrast: #22262B;     /* texto sobre --brand (fixo nos 2 temas) */
+  --graphite: #22262B;
+  --graphite-hi: #2C3138;
+  --ok: #1F7A4D;      --ok-bg: #E3F3EA;
+  --danger: #C0392B;  --danger-bg: #FBE7E4;
+  --info: #1F6FB2;    --info-bg: #E4F0F9;
+  --warn: #B5730E;    --warn-bg: #FBEFD3;
+  --neu: #5B6270;     --neu-bg: #EDEFF2;
+  --shadow: 0 1px 2px rgba(20,25,35,.04), 0 1px 3px rgba(20,25,35,.03);
+  --focus-ring: rgba(224,153,21,.16);   /* halo de foco de inputs */
+  --ph: repeating-linear-gradient(45deg, #E7E9ED, #E7E9ED 10px, #EDEFF2 10px, #EDEFF2 20px);
+
+  /* Layout do chrome */
+  --sidebar-width: 260px;
+  --topbar-height: 64px;
+
+  /* --- Aliases legados (transitorios) ------------------------------
+     Templates ainda nao reskinados (modulos 03-13) referenciam as
+     vars antigas do custom.css em <style> inline (ex.: dashboard.html
+     usa --color-surface / --color-text-muted). Mapeadas para os novos
+     tokens para nao quebrar o intervalo entre o modulo 02 e o 13.
+     Remover quando todos os modulos de tela estiverem concluidos. */
+  --color-primary: var(--brand);
+  --color-secondary: var(--ink);
+  --color-background: var(--canvas);
+  --color-surface: var(--surface);
+  --color-text-light: #FFFFFF;
+  --color-text-muted: var(--muted);
+  --color-border: var(--border);
+  --color-success: var(--ok);
+  --color-warning: var(--warn);
+  --color-danger: var(--danger);
+  --color-neutral: var(--neu);
+  --color-info: var(--info);
+
+  /* --- Redefinicao das vars globais do Bootstrap (Decisao 5.3) ----
+     Cobre body, .text-muted (--bs-secondary-color), .text-secondary
+     (--bs-secondary-rgb), .bg-light (--bs-light-rgb), .text-primary
+     (--bs-primary-rgb), links, sombras (.shadow-sm) e os text-bg-*
+     dos toasts (--bs-success-rgb etc.) sem nenhum !important. */
+  --bs-body-bg: var(--canvas);
+  --bs-body-color: var(--ink);
+  --bs-body-color-rgb: 28, 32, 36;
+  --bs-body-bg-rgb: 244, 245, 247;
+  --bs-body-font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bs-border-color: var(--border);
+  --bs-secondary-color: var(--muted);          /* alvo: .text-muted { color: var(--bs-secondary-color) !important } */
+  --bs-tertiary-bg: var(--sunken);
+  --bs-emphasis-color: var(--ink);
+  --bs-heading-color: var(--ink);
+  --bs-primary-rgb: 224, 153, 21;              /* alvo: .text-primary / .bg-primary */
+  --bs-secondary-rgb: 91, 98, 112;             /* alvo: .text-secondary (icones do topbar) */
+  --bs-light-rgb: 237, 239, 242;               /* alvo: .bg-light (placeholder de foto do imovel) */
+  --bs-success-rgb: 31, 122, 77;               /* alvo: .text-bg-success (toast) */
+  --bs-danger-rgb: 192, 57, 43;                /* alvo: .text-bg-danger (toast) / .text-danger */
+  --bs-info-rgb: 31, 111, 178;                 /* alvo: .text-bg-info (toast) */
+  --bs-warning-rgb: 181, 115, 14;              /* alvo: .text-bg-warning (toast) */
+  --bs-link-color-rgb: 31, 111, 178;           /* alvo: a { color: rgba(var(--bs-link-color-rgb),...) } */
+  --bs-link-hover-color-rgb: 21, 84, 136;
+  --bs-box-shadow: var(--shadow);              /* alvo: .shadow { box-shadow: var(--bs-box-shadow) !important } */
+  --bs-box-shadow-sm: var(--shadow);           /* alvo: .shadow-sm (cards de imovel) */
+
+  color-scheme: light;
+}
+
+/* ============================================================
+   2. TOKENS - TEMA ESCURO (DESIGN_BRIEF.md secao 1)
+   Mesmo peso de :root (html[data-theme]) - vence por vir depois.
+   ============================================================ */
+[data-theme="dark"] {
+  --canvas: #16181C;
+  --surface: #1E2126;
+  --sunken: #24282E;
+  --border: #2C3036;
+  --border-strong: #3A3F47;
+  --ink: #E8EAED;
+  --muted: #9098A3;
+  --brand: #F0A93C;
+  --brand-hover: #F5BC5E;
+  --brand-soft: #33291A;
+  --graphite: #101216;
+  --graphite-hi: #1A1D22;
+  --ok: #4FB07E;      --ok-bg: #16281F;
+  --danger: #E0685A;  --danger-bg: #2A1917;
+  --info: #5BA3D8;    --info-bg: #15222D;
+  --warn: #E0A044;    --warn-bg: #2A2113;
+  --neu: #9098A3;     --neu-bg: #24282E;
+  --shadow: 0 1px 2px rgba(0,0,0,.3);
+  --focus-ring: rgba(240,169,60,.20);
+  --ph: repeating-linear-gradient(45deg, #24282E, #24282E 10px, #2C3036 10px, #2C3036 20px);
+
+  /* Vars Bootstrap no tema escuro */
+  --bs-body-color-rgb: 232, 234, 237;
+  --bs-body-bg-rgb: 22, 24, 28;
+  --bs-primary-rgb: 240, 169, 60;
+  --bs-secondary-rgb: 144, 152, 163;
+  --bs-light-rgb: 36, 40, 46;
+  --bs-success-rgb: 79, 176, 126;
+  --bs-danger-rgb: 224, 104, 90;
+  --bs-info-rgb: 91, 163, 216;
+  --bs-warning-rgb: 224, 160, 68;
+  --bs-link-color-rgb: 91, 163, 216;
+  --bs-link-hover-color-rgb: 137, 189, 226;
+
+  color-scheme: dark;
+}
+
+/* ============================================================
+   3. BASE / TIPOGRAFIA
+   ============================================================ */
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: .9rem;
+  font-feature-settings: 'tnum' 1;   /* numeros tabulares em todo o app */
+}
+
+a { text-decoration: none; }
+
+/* Labels de formulario (brief: 11-12px / 700 / uppercase / muted).
+   Neutraliza .form-label do Bootstrap (classe unica, empate ->
+   vence por ordem de carga). */
+.form-label {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .3rem;
+}
+
+/* ============================================================
+   4. CHROME - SIDEBAR (graphite 260px) - consumido pelo modulo 02
+   ============================================================ */
+#sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--graphite);
+  display: flex;
+  flex-direction: column;
+  z-index: 1040;
+  transition: transform .3s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#sidebar .sidebar-brand {
+  height: var(--topbar-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  box-sizing: border-box;
+}
+
+#sidebar .brand-link {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+}
+
+#sidebar .brand-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  font-weight: 800;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#sidebar .brand-wordmark {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: .01em;
+}
+
+#sidebar > ul.nav { padding-top: 0; }
+
+#sidebar .nav-section-label {
+  display: block;
+  padding: 1rem 1.5rem .3rem;
+  font-size: .656rem;                /* ~10.5px (brief secao 2) */
+  color: #6B727C;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-weight: 700;
+}
+
+#sidebar .nav-link {
+  color: rgba(255,255,255,.72);
+  padding: .6rem 1.5rem;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  transition: background .15s, color .15s;
+  font-size: .88rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  padding-left: calc(1.5rem - 3px);
+}
+
+#sidebar .nav-link i {
+  font-size: 1rem;
+  width: 1.2rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+#sidebar .nav-link:hover {
+  background: rgba(255,255,255,.05);
+  color: #fff;
+}
+
+/* Item ativo (brief: graphite-hi + barra brand a esquerda) */
+#sidebar .nav-link.active {
+  background: var(--graphite-hi);
+  color: #fff;
+  border-left-color: var(--brand);
+  font-weight: 600;
+}
+
+/* ============================================================
+   5. CHROME - TOPBAR (surface, 64px)
+   ============================================================ */
+#topbar {
+  position: fixed;
+  top: 0;
+  left: var(--sidebar-width);
+  right: 0;
+  height: var(--topbar-height);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  z-index: 1030;
+  gap: 1rem;
+}
+
+#topbar .page-title {
+  flex: 1;
+  font-size: 1.125rem;    /* 18px (brief secao 2) */
+  font-weight: 700;
+  color: var(--ink);
+}
+
+#topbar .user-info {
+  font-size: .85rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+#topbar .user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  font-size: .8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#topbar .user-name {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+#topbar .user-role {
+  font-size: .72rem;
+  color: var(--muted);
+  line-height: 1.1;
+}
+
+/* Botao de icone do topbar (toggle de tema / sino) */
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  padding: 0;
+}
+.icon-btn:hover {
+  background: var(--sunken);
+  color: var(--ink);
+}
+
+/* ============================================================
+   6. CHROME - CONTEUDO / OVERLAY / RESPONSIVO
+   ============================================================ */
+#main-content {
+  margin-left: var(--sidebar-width);
+  margin-top: var(--topbar-height);
+  padding: 1.75rem;
+  min-height: calc(100vh - var(--topbar-height));
+}
+
+#sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 1039;
+}
+#sidebar-overlay.show { display: block; }
+
+@media (max-width: 768px) {
+  #sidebar { transform: translateX(calc(-1 * var(--sidebar-width))); }
+  #sidebar.show { transform: translateX(0); }
+  #topbar { left: 0; }
+  #main-content { margin-left: 0; }
+  #topbar .user-name, #topbar .user-role { display: none; }
+}
+
+/* ============================================================
+   7. BOTOES
+   Todas as variantes redefinem as vars --bs-btn-* do proprio
+   Bootstrap (Decisao 5.3) - isso cobre normal/hover/active/
+   disabled/focus de uma vez, inclusive o seletor de alta
+   especificidade `.btn-check:checked + .btn` (que tambem le
+   --bs-btn-active-*).
+   ============================================================ */
+.btn {
+  --bs-btn-border-radius: 8px;
+  --bs-btn-font-weight: 600;
+}
+.btn-sm, .btn-group-sm > .btn { --bs-btn-border-radius: 6px; }
+
+/* Primario laranja (brief: bg brand, texto graphite, 700) */
+.btn-primary {
+  --bs-btn-color: var(--brand-contrast);
+  --bs-btn-bg: var(--brand);
+  --bs-btn-border-color: var(--brand);
+  --bs-btn-hover-color: var(--brand-contrast);
+  --bs-btn-hover-bg: var(--brand-hover);
+  --bs-btn-hover-border-color: var(--brand-hover);
+  --bs-btn-active-color: var(--brand-contrast);
+  --bs-btn-active-bg: var(--brand-hover);
+  --bs-btn-active-border-color: var(--brand-hover);
+  --bs-btn-disabled-color: var(--brand-contrast);
+  --bs-btn-disabled-bg: var(--brand);
+  --bs-btn-disabled-border-color: var(--brand);
+  --bs-btn-focus-shadow-rgb: 224, 153, 21;
+  --bs-btn-font-weight: 700;
+}
+
+/* Graphite (acao principal escura). .btn-secondary/.btn-dark ganham
+   o mesmo visual; .btn-graphite e o alias semantico novo. */
+.btn-graphite, .btn-secondary, .btn-dark {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--graphite);
+  --bs-btn-border-color: var(--graphite);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--graphite-hi);
+  --bs-btn-hover-border-color: var(--graphite-hi);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--graphite-hi);
+  --bs-btn-active-border-color: var(--graphite-hi);
+  --bs-btn-disabled-color: rgba(255,255,255,.65);
+  --bs-btn-disabled-bg: var(--graphite);
+  --bs-btn-disabled-border-color: var(--graphite);
+  --bs-btn-focus-shadow-rgb: 44, 49, 56;
+}
+/* .btn-graphite nao existe no Bootstrap: aplica as cores lidas das vars */
+.btn-graphite {
+  color: var(--bs-btn-color);
+  background-color: var(--bs-btn-bg);
+  border-color: var(--bs-btn-border-color);
+}
+.btn-graphite:hover {
+  color: var(--bs-btn-hover-color);
+  background-color: var(--bs-btn-hover-bg);
+  border-color: var(--bs-btn-hover-border-color);
+}
+
+/* Outline neutro (Voltar / Cancelar / acao de linha "Ver") */
+.btn-outline-secondary {
+  --bs-btn-color: var(--ink);
+  --bs-btn-bg: var(--surface);
+  --bs-btn-border-color: var(--border-strong);
+  --bs-btn-hover-color: var(--ink);
+  --bs-btn-hover-bg: var(--sunken);
+  --bs-btn-hover-border-color: var(--border-strong);
+  --bs-btn-active-color: var(--ink);
+  --bs-btn-active-bg: var(--sunken);
+  --bs-btn-active-border-color: var(--border-strong);
+  --bs-btn-disabled-color: var(--muted);
+  --bs-btn-disabled-border-color: var(--border);
+  --bs-btn-focus-shadow-rgb: 196, 201, 208;
+}
+
+/* Acao de linha "Editar" - laranja soft (brief secao 4) */
+.btn-outline-primary {
+  --bs-btn-color: var(--brand-hover);
+  --bs-btn-bg: var(--brand-soft);
+  --bs-btn-border-color: var(--brand-soft);
+  --bs-btn-hover-color: var(--brand-contrast);
+  --bs-btn-hover-bg: var(--brand);
+  --bs-btn-hover-border-color: var(--brand);
+  --bs-btn-active-color: var(--brand-contrast);
+  --bs-btn-active-bg: var(--brand);
+  --bs-btn-active-border-color: var(--brand);
+  --bs-btn-disabled-color: var(--muted);
+  --bs-btn-disabled-border-color: var(--border);
+  --bs-btn-focus-shadow-rgb: 224, 153, 21;
+}
+
+/* Acao de linha "Excluir" - danger soft */
+.btn-outline-danger {
+  --bs-btn-color: var(--danger);
+  --bs-btn-bg: var(--danger-bg);
+  --bs-btn-border-color: var(--danger-bg);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--danger);
+  --bs-btn-hover-border-color: var(--danger);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--danger);
+  --bs-btn-active-border-color: var(--danger);
+  --bs-btn-disabled-color: var(--muted);
+  --bs-btn-disabled-border-color: var(--border);
+  --bs-btn-focus-shadow-rgb: 192, 57, 43;
+}
+
+/* Soft variants para as demais outline usadas (GED / detail) */
+.btn-outline-info {
+  --bs-btn-color: var(--info);
+  --bs-btn-bg: var(--info-bg);
+  --bs-btn-border-color: var(--info-bg);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--info);
+  --bs-btn-hover-border-color: var(--info);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--info);
+  --bs-btn-active-border-color: var(--info);
+  --bs-btn-focus-shadow-rgb: 31, 111, 178;
+}
+.btn-outline-success {
+  --bs-btn-color: var(--ok);
+  --bs-btn-bg: var(--ok-bg);
+  --bs-btn-border-color: var(--ok-bg);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--ok);
+  --bs-btn-hover-border-color: var(--ok);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--ok);
+  --bs-btn-active-border-color: var(--ok);
+  --bs-btn-focus-shadow-rgb: 31, 122, 77;
+}
+.btn-outline-warning {
+  --bs-btn-color: var(--warn);
+  --bs-btn-bg: var(--warn-bg);
+  --bs-btn-border-color: var(--warn-bg);
+  --bs-btn-hover-color: var(--brand-contrast);
+  --bs-btn-hover-bg: var(--warn);
+  --bs-btn-hover-border-color: var(--warn);
+  --bs-btn-active-color: var(--brand-contrast);
+  --bs-btn-active-bg: var(--warn);
+  --bs-btn-active-border-color: var(--warn);
+  --bs-btn-focus-shadow-rgb: 181, 115, 14;
+}
+
+/* Solidas semanticas */
+.btn-danger {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--danger);
+  --bs-btn-border-color: var(--danger);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--danger);
+  --bs-btn-hover-border-color: var(--danger);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--danger);
+  --bs-btn-active-border-color: var(--danger);
+  --bs-btn-focus-shadow-rgb: 192, 57, 43;
+}
+.btn-info {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--info);
+  --bs-btn-border-color: var(--info);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--info);
+  --bs-btn-hover-border-color: var(--info);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--info);
+  --bs-btn-active-border-color: var(--info);
+  --bs-btn-focus-shadow-rgb: 31, 111, 178;
+}
+/* Feedback de hover das solidas (a cor base vem do token do tema) */
+.btn-danger:hover, .btn-info:hover { filter: brightness(.94); }

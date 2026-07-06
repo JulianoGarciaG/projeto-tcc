@@ -69,4 +69,4 @@ Nao altera a view `dashboard` nem os nomes de contexto usados no template.
   testar a troca de tema repetidas vezes.
 - Se o evento do modulo 02 nao disparar (ex.: nome do evento divergente),
   os graficos ficam com as cores do tema errado apos o toggle -- validar a
-  integracao junto do Engineer do modulo 02.
+  integracao contra o `static/js/theme.js` produzido no modulo 02.

@@ -57,7 +57,7 @@ O Documenter possui dois modos de operação.
 
 ## 1. Sincronização incremental
 
-Utilize quando um módulo acabou de ser implementado pelo Engineer.
+Utilize quando um módulo acabou de ser implementado (numa janela de contexto regular do Claude Code, seguindo o plan.md do Planner).
 
 Fluxo:
 
@@ -141,7 +141,6 @@ Nunca:
 Durante sua execução utilize as seguintes Skills quando apropriado:
 
 - audit-project-documentation
-- sync-documentation
 
 Cada Skill possui uma responsabilidade única.
 

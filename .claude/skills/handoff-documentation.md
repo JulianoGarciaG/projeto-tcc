@@ -9,7 +9,7 @@ description: Prepara e delega ao Documenter todas as informações necessárias 
 
 Transferir ao Documenter apenas o contexto necessário para atualizar a documentação referente ao módulo recém-concluído.
 
-Esta Skill encerra a responsabilidade do Engineer sobre o módulo atual.
+Esta Skill encerra a responsabilidade de quem implementou sobre o módulo atual.
 
 ## Fluxo de execução
 
@@ -48,4 +48,4 @@ A Skill é concluída quando:
 
 - O contexto necessário foi entregue ao Documenter.
 - A responsabilidade pela documentação foi transferida.
-- O Engineer está apto a iniciar o próximo módulo após o retorno do Documenter.
+- A próxima janela de contexto está apta a iniciar o próximo módulo após o retorno do Documenter.
