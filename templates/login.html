@@ -5,34 +5,218 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login — Shelter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+  <link rel="stylesheet" href="{% static 'css/shelter.css' %}">
+  <style>
+    /* ============================================================
+       Pagina de Login (layout dedicado, sem sidebar/topbar)
+       DESIGN_BRIEF.md secao 3.1 - consome os tokens de shelter.css
+       ============================================================ */
+    body.login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--canvas);
+      padding: 1.5rem;
+    }
+
+    /* Card central: max 1040px, grid 2 colunas, raio 18px, min 560px */
+    .login-card {
+      width: 100%;
+      max-width: 1040px;
+      min-height: 560px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 10px 40px rgba(20, 25, 35, .12);
+      overflow: hidden;
+    }
+
+    /* ---------- Painel esquerdo (graphite) ---------- */
+    .login-left {
+      position: relative;
+      background: var(--graphite);
+      color: #fff;
+      padding: 2.75rem 3rem;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Circulos decorativos laranja translucidos */
+    .login-deco {
+      position: absolute;
+      border-radius: 50%;
+      background: var(--brand);
+      opacity: .14;
+      pointer-events: none;
+    }
+    .login-deco-1 { width: 260px; height: 260px; top: -90px; right: -70px; }
+    .login-deco-2 { width: 180px; height: 180px; bottom: 40px; left: -80px; opacity: .10; }
+    .login-deco-3 { width: 90px;  height: 90px;  bottom: 150px; right: 30px; opacity: .12; }
+
+    /* Logo Shelter */
+    .login-brand {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+    }
+    .login-brand img {
+      height: 88px;
+      width: auto;
+      max-width: 200px;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Mensagem de boas-vindas */
+    .login-welcome {
+      position: relative;
+      z-index: 1;
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+    .login-welcome h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin: 0 0 1rem;
+      color: #FFFFFF;
+    }
+    .login-welcome p {
+      font-size: .95rem;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, .85);
+      margin: 0;
+      max-width: 34ch;
+    }
+
+    .login-footer {
+      position: relative;
+      z-index: 1;
+      font-size: .78rem;
+      color: rgba(255, 255, 255, .55);
+    }
+
+    /* ---------- Painel direito (formulario) ---------- */
+    .login-right {
+      padding: 3rem 3.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .login-form-wrap { width: 100%; max-width: 380px; margin: 0 auto; }
+
+    .login-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--ink);
+      margin: 0 0 .35rem;
+    }
+    .login-subtitle {
+      font-size: .9rem;
+      color: var(--muted);
+      margin: 0 0 1.75rem;
+    }
+
+    .login-field { margin-bottom: 1.15rem; }
+
+    /* Input group com icone a esquerda + toggle a direita.
+       Inputs mais altos no login (brief: 48-50px) */
+    .login-input-group { position: relative; }
+    .login-input-group .input-icon {
+      position: absolute;
+      left: .9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 1.05rem;
+      pointer-events: none;
+    }
+    .login-input-group .form-control {
+      min-height: 50px;
+      padding-left: 2.6rem;
+    }
+    .login-input-group .form-control.has-toggle { padding-right: 2.8rem; }
+
+    .toggle-password {
+      position: absolute;
+      right: .5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1.05rem;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    .toggle-password:hover { color: var(--ink); }
+
+    .login-btn {
+      width: 100%;
+      min-height: 50px;
+      margin-top: .5rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--graphite);
+      color: #fff;
+      font-weight: 700;
+      font-size: .95rem;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .login-btn:hover { background: var(--graphite-hi); }
+
+    /* ---------- Responsivo (mobile: some o painel esquerdo) ---------- */
+    @media (max-width: 767px) {
+      .login-card {
+        grid-template-columns: 1fr;
+        min-height: 0;
+        max-width: 440px;
+      }
+      .login-left { display: none; }
+      .login-right { padding: 2.5rem 1.75rem; }
+    }
+  </style>
 </head>
 <body class="login-page">
 
-  <div class="login-split">
+  <div class="login-card">
 
     <!-- Painel esquerdo -->
     <div class="login-left">
       <!-- Elementos decorativos -->
-      <div class="login-deco-blob login-deco-blob-1"></div>
-      <div class="login-deco-blob login-deco-blob-2"></div>
-      <div class="login-deco-dots"></div>
+      <span class="login-deco login-deco-1"></span>
+      <span class="login-deco login-deco-2"></span>
+      <span class="login-deco login-deco-3"></span>
 
-      <!-- Logo -->
-      <div class="login-left-top">
+      <!-- Logo Shelter -->
+      <div class="login-brand">
         <img src="{% static 'assets/Shelter_LOGO_white.svg' %}" alt="Shelter">
       </div>
 
       <!-- Texto de boas-vindas -->
-      <div class="login-left-bottom">
-        <h2>Bem-vindo(a) de volta!</h2>
+      <div class="login-welcome">
+        <h1>Bem-vindo(a) de volta!</h1>
         <p>Acesse o painel de gestão imobiliária da Shelter para administrar imóveis, contratos e finanças em um só lugar.</p>
       </div>
 
       <!-- Rodapé -->
-      <div class="login-left-footer">
+      <div class="login-footer">
         &copy; {% now "Y" %} Shelter &middot; Gestão Imobiliária
       </div>
     </div>
@@ -41,11 +225,11 @@
     <div class="login-right">
       <div class="login-form-wrap">
 
-        <h3 class="login-form-title">Entrar na conta</h3>
-        <p class="login-form-subtitle">Informe suas credenciais para continuar.</p>
+        <h2 class="login-title">Entrar na conta</h2>
+        <p class="login-subtitle">Informe suas credenciais para continuar.</p>
 
         {% if form.errors %}
-        <div class="alert alert-danger small py-2 mb-4">
+        <div class="alert alert-danger py-2 mb-4" role="alert">
           <i class="bi bi-exclamation-triangle me-1"></i>
           Usuário ou senha inválidos. Tente novamente.
         </div>
@@ -55,7 +239,7 @@
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ next }}">
 
-          <div class="mb-3">
+          <div class="login-field">
             <label class="form-label" for="id_username">Usuário</label>
             <div class="login-input-group">
               <i class="bi bi-person input-icon"></i>
@@ -71,7 +255,7 @@
             </div>
           </div>
 
-          <div class="mb-3">
+          <div class="login-field">
             <label class="form-label" for="id_password">Senha</label>
             <div class="login-input-group">
               <i class="bi bi-lock input-icon"></i>
@@ -79,11 +263,11 @@
                 type="password"
                 name="password"
                 id="id_password"
-                class="form-control"
-                placeholder="........"
+                class="form-control has-toggle"
+                placeholder="••••••••"
                 required
               >
-              <button type="button" class="toggle-password" onclick="togglePassword()" tabindex="-1">
+              <button type="button" class="toggle-password" onclick="togglePassword()" tabindex="-1" aria-label="Mostrar senha">
                 <i class="bi bi-eye" id="toggle-icon"></i>
               </button>
             </div>
@@ -97,9 +281,8 @@
       </div>
     </div>
 
-  </div><!-- /login-split -->
+  </div><!-- /login-card -->
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     function togglePassword() {
       const input = document.getElementById('id_password');

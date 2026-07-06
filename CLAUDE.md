@@ -82,10 +82,6 @@ venv/Scripts/python manage.py createsuperuser
 - **Correção visual dos PDFs** (`planner-docs/fix-visual-pdfs-gerados/`): ajustes **100% CSS/HTML** dos templates de PDF (`base_pdf.html` + `{contrato,laudo,recibo}_pdf.html`) para compatibilizar o redesign da Rodada 4 com o **xhtml2pdf 0.2.17** — `text-transform: uppercase` é ignorado pelo motor (textos estáticos passam a CAIXA ALTA literal; valores dinâmicos usam `|upper`), `margin: ... auto ...` não é suportado (a barra `.doc-title-underline` é centralizada via `<table align="center">`, não por `margin: auto`) e `border` em `<div>` com múltiplos filhos block-level vira grade (o wrapper `.card` foi eliminado — `border`/`padding` migraram para `.cards td`). Nenhum model/view/form/signal/migration alterado.
 - Suíte de testes: **72 testes** em `imoveis/tests.py` (nova classe `DocumentoGeradoTests` + asserts de PDF ajustados ao redesign; helper `limpar_arquivos_gerados()` no `tearDown`), todos passando.
 
-### Pendente
-- Validação manual no navegador dos itens visuais/UX da Rodada 3 (datepicker do dashboard, preview da planta, espaço de assinatura do laudo, uploads de documento do contrato pelo detail).
-- Validação visual dos 3 PDFs (Rodada 4 + correção visual) frente aos mockups de `docs/pdf-models/` — checklist em `planner-docs/fix-visual-pdfs-gerados/modules/05-validacao-visual-manual.md`.
-- Nenhuma rodada futura planejada ainda.
 
 ### Convenções obrigatórias (estabelecidas nas Rodadas 1–4)
 - **PDF nunca é gerado ao salvar** — create/edit fazem redirect + toast; só as views `*_gerar_pdf` geram/baixam PDF.

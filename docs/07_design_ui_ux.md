@@ -316,13 +316,14 @@ Padrão: pill arredondado (`border-radius: 999px`), padding `0.25rem 0.65rem`, G
 
 ---
 
-## 16. Página de Login
+## 16. Página de Login (redesign — módulo 03)
 
-- Layout **split**: dois painéis lado a lado
-- **Painel esquerdo:** fundo `#3A3A3A`, elementos decorativos (blobs, grade de pontos), texto de boas-vindas, logo da empresa (`Shelter_LOGO_white.svg`)
-- **Painel direito:** fundo `#F7F7F7`, formulário centralizado com inputs estilizados
-- Border-radius do container: `8px` (desktop), sem radius (mobile)
-- No mobile: apenas o painel direito (formulário) é exibido
+- Layout **dedicado** (fora do `base.html`, sem sidebar/topbar); referencia `static/css/shelter.css` (tokens) + fonte Inter, com o CSS específico da tela num `<style>` local que consome os tokens.
+- **Card central:** `max-width: 1040px`, `min-height: 560px`, `border-radius: 18px`, grid de **2 colunas**, centralizado sobre fundo `--canvas`.
+- **Painel esquerdo:** fundo `--graphite`, texto branco, círculos decorativos laranja translúcidos (`--brand` com baixa opacidade), logo "S" (quadradinho laranja) + wordmark "Shelter", headline "Bem-vindo(a) de volta!", parágrafo e rodapé "© {ano} Shelter · Gestão Imobiliária" (`{% now "Y" %}`).
+- **Painel direito:** fundo `--surface`; título "Entrar na conta" + subtítulo; campo Usuário (ícone `bi-person`) e campo Senha (ícone `bi-lock` + toggle `bi-eye`/`bi-eye-slash` via `togglePassword()`); inputs de ~50px de altura; botão "Entrar →" full-width graphite.
+- **Responsivo:** no mobile (`max-width: 767px`) o painel esquerdo some e apenas o formulário é exibido (card em coluna única).
+- Lógica de autenticação Django preservada: `form`, `next` (hidden), mensagem de erro (`{% if form.errors %}`), ids/names `username`/`password`.
 
 ---
 
