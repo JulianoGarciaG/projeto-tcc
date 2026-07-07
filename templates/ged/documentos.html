@@ -11,22 +11,22 @@
   <div class="col-md-6">
     <div class="section-card h-100">
       <div class="section-card-header">
-        <i class="bi bi-clipboard-check-fill text-success me-1"></i> Laudos de Vistoria
-        <span class="badge bg-success ms-2">{{ laudos.count }}</span>
+        <i class="bi bi-clipboard-check-fill"></i> Laudos de Vistoria
+        <span class="status-badge badge-neu ms-auto">{{ laudos.count }}</span>
       </div>
       <div class="table-responsive">
-        <table class="table mb-0 small">
-          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Data</th><th>Arquivo</th></tr></thead>
+        <table class="table mb-0">
+          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Data</th><th class="text-end">Arquivo</th></tr></thead>
           <tbody>
             {% for l in laudos %}
             <tr>
-              <td>{{ l.imovel.endereco|truncatechars:25 }}</td>
-              <td>{{ l.get_tipo_display }}</td>
-              <td>{{ l.data|date:"d/m/Y" }}</td>
-              <td><a href="{{ l.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
+              <td class="small">{{ l.imovel.endereco|truncatechars:25 }}</td>
+              <td class="small">{{ l.get_tipo_display }}</td>
+              <td class="small">{{ l.data|date:"d/m/Y" }}</td>
+              <td class="text-end"><a href="{{ l.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-3">Nenhum laudo com arquivo.</td></tr>
+            <tr><td colspan="4" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum laudo com arquivo.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -38,22 +38,22 @@
   <div class="col-md-6">
     <div class="section-card h-100">
       <div class="section-card-header">
-        <i class="bi bi-receipt text-warning me-1"></i> Comprovantes de Pagamento
-        <span class="badge bg-warning text-dark ms-2">{{ comprovantes.count }}</span>
+        <i class="bi bi-receipt"></i> Comprovantes de Pagamento
+        <span class="status-badge badge-neu ms-auto">{{ comprovantes.count }}</span>
       </div>
       <div class="table-responsive">
-        <table class="table mb-0 small">
-          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Data Pgto</th><th>Arquivo</th></tr></thead>
+        <table class="table mb-0">
+          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Data Pgto</th><th class="text-end">Arquivo</th></tr></thead>
           <tbody>
             {% for l in comprovantes %}
             <tr>
-              <td>{{ l.contrato.imovel.endereco|truncatechars:25 }}</td>
-              <td>{{ l.get_tipo_display }}</td>
-              <td>{{ l.data_pagamento|date:"d/m/Y"|default:"—" }}</td>
-              <td><a href="{{ l.comprovante.url }}" target="_blank" class="btn btn-sm btn-outline-warning"><i class="bi bi-file-earmark me-1"></i> Abrir</a></td>
+              <td class="small">{{ l.contrato.imovel.endereco|truncatechars:25 }}</td>
+              <td class="small">{{ l.get_tipo_display }}</td>
+              <td class="small">{{ l.data_pagamento|date:"d/m/Y"|default:"—" }}</td>
+              <td class="text-end"><a href="{{ l.comprovante.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-3">Nenhum comprovante.</td></tr>
+            <tr><td colspan="4" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum comprovante.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -65,23 +65,23 @@
   <div class="col-md-6">
     <div class="section-card h-100">
       <div class="section-card-header">
-        <i class="bi bi-file-earmark-check-fill text-danger me-1"></i> Contratos Gerados (Sistema)
-        <span class="badge bg-danger ms-2">{{ contratos_gerados.count }}</span>
+        <i class="bi bi-file-earmark-check-fill"></i> Contratos Gerados (Sistema)
+        <span class="status-badge badge-neu ms-auto">{{ contratos_gerados.count }}</span>
       </div>
       <div class="table-responsive">
-        <table class="table mb-0 small">
-          <thead><tr><th>Inquilino</th><th>Imóvel</th><th>Versão</th><th>Gerado em</th><th>Arquivo</th></tr></thead>
+        <table class="table mb-0">
+          <thead><tr><th>Inquilino</th><th>Imóvel</th><th>Versão</th><th>Gerado em</th><th class="text-end">Arquivo</th></tr></thead>
           <tbody>
             {% for d in contratos_gerados %}
             <tr>
-              <td>{{ d.contrato.inquilino.nome }}</td>
-              <td>{{ d.contrato.imovel.endereco|truncatechars:25 }}</td>
-              <td>v{{ d.numero_versao }}</td>
-              <td>{{ d.gerado_em|date:"d/m/Y H:i" }}</td>
-              <td><a href="{{ d.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
+              <td class="small">{{ d.contrato.inquilino.nome }}</td>
+              <td class="small">{{ d.contrato.imovel.endereco|truncatechars:25 }}</td>
+              <td class="small">v{{ d.numero_versao }}</td>
+              <td class="small">{{ d.gerado_em|date:"d/m/Y H:i" }}</td>
+              <td class="text-end"><a href="{{ d.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="text-center text-muted py-3">Nenhum contrato gerado pelo sistema.</td></tr>
+            <tr><td colspan="5" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum contrato gerado pelo sistema.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -93,23 +93,23 @@
   <div class="col-md-6">
     <div class="section-card h-100">
       <div class="section-card-header">
-        <i class="bi bi-clipboard-check-fill text-danger me-1"></i> Laudos Gerados (Sistema)
-        <span class="badge bg-danger ms-2">{{ laudos_gerados.count }}</span>
+        <i class="bi bi-clipboard-check-fill"></i> Laudos Gerados (Sistema)
+        <span class="status-badge badge-neu ms-auto">{{ laudos_gerados.count }}</span>
       </div>
       <div class="table-responsive">
-        <table class="table mb-0 small">
-          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Versão</th><th>Gerado em</th><th>Arquivo</th></tr></thead>
+        <table class="table mb-0">
+          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Versão</th><th>Gerado em</th><th class="text-end">Arquivo</th></tr></thead>
           <tbody>
             {% for d in laudos_gerados %}
             <tr>
-              <td>{{ d.laudo.imovel.endereco|truncatechars:25 }}</td>
-              <td>{{ d.laudo.get_tipo_display }}</td>
-              <td>v{{ d.numero_versao }}</td>
-              <td>{{ d.gerado_em|date:"d/m/Y H:i" }}</td>
-              <td><a href="{{ d.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
+              <td class="small">{{ d.laudo.imovel.endereco|truncatechars:25 }}</td>
+              <td class="small">{{ d.laudo.get_tipo_display }}</td>
+              <td class="small">v{{ d.numero_versao }}</td>
+              <td class="small">{{ d.gerado_em|date:"d/m/Y H:i" }}</td>
+              <td class="text-end"><a href="{{ d.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="text-center text-muted py-3">Nenhum laudo gerado pelo sistema.</td></tr>
+            <tr><td colspan="5" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum laudo gerado pelo sistema.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -121,24 +121,24 @@
   <div class="col-md-6">
     <div class="section-card h-100">
       <div class="section-card-header">
-        <i class="bi bi-receipt-cutoff text-info me-1"></i> Recibos Gerados
-        <span class="badge bg-info text-dark ms-2">{{ recibos.count }}</span>
+        <i class="bi bi-receipt-cutoff"></i> Recibos Gerados
+        <span class="status-badge badge-neu ms-auto">{{ recibos.count }}</span>
       </div>
       <div class="table-responsive">
-        <table class="table mb-0 small">
-          <thead><tr><th>#</th><th>Imóvel</th><th>Quem Pagou</th><th>Versão</th><th>Gerado em</th><th>Arquivo</th></tr></thead>
+        <table class="table mb-0">
+          <thead><tr><th>#</th><th>Imóvel</th><th>Quem Pagou</th><th>Versão</th><th>Gerado em</th><th class="text-end">Arquivo</th></tr></thead>
           <tbody>
             {% for d in recibos %}
             <tr>
-              <td>{{ d.recibo.pk }}</td>
-              <td>{{ d.recibo.imovel.endereco|default:"—"|truncatechars:25 }}</td>
-              <td>{{ d.recibo.quem_pagou|default:"—" }}</td>
-              <td>v{{ d.numero_versao }}</td>
-              <td>{{ d.gerado_em|date:"d/m/Y H:i" }}</td>
-              <td><a href="{{ d.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-info"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
+              <td class="small">{{ d.recibo.pk }}</td>
+              <td class="small">{{ d.recibo.imovel.endereco|default:"—"|truncatechars:25 }}</td>
+              <td class="small">{{ d.recibo.quem_pagou|default:"—" }}</td>
+              <td class="small">v{{ d.numero_versao }}</td>
+              <td class="small">{{ d.gerado_em|date:"d/m/Y H:i" }}</td>
+              <td class="text-end"><a href="{{ d.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="6" class="text-center text-muted py-3">Nenhum recibo gerado.</td></tr>
+            <tr><td colspan="6" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum recibo gerado.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>

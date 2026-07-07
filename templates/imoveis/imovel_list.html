@@ -1,18 +1,22 @@
 {% extends 'base.html' %}
 {% load imoveis_tags %}
-{% block title %}Imóveis — GestImóveis{% endblock %}
+{% load static %}
+{% block title %}Imóveis — Shelter{% endblock %}
 {% block page_title %}<i class="bi bi-house-door me-2"></i>Imóveis{% endblock %}
 {% block nav_imoveis %}active{% endblock %}
 
 {% block content %}
 
-<!-- Filtros + Botão novo -->
+<!-- Barra de filtros -->
 <div class="section-card mb-4">
   <div class="section-card-body">
     <form method="get" class="row g-2 align-items-end">
       <div class="col-12 col-md-5">
         <label class="form-label">Buscar</label>
-        <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Endereço, bairro ou cidade...">
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Endereço, bairro ou cidade...">
+        </div>
       </div>
       <div class="col-6 col-md-3">
         <label class="form-label">Status</label>
@@ -33,71 +37,72 @@
         </select>
       </div>
       <div class="col-12 col-md-2 d-flex gap-2">
-        <button type="submit" class="btn btn-primary flex-fill">
-          <i class="bi bi-search"></i> Filtrar
-        </button>
-        <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary" title="Limpar">
-          <i class="bi bi-x-lg"></i>
-        </a>
+        <button type="submit" class="btn btn-graphite flex-fill"><i class="bi bi-funnel me-1"></i> Filtrar</button>
+        <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary" title="Limpar"><i class="bi bi-x-lg"></i></a>
       </div>
     </form>
   </div>
 </div>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<!-- Result bar: contador + segmented toggle Cards/Tabela + Novo -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
   <span class="text-muted small">{{ imoveis.count }} imóvel(is) encontrado(s)</span>
-  <a href="{% url 'imovel_create' %}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i> Novo Imóvel
-  </a>
+  <div class="d-flex align-items-center gap-2">
+    <div class="segmented" id="imovel-view-toggle" role="tablist" aria-label="Alternar visualização">
+      <button type="button" class="segmented-item active" data-view="cards" aria-label="Ver como cards">
+        <i class="bi bi-grid-3x3-gap"></i> Cards
+      </button>
+      <button type="button" class="segmented-item" data-view="table" aria-label="Ver como tabela">
+        <i class="bi bi-list-ul"></i> Tabela
+      </button>
+    </div>
+    <a href="{% url 'imovel_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Novo Imóvel</a>
+  </div>
 </div>
 
-<!-- Cards de Imóveis com Fotos -->
-<div class="row g-3">
+{# Escolha de arquitetura: o queryset `imoveis` e iterado DUAS vezes (cards +   #}
+{# tabela) para gerar as duas vistas. Para os querysets pequenos deste sistema  #}
+{# o custo e desprezivel; a alternativa (montar tudo em uma iteracao) exigiria  #}
+{# markup bem mais complexo sem ganho pratico.                                  #}
+
+<!-- ============ Vista Cards ============ -->
+<div id="imovel-view-cards" class="row g-3">
   {% for im in imoveis %}
   <div class="col-sm-6 col-lg-4">
-    <div class="card h-100 shadow-sm">
+    <div class="card h-100">
       {% with im.fotos.first as foto %}
       {% if foto %}
       <img src="{{ foto.imagem.url }}" class="card-img-top" alt="{{ foto.legenda|default:im.endereco }}"
-           style="height:180px; object-fit:cover;">
+           style="height:180px; object-fit:cover; border-radius:10px 10px 0 0;">
       {% else %}
-      <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;">
-        <i class="bi bi-house-door text-muted" style="font-size:3rem;"></i>
+      <div class="ph d-flex align-items-center justify-content-center" style="height:180px; border-radius:10px 10px 0 0;">
+        <i class="bi bi-house-door" style="font-size:3rem; color:var(--muted); opacity:.5;"></i>
       </div>
       {% endif %}
       {% endwith %}
-      <div class="card-body pb-2">
-        <div class="d-flex justify-content-between align-items-start">
-          <h6 class="card-title mb-1">
-            <a href="{% url 'imovel_detail' im.pk %}" class="text-decoration-none text-primary">
-              {{ im.endereco|truncatechars:45 }}
-            </a>
-          </h6>
-          <span class="status-badge badge-{{ im.status }} ms-2 flex-shrink-0">{{ im.get_status_display }}</span>
-        </div>
-        <p class="text-muted small mb-1">
+      <div class="card-body pb-2" style="position:relative;">
+        <span class="status-badge badge-{{ im.status }}" style="position:absolute; top:-14px; right:14px;">{{ im.get_status_display }}</span>
+        <h6 class="mb-1">
+          <a href="{% url 'imovel_detail' im.pk %}" class="fw-semibold text-primary">
+            {{ im.endereco|truncatechars:45 }}
+          </a>
+        </h6>
+        <p class="text-muted small mb-2">
           <i class="bi bi-geo-alt me-1"></i>{{ im.bairro|default:"" }}{% if im.bairro %}, {% endif %}{{ im.cidade }}
         </p>
-        <p class="small mb-0">
-          <span class="text-muted">{{ im.get_tipo_display }}</span>
-          <span class="text-muted mx-1">·</span>
-          <span class="text-muted">{{ im.get_categoria_display }}</span>
-        </p>
-        <p class="text-muted small mb-0 mt-1">
+        <div class="d-flex flex-wrap gap-1 mb-2">
+          <span class="status-badge badge-neu">{{ im.get_tipo_display }}</span>
+          <span class="status-badge badge-neu">{{ im.get_categoria_display }}</span>
+        </div>
+        <p class="text-muted small mb-0">
           <i class="bi bi-person me-1"></i>{{ im.proprietario.nome }}
         </p>
       </div>
-      <div class="card-footer bg-transparent border-top-0 pt-0 pb-2 d-flex gap-1 justify-content-end">
-        <a href="{% url 'imovel_detail' im.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver">
-          <i class="bi bi-eye"></i>
-        </a>
-        <a href="{% url 'imovel_edit' im.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">
-          <i class="bi bi-pencil"></i>
-        </a>
+      <div class="card-footer bg-transparent border-top-0 pt-0 pb-3 d-flex gap-1 justify-content-end">
+        <a href="{% url 'imovel_detail' im.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver"><i class="bi bi-eye"></i></a>
+        <a href="{% url 'imovel_edit' im.pk %}" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>
         <button class="btn btn-sm btn-outline-danger" title="Excluir"
-          data-bs-toggle="modal" data-bs-target="#modalExcluir{{ im.pk }}">
-          <i class="bi bi-trash"></i>
-        </button>
+          data-bs-toggle="modal" data-bs-target="#modalExcluir{{ im.pk }}"><i class="bi bi-trash"></i></button>
       </div>
     </div>
 
@@ -124,10 +129,68 @@
     </div>
   </div>
   {% empty %}
-  <div class="col-12 text-center text-muted py-5">
-    <i class="bi bi-house-door" style="font-size:3rem;"></i>
-    <p class="mt-2">Nenhum imóvel encontrado.</p>
+  <div class="col-12">
+    <div class="empty-state"><i class="bi bi-house-door"></i>Nenhum imóvel encontrado.</div>
   </div>
   {% endfor %}
 </div>
+
+<!-- ============ Vista Tabela (oculta por padrão) ============ -->
+<div id="imovel-view-table" class="section-card" style="display:none;">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr><th>Endereço</th><th>Bairro/Cidade</th><th>Tipo</th><th>Proprietário</th><th>Status</th><th class="text-end">Ações</th></tr>
+      </thead>
+      <tbody>
+        {% for im in imoveis %}
+        <tr>
+          <td><a href="{% url 'imovel_detail' im.pk %}" class="fw-semibold text-primary">{{ im.endereco|truncatechars:40 }}</a></td>
+          <td class="small text-muted">{{ im.bairro|default:"" }}{% if im.bairro %}, {% endif %}{{ im.cidade }}</td>
+          <td class="small">{{ im.get_tipo_display }}</td>
+          <td class="small">{{ im.proprietario.nome }}</td>
+          <td><span class="status-badge badge-{{ im.status }}">{{ im.get_status_display }}</span></td>
+          <td class="text-end">
+            <a href="{% url 'imovel_detail' im.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver"><i class="bi bi-eye"></i></a>
+            <a href="{% url 'imovel_edit' im.pk %}" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>
+            <button class="btn btn-sm btn-outline-danger" title="Excluir"
+              data-bs-toggle="modal" data-bs-target="#modalExcluirTb{{ im.pk }}"><i class="bi bi-trash"></i></button>
+            <!-- Modal exclusão (vista tabela) -->
+            <div class="modal fade" id="modalExcluirTb{{ im.pk }}" tabindex="-1">
+              <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                  <div class="modal-header border-0 pb-0">
+                    <h6 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Confirmar exclusão</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body small">
+                    Deseja excluir o imóvel <strong>{{ im.endereco }}</strong>?
+                  </div>
+                  <div class="modal-footer border-0 pt-0">
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form method="post" action="{% url 'imovel_delete' im.pk %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="border-0">
+            <div class="empty-state"><i class="bi bi-inbox"></i>Nenhum imóvel encontrado.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/imovel-view-toggle.js' %}"></script>
 {% endblock %}

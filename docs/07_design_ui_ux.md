@@ -246,6 +246,17 @@ A sidebar é **sempre expandida no desktop** (o colapso introduzido na Rodada 2 
 - **Hover de linha:** fundo `rgba(242, 180, 65, 0.05)`
 - **Texto de células:** `0.88rem`, cor `#3A3A3A`
 
+### 10.1. Vista Tabela de Imóveis (alternativa aos Cards)
+
+A listagem de Imóveis (`imovel_list.html`) oferece duas visualizações da mesma
+listagem, alternadas por um *segmented control* Cards/Tabela na result bar
+(preferência persistida em `localStorage`, chave `shelterImovelView`, via
+`static/js/imovel-view-toggle.js`). A vista Cards é a padrão; a vista Tabela
+tem as colunas: **Endereço** (link para o detalhe), **Bairro/Cidade**,
+**Tipo**, **Proprietário**, **Status** (badge) e **Ações** (Ver / Editar /
+Excluir). Ambas as vistas iteram o mesmo queryset `imoveis` e compartilham o
+mesmo modal de exclusão; nenhuma consulta nova é feita.
+
 ---
 
 ## 11. Badges de Status
