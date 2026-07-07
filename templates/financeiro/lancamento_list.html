@@ -9,15 +9,17 @@
 <!-- Totalizadores -->
 <div class="row g-3 mb-4">
   <div class="col-md-4">
-    <div class="kpi-card kpi-green">
-      <div class="kpi-icon"><i class="bi bi-check-circle-fill"></i></div>
-      <div><div class="kpi-value">R$ {{ total_pago|brl }}</div><div class="kpi-label">Total Recebido (filtro)</div></div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-ok"></span>Total Recebido (filtro)</div>
+      <div class="kpi-value">R$ {{ total_pago|brl }}</div>
+      <div class="kpi-aux"><i class="bi bi-check-circle"></i> pagamentos confirmados</div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="kpi-card kpi-red">
-      <div class="kpi-icon"><i class="bi bi-exclamation-circle-fill"></i></div>
-      <div><div class="kpi-value">R$ {{ total_pendente|brl }}</div><div class="kpi-label">Pendente / Atrasado (filtro)</div></div>
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-danger"></span>Pendente / Atrasado (filtro)</div>
+      <div class="kpi-value">R$ {{ total_pendente|brl }}</div>
+      <div class="kpi-aux"><i class="bi bi-exclamation-triangle"></i> em aberto no período</div>
     </div>
   </div>
 </div>
@@ -26,7 +28,12 @@
 <div class="section-card mb-4">
   <div class="section-card-body">
     <form method="get" class="row g-2 align-items-end">
-      <div class="col-md-4"><label class="form-label">Buscar</label><input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Inquilino ou imóvel..."></div>
+      <div class="col-md-4"><label class="form-label">Buscar</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Inquilino ou imóvel...">
+        </div>
+      </div>
       <div class="col-md-3"><label class="form-label">Status</label>
         <select name="status" class="form-select"><option value="">Todos</option>{% for val, label in status_choices %}<option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
       </div>
@@ -34,7 +41,7 @@
         <select name="tipo" class="form-select"><option value="">Todos</option>{% for val, label in tipo_choices %}<option value="{{ val }}" {% if tipo == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
       </div>
       <div class="col-md-2 d-flex gap-2">
-        <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i></button>
+        <button type="submit" class="btn btn-graphite flex-fill" title="Filtrar"><i class="bi bi-funnel"></i></button>
         <a href="{% url 'lancamento_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
       </div>
     </form>
@@ -76,7 +83,11 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="9" class="text-center text-muted py-4">Nenhum lançamento encontrado.</td></tr>
+        <tr>
+          <td colspan="9" class="border-0">
+            <div class="empty-state"><i class="bi bi-inbox"></i>Nenhum lançamento encontrado.</div>
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>

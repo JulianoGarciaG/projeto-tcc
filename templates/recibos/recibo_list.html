@@ -8,9 +8,14 @@
 <div class="section-card mb-4">
   <div class="section-card-body">
     <form method="get" class="row g-2 align-items-end">
-      <div class="col-md-9"><label class="form-label">Buscar</label><input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Quem pagou, assinante ou endereço..."></div>
+      <div class="col-md-9"><label class="form-label">Buscar</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Quem pagou, assinante ou endereço...">
+        </div>
+      </div>
       <div class="col-md-3 d-flex gap-2">
-        <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Filtrar</button>
+        <button type="submit" class="btn btn-graphite flex-fill"><i class="bi bi-funnel me-1"></i> Filtrar</button>
         <a href="{% url 'recibo_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
       </div>
     </form>
@@ -50,7 +55,11 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="text-center text-muted py-4">Nenhum recibo encontrado.</td></tr>
+        <tr>
+          <td colspan="7" class="border-0">
+            <div class="empty-state"><i class="bi bi-inbox"></i>Nenhum recibo encontrado.</div>
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>

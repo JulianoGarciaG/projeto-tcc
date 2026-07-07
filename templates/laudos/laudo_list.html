@@ -7,12 +7,17 @@
 <div class="section-card mb-4">
   <div class="section-card-body">
     <form method="get" class="row g-2 align-items-end">
-      <div class="col-md-6"><label class="form-label">Buscar</label><input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Endereço ou responsável..."></div>
+      <div class="col-md-6"><label class="form-label">Buscar</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Endereço ou responsável...">
+        </div>
+      </div>
       <div class="col-md-3"><label class="form-label">Tipo</label>
         <select name="tipo" class="form-select"><option value="">Todos</option>{% for val, label in tipo_choices %}<option value="{{ val }}" {% if tipo == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
       </div>
       <div class="col-md-3 d-flex gap-2">
-        <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Filtrar</button>
+        <button type="submit" class="btn btn-graphite flex-fill"><i class="bi bi-funnel me-1"></i> Filtrar</button>
         <a href="{% url 'laudo_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
       </div>
     </form>
@@ -56,7 +61,11 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="text-center text-muted py-4">Nenhum laudo encontrado.</td></tr>
+        <tr>
+          <td colspan="6" class="border-0">
+            <div class="empty-state"><i class="bi bi-inbox"></i>Nenhum laudo encontrado.</div>
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>

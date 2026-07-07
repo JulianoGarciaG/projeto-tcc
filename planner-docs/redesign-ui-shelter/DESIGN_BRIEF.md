@@ -53,7 +53,7 @@ Placeholder hachurado (cards sem foto):
 ## 2. Chrome comum (Sidebar + Topbar)
 
 ### Sidebar (graphite, 260px, sticky, altura 100vh)
-- Header 64px: quadradinho laranja "S" (logo) + wordmark "Shelter" branco.
+- Header 64px: quadradinho laranja "S" (logo) + logo shelter.
 - Nav com grupos rotulados (uppercase 10.5px, cor `#6B727C`):
   - **(topo)** Dashboard
   - **Cadastros:** Imóveis · Proprietários · Inquilinos
