@@ -5,11 +5,11 @@
 {% block nav_imoveis %}active{% endblock %}
 
 {% block content %}
-<div class="mb-3 d-flex gap-2 flex-wrap">
-  <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary btn-sm">
+<div class="mb-3 d-flex gap-2 flex-wrap align-items-center">
+  <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary btn-sm me-auto">
     <i class="bi bi-arrow-left me-1"></i> Voltar
   </a>
-  <a href="{% url 'imovel_edit' imovel.pk %}" class="btn btn-primary btn-sm">
+  <a href="{% url 'imovel_edit' imovel.pk %}" class="btn btn-graphite btn-sm">
     <i class="bi bi-pencil me-1"></i> Editar
   </a>
   <a href="{% url 'notificacao_create' imovel.pk %}" class="btn btn-outline-warning btn-sm">
@@ -165,7 +165,7 @@
               </td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="text-center text-muted py-2">Nenhuma notificação.</td></tr>
+            <tr><td colspan="5" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhuma notificação.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -195,7 +195,7 @@
               <td><span class="status-badge badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="text-center text-muted py-2">Nenhum contrato.</td></tr>
+            <tr><td colspan="5" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum contrato.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -228,7 +228,7 @@
               </td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-2">Nenhum laudo.</td></tr>
+            <tr><td colspan="4" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum laudo.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>

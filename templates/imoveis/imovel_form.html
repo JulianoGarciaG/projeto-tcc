@@ -22,23 +22,23 @@
         <div class="section-card-body">
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label">Proprietário *</label>
+              <label class="form-label">Proprietário <span class="text-danger">*</span></label>
               {{ form.proprietario }}
             </div>
             <div class="col-md-3">
-              <label class="form-label">Tipo *</label>
+              <label class="form-label">Tipo <span class="text-danger">*</span></label>
               {{ form.tipo }}
             </div>
             <div class="col-md-3">
-              <label class="form-label">Categoria *</label>
+              <label class="form-label">Categoria <span class="text-danger">*</span></label>
               {{ form.categoria }}
             </div>
             <div class="col-md-3">
-              <label class="form-label">Status *</label>
+              <label class="form-label">Status <span class="text-danger">*</span></label>
               {{ form.status }}
             </div>
             <div class="col-md-6">
-              <label class="form-label">Endereço *</label>
+              <label class="form-label">Endereço <span class="text-danger">*</span></label>
               {{ form.endereco }}
             </div>
             <div class="col-md-2">
@@ -54,7 +54,7 @@
               {{ form.bairro }}
             </div>
             <div class="col-md-4">
-              <label class="form-label">Cidade *</label>
+              <label class="form-label">Cidade <span class="text-danger">*</span></label>
               {{ form.cidade }}
             </div>
             <div class="col-md-4">
@@ -169,7 +169,7 @@
 
       <div class="d-flex gap-2 justify-content-end mb-4">
         <a href="{% url 'imovel_list' %}" class="btn btn-outline-secondary">Cancelar</a>
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-graphite">
           <i class="bi bi-check-lg me-1"></i> Salvar
         </button>
       </div>

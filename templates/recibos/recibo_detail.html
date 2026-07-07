@@ -5,9 +5,9 @@
 {% block nav_recibos %}active{% endblock %}
 
 {% block content %}
-<div class="mb-3 d-flex gap-2 flex-wrap">
-  <a href="{% url 'recibo_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a>
-  <a href="{% url 'recibo_edit' recibo.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i> Editar</a>
+<div class="mb-3 d-flex gap-2 flex-wrap align-items-center">
+  <a href="{% url 'recibo_list' %}" class="btn btn-outline-secondary btn-sm me-auto"><i class="bi bi-arrow-left me-1"></i> Voltar</a>
+  <a href="{% url 'recibo_edit' recibo.pk %}" class="btn btn-graphite btn-sm"><i class="bi bi-pencil me-1"></i> Editar</a>
   <a href="{% url 'recibo_gerar_pdf' recibo.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Regerar PDF</a>
   {% if recibo.arquivo %}
   <a href="{{ recibo.arquivo.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i> Recibo Gerado (PDF)</a>

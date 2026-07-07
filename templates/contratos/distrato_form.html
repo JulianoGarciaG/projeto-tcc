@@ -26,11 +26,11 @@
           {% csrf_token %}
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label">Tipo de Distrato *</label>
+              <label class="form-label">Tipo de Distrato <span class="text-danger">*</span></label>
               {{ form.tipo }}
             </div>
             <div class="col-md-6">
-              <label class="form-label">Data do Distrato *</label>
+              <label class="form-label">Data do Distrato <span class="text-danger">*</span></label>
               {{ form.data_distrato }}
             </div>
             <div class="col-md-6">

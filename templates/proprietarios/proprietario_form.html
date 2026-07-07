@@ -13,15 +13,15 @@
         <form method="post" novalidate>
           {% csrf_token %}
           <div class="row g-3">
-            <div class="col-12"><label class="form-label">Nome completo *</label>{{ form.nome }}</div>
-            <div class="col-md-6"><label class="form-label">CPF/CNPJ *</label>{{ form.cpf_cnpj }}</div>
+            <div class="col-12"><label class="form-label">Nome completo <span class="text-danger">*</span></label>{{ form.nome }}</div>
+            <div class="col-md-6"><label class="form-label">CPF/CNPJ <span class="text-danger">*</span></label>{{ form.cpf_cnpj }}</div>
             <div class="col-md-6"><label class="form-label">Telefone</label>{{ form.telefone }}</div>
             <div class="col-12"><label class="form-label">Email</label>{{ form.email }}</div>
           </div>
           {% if form.errors %}<div class="alert alert-danger mt-3 small">{% for f in form %}{% for e in f.errors %}<div>{{ f.label }}: {{ e }}</div>{% endfor %}{% endfor %}</div>{% endif %}
           <div class="d-flex gap-2 justify-content-end mt-4">
             <a href="{% url 'proprietario_list' %}" class="btn btn-outline-secondary">Cancelar</a>
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Salvar</button>
+            <button type="submit" class="btn btn-graphite"><i class="bi bi-check-lg me-1"></i> Salvar</button>
           </div>
         </form>
       </div>

@@ -5,9 +5,9 @@
 {% block nav_contratos %}active{% endblock %}
 
 {% block content %}
-<div class="mb-3 d-flex gap-2 flex-wrap">
-  <a href="{% url 'contrato_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a>
-  <a href="{% url 'contrato_edit' contrato.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i> Editar</a>
+<div class="mb-3 d-flex gap-2 flex-wrap align-items-center">
+  <a href="{% url 'contrato_list' %}" class="btn btn-outline-secondary btn-sm me-auto"><i class="bi bi-arrow-left me-1"></i> Voltar</a>
+  <a href="{% url 'contrato_edit' contrato.pk %}" class="btn btn-graphite btn-sm"><i class="bi bi-pencil me-1"></i> Editar</a>
   <a href="{% url 'contrato_gerar_pdf' contrato.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Regerar Contrato (PDF)</a>
   {% if contrato.documento_gerado %}
   <a href="{{ contrato.documento_gerado.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i> Contrato Gerado (PDF)</a>
@@ -82,29 +82,29 @@
 
         <div class="border-bottom pb-2 mb-2">
           <div class="d-flex align-items-center mb-1">
-            <strong>Comprovante de Renda</strong> <span class="badge bg-info text-dark ms-1">PF</span>
+            <strong>Comprovante de Renda</strong> <span class="status-badge badge-info ms-1">PF</span>
             {% if contrato.comprovante_renda %}
             <a href="{{ contrato.comprovante_renda.url }}" target="_blank" class="ms-auto"><i class="bi bi-file-earmark me-1"></i>Ver arquivo</a>
             {% endif %}
           </div>
           <form method="post" action="{% url 'contrato_anexar_documento' contrato.pk 'comprovante_renda' %}" enctype="multipart/form-data" class="d-flex gap-2">
             {% csrf_token %}
-            <input type="file" name="arquivo" class="form-control form-control-sm" accept="application/pdf,image/*">
-            <button type="submit" class="btn btn-primary btn-sm flex-shrink-0"><i class="bi bi-upload me-1"></i>Enviar</button>
+            <input type="file" name="arquivo" class="form-control form-control-sm input-dashed" accept="application/pdf,image/*">
+            <button type="submit" class="btn btn-graphite btn-sm flex-shrink-0"><i class="bi bi-upload me-1"></i>Enviar</button>
           </form>
         </div>
 
         <div class="border-bottom pb-2 mb-2">
           <div class="d-flex align-items-center mb-1">
-            <strong>Contrato Social</strong> <span class="badge bg-warning text-dark ms-1">PJ</span>
+            <strong>Contrato Social</strong> <span class="status-badge badge-warn ms-1">PJ</span>
             {% if contrato.contrato_social %}
             <a href="{{ contrato.contrato_social.url }}" target="_blank" class="ms-auto"><i class="bi bi-file-earmark me-1"></i>Ver arquivo</a>
             {% endif %}
           </div>
           <form method="post" action="{% url 'contrato_anexar_documento' contrato.pk 'contrato_social' %}" enctype="multipart/form-data" class="d-flex gap-2">
             {% csrf_token %}
-            <input type="file" name="arquivo" class="form-control form-control-sm" accept="application/pdf,image/*">
-            <button type="submit" class="btn btn-primary btn-sm flex-shrink-0"><i class="bi bi-upload me-1"></i>Enviar</button>
+            <input type="file" name="arquivo" class="form-control form-control-sm input-dashed" accept="application/pdf,image/*">
+            <button type="submit" class="btn btn-graphite btn-sm flex-shrink-0"><i class="bi bi-upload me-1"></i>Enviar</button>
           </form>
         </div>
 
@@ -117,8 +117,8 @@
           </div>
           <form method="post" action="{% url 'contrato_anexar_documento' contrato.pk 'recibo_chaves' %}" enctype="multipart/form-data" class="d-flex gap-2">
             {% csrf_token %}
-            <input type="file" name="arquivo" class="form-control form-control-sm" accept="application/pdf,image/*">
-            <button type="submit" class="btn btn-primary btn-sm flex-shrink-0"><i class="bi bi-upload me-1"></i>Enviar</button>
+            <input type="file" name="arquivo" class="form-control form-control-sm input-dashed" accept="application/pdf,image/*">
+            <button type="submit" class="btn btn-graphite btn-sm flex-shrink-0"><i class="bi bi-upload me-1"></i>Enviar</button>
           </form>
         </div>
 
@@ -131,8 +131,8 @@
           </div>
           <form method="post" action="{% url 'contrato_anexar_documento' contrato.pk 'comprovante_anual' %}" enctype="multipart/form-data" class="d-flex gap-2">
             {% csrf_token %}
-            <input type="file" name="arquivo" class="form-control form-control-sm" accept="application/pdf,image/*">
-            <button type="submit" class="btn btn-primary btn-sm flex-shrink-0"><i class="bi bi-upload me-1"></i>Enviar</button>
+            <input type="file" name="arquivo" class="form-control form-control-sm input-dashed" accept="application/pdf,image/*">
+            <button type="submit" class="btn btn-graphite btn-sm flex-shrink-0"><i class="bi bi-upload me-1"></i>Enviar</button>
           </form>
         </div>
       </div>
@@ -144,7 +144,7 @@
       <div class="section-card-header"><i class="bi bi-person-check me-1"></i> Fiador(es)</div>
       <div class="section-card-body">
         {% for f in fiadores %}
-        <div class="small {% if not forloop.last %}border-bottom pb-2 mb-2{% endif %}">
+        <div class="sunken-block small {% if not forloop.last %}mb-2{% endif %}">
           <strong>{{ f.nome }}</strong>{% if f.qualificacao %} — {{ f.qualificacao }}{% endif %}<br>
           RG/CPF: {{ f.rg_cpf }}
           {% if f.rg %}<br>RG: {{ f.rg }}{% endif %}
@@ -223,7 +223,7 @@
               <td>{% if l.comprovante %}<a href="{{ l.comprovante.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark"></i></a>{% else %}—{% endif %}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="text-center text-muted py-2">Nenhum lançamento.</td></tr>
+            <tr><td colspan="5" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum lançamento.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -249,7 +249,7 @@
               <td>{% if l.arquivo %}<a href="{{ l.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i></a>{% else %}—{% endif %}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-2">Nenhum laudo.</td></tr>
+            <tr><td colspan="4" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum laudo.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>

@@ -203,11 +203,34 @@ A sidebar é **sempre expandida no desktop** (o colapso introduzido na Rodada 2 
 
 ## 8. Formulários
 
-- **Inputs e selects:** fundo `#FFFFFF`, borda `1px solid #E0E0E0`, border-radius `6px`
-- **Focus:** borda `#F2B441`, box-shadow `0 0 0 3px rgba(242, 180, 65, 0.15)`
-- **Labels:** Gotham Medium, `0.87rem`, cor `#3A3A3A`
-- **Placeholders:** cor `#888888`
+Tokens do redesign "Shelter" (`static/css/shelter.css`); reagem ao tema
+claro/escuro via `data-theme` no `<html>`.
+
+- **Inputs e selects:** fundo `var(--surface)`, borda `1px solid
+  var(--border-strong)`, border-radius `8px`, altura mínima `42px`
+- **Focus:** borda `2px solid var(--brand)` + halo `0 0 0 3px
+  var(--focus-ring)` (padding compensado em `-1px` para o conteúdo não pular)
+- **Labels:** `.form-label` uppercase, `700`, `letter-spacing:.045em`,
+  `0.72rem`, cor `var(--muted)`
+- **Asterisco de campo obrigatório:** `*` envolto em
+  `<span class="text-danger">` (cor `var(--danger)`), logo após o texto do label
+- **Placeholders:** cor `var(--muted)`
 - **Textarea:** mesmas regras dos inputs, `resize: vertical`
+
+### 8.1. Padrão de formulário CRUD
+
+Os 9 formulários de card único (imóvel, notificação, inquilino, proprietário,
+contrato, renovação, distrato, recibo, lançamento) seguem a mesma receita
+(brief §3.5): link **Voltar** no topo; um ou mais `.section-card` "Dados de
+…" com grid de campos renderizados via `{{ form.campo }}`; erros de validação
+em `.alert-danger`; footer alinhado à direita com **Cancelar** (outline,
+`.btn-outline-secondary`, leva à listagem/detalhe) + **Salvar** (grafite,
+`.btn-graphite`, submit). Exceções semânticas: **Renovação** usa `.btn-info`
+("Registrar Renovação") e **Distrato** usa `.btn-danger` ("Confirmar
+Distrato"), acompanhando o código de cor dessas operações nas action bars de
+detalhe. Datepicker (Flatpickr) e máscaras (IMask) continuam via atributos
+`data-flatpickr`/`data-mask` definidos em `imoveis/forms.py` — o reskin não
+altera o markup do campo em si.
 
 ---
 
