@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guia do Claude Code (claude.ai/code) para este repositório.
 
 > Sistema Integrado de Gestão Imobiliária (GED e BI) — "Shelter"
 
@@ -8,24 +8,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Comandos essenciais
 
-Todos os comandos usam o Python do virtualenv em `venv/Scripts/` (Windows).
+Tudo roda pelo Python do virtualenv em `venv/Scripts/` (Windows).
 
 ```bash
-# Servidor de desenvolvimento
-venv/Scripts/python manage.py runserver
-
-# Migrações
+venv/Scripts/python manage.py runserver          # dev server
 venv/Scripts/python manage.py makemigrations
 venv/Scripts/python manage.py migrate
-
-# Verificação de integridade
-venv/Scripts/python manage.py check
-
-# Testes
-venv/Scripts/python manage.py test imoveis
-venv/Scripts/python manage.py test imoveis.tests.NomeDaClasse  # teste único
-
-# Criar superusuário
+venv/Scripts/python manage.py check              # integridade
+venv/Scripts/python manage.py test imoveis       # suíte (98 testes)
+venv/Scripts/python manage.py test imoveis.tests.NomeDaClasse   # teste único
 venv/Scripts/python manage.py createsuperuser
 ```
 
@@ -34,85 +25,84 @@ venv/Scripts/python manage.py createsuperuser
 ## Arquitetura
 
 ### Stack
-- **Backend:** Django 6.0 com SQLite (dev)
-- **Frontend:** Templates Django + CSS estático — sem build system. Libs via CDN em `base.html`: Bootstrap 5.3, Bootstrap Icons, **Flatpickr** (datepicker dd/mm/yyyy) e **IMask** (máscaras) — init automática em `static/js/masks.js` por atributos `data-flatpickr` / `data-mask="telefone|moeda"`
-- **PDF:** `xhtml2pdf` renderiza os templates de `templates/documentos/` (contrato, laudo, recibo)
-- **Uploads:** `Pillow` para imagens, PDFs salvos em `media/`
+- **Backend:** Django 6.0, SQLite (dev) / MySQL (prod) — ver [Configuração](#configuração).
+- **Frontend:** Templates Django + CSS estático, **sem build system**. Libs via CDN em `base.html`: Bootstrap 5.3, Bootstrap Icons, **Flatpickr** (datepicker dd/mm/yyyy), **IMask** (máscaras), **Chart.js** (dashboard). Init de máscaras/datepickers em `static/js/masks.js` por atributos `data-flatpickr` / `data-mask="telefone|moeda"`.
+- **PDF:** `xhtml2pdf` renderiza os templates de `templates/documentos/`.
+- **Uploads:** `Pillow` (imagens) + PDFs; storage plugável via `STORAGES` (ver convenções).
 
-### Estrutura de diretórios relevante
-- `core/` — configuração Django (`settings.py`, `urls.py`, `wsgi.py`)
-- `imoveis/` — único app do projeto (models, views, urls, forms, validators, signals, admin)
-- `templates/` — templates globais por módulo (`imoveis/`, `contratos/`, `financeiro/`, `ged/`, `laudos/`, `proprietarios/`, `inquilinos/`, `recibos/`, `documentos/` = PDFs)
-- `static/css/` — estilos globais (`custom.css`)
-- `static/js/` — `masks.js` (init de máscaras e datepickers)
-- `media/` — uploads de usuário (fotos, PDFs gerados/anexados)
+### Estrutura de diretórios
+- `core/` — configuração Django (`settings.py`, `urls.py`, `wsgi.py`).
+- `imoveis/` — **único app** (models, views, urls, forms, validators, signals, admin, `pdf.py`).
+- `templates/` — por módulo: `imoveis/`, `contratos/`, `financeiro/`, `ged/`, `laudos/`, `proprietarios/`, `inquilinos/`, `recibos/` + `documentos/` (PDFs).
+- `static/css/` — `shelter.css` (estilo global atual). `custom.css` está **órfão** (não referenciado).
+- `static/js/` — `masks.js`, `theme.js` (dark mode), `imovel-view-toggle.js`.
+- `media/` — uploads (fotos, PDFs gerados/anexados).
 
-### Modelos principais (`imoveis/models.py`)
-| Modelo | Papel |
+### Modelos (`imoveis/models.py`) — referência rápida
+Detalhamento completo de campos/relacionamentos em **[docs/03_modelagem_dados.md](docs/03_modelagem_dados.md)**.
+
+| Modelo | Papel / gotcha |
 |---|---|
-| `Proprietario` | Dono do imóvel (`cpf_cnpj` validado) |
-| `Imovel` | Imóvel com `numero`/`complemento` e status `vago`/`ocupado` (gerenciado por signal); **não tem** `valor_aluguel` — o valor vem do contrato ativo |
-| `FotoImovel` | Fotos vinculadas ao imóvel |
-| `Inquilino` | Locatário (`faixa_renda` em faixas de R$, não mais em salários mínimos; CPF/CNPJ/RG/telefone validados) |
-| `Contrato` | Contrato de locação (Imovel ↔ Inquilino); PDF gerado em `documento_gerado`; documentos GED (`comprovante_renda`/`contrato_social`/`recibo_chaves`/`comprovante_anual`) anexados individualmente pela tela de detalhe via `contrato_anexar_documento` (não fazem parte do form de criação/edição) |
-| `Fiador` | Fiadores do contrato (`rg_cpf` validado) |
-| `LaudoVistoria` | Laudo de vistoria (tipos `entrada`/`saida`); `contrato` é **obrigatório** (`PROTECT`) e o select é dependente do imóvel escolhido (endpoint `contratos_por_imovel_json`); `documento_gerado` = PDF do sistema, `arquivo` = anexo do laudo assinado (upload só no detail) |
-| `ComodoTemplate` / `ItemVistoriaTemplate` | Catálogo do checklist de vistoria (seed na migração 0004: 5 cômodos, 32 itens) |
-| `ItemVistoria` | Itens vistoriados de um laudo (estado bom/regular/ruim) |
-| `TestemunhaLaudo` | Testemunhas do laudo |
-| `Recibo` | Recibo de pagamento; `imovel`/`contrato` obrigatórios (`PROTECT`), período com `periodo_inicio`/`periodo_fim` |
-| `Lancamento` | Lançamento financeiro (único módulo financeiro — `Entrada`/`Saida` foram removidos na Rodada 2; não recriar) |
-| `Notificacao` | Notificações de compliance |
-| `RenovacaoContrato` | Renovações de contrato |
-| `Distrato` | Distratos (rescisões) |
-| `DocumentoGerado` | **Versão imutável** de PDF gerado (GED versionado, Rodada 4); 3 FKs opcionais (`contrato`/`laudo`/`recibo`, uma preenchida via `CheckConstraint`), `numero_versao` sequencial por origem, `sha256`, `gerado_por`; `upload_to` = `ged/{tipo}/{origem_pk}/v{numero_versao}/`; campos legados `*.documento_gerado`/`Recibo.arquivo` são espelho da última versão |
+| `Proprietario` / `Inquilino` / `Fiador` | Partes; CPF/CNPJ/RG/telefone validados (ver convenções). `Inquilino.faixa_renda` em faixas de R$. |
+| `Imovel` | `numero`/`complemento`; status `vago`/`ocupado` via **signal**. **Não tem** `valor_aluguel` (vem do contrato ativo). |
+| `FotoImovel` | Fotos do imóvel. |
+| `Contrato` | Imóvel ↔ Inquilino. 4 docs GED (`comprovante_renda`/`contrato_social`/`recibo_chaves`/`comprovante_anual`) são anexados no **detail** via `contrato_anexar_documento`, não no form. |
+| `LaudoVistoria` | Tipos `entrada`/`saida`; `contrato` **obrigatório** (`PROTECT`), select dependente do imóvel (`contratos_por_imovel_json`). `arquivo` = anexo assinado (upload só no detail). |
+| `ComodoTemplate` / `ItemVistoriaTemplate` | Catálogo do checklist (seed migração 0004: 5 cômodos, 32 itens). |
+| `ItemVistoria` / `TestemunhaLaudo` | Itens vistoriados (bom/regular/ruim) e testemunhas de um laudo. |
+| `Recibo` | `imovel`/`contrato` obrigatórios (`PROTECT`); período `periodo_inicio`/`periodo_fim`. |
+| `Lancamento` | **Único** módulo financeiro (`Entrada`/`Saida` removidos — não recriar). |
+| `Notificacao` / `RenovacaoContrato` / `Distrato` | Compliance, renovações e distratos. |
+| `DocumentoGerado` | **Versão imutável** de PDF (GED versionado). FKs opcionais `contrato`/`laudo`/`recibo` (uma via `CheckConstraint`), `numero_versao` sequencial por origem, `sha256`, `gerado_por`. Campos legados `*.documento_gerado`/`Recibo.arquivo` são **espelho** da última versão. |
 
 ### Signal crítico (`imoveis/signals.py`)
-`Imovel.status` é atualizado automaticamente via `post_save`/`post_delete` em `Contrato`. Sempre que um contrato é criado, alterado ou excluído, o sistema verifica se há contratos `ativo` vinculados ao imóvel e define o status como `ocupado` ou `vago`. O signal é registrado em `imoveis/apps.py`.
+`Imovel.status` é recalculado por `post_save`/`post_delete` de `Contrato` (há contrato `ativo` → `ocupado`, senão `vago`). Registrado em `imoveis/apps.py`. Regras de negócio completas em **[docs/04_regras_de_negocio.md](docs/04_regras_de_negocio.md)**.
 
 ---
 
-## ESTADO ATUAL
+## Convenções obrigatórias
 
-### Consolidado
-- **Rodada 1** (`PLANO_GERACAO_DOCUMENTOS.md`): geração de PDF para Contrato/Laudo/Recibo (xhtml2pdf), models `Recibo`/`ComodoTemplate`/`ItemVistoriaTemplate`/`ItemVistoria`/`TestemunhaLaudo`, CRUD de Recibos, seed do catálogo de vistoria.
-- **Rodada 2** (`PLANO_AJUSTES_RODADA2.md`, 25 itens, migrações 0005–0006): PDF deixou de ser automático (padrão PRG; botão "Regerar PDF" é o único gatilho); toasts Bootstrap para mensagens; colapso da sidebar no desktop (persistido em `localStorage`) — **removido na Rodada 3, ver abaixo**; máscaras IMask + Flatpickr; validação de CPF/CNPJ/RG; `Imovel.numero`/`complemento`; remoção de `Imovel.valor_aluguel`, `Proprietario.endereco`, `Contrato.arquivo`, `Recibo.proveniente_sitio`, tipo `periodica` de laudo e do módulo Entrada/Saída; `Inquilino.faixa_renda` + `observacoes`; select de contrato dependente do imóvel no laudo (endpoint `contratos_por_imovel_json`); Recibo com vínculos obrigatórios e período em duas datas; anexo do laudo assinado via `laudo_anexar_arquivo`.
-- **Rodada 3** (`planner-docs/melhorias-validacao-visualizacao-documentos/` + `planner-docs/remover-colapso-sidebar-e-ajustar-logo/`, migração 0007–0008): novos validators `validate_rg_cpf` (`Fiador.rg_cpf`) e `validate_telefone` (`Proprietario.telefone`/`Inquilino.telefone`); `MinValueValidator(1)`/`MaxValueValidator(31)` em `Contrato.dia_vencimento`; filtro de período do Dashboard migrado para `DashboardFiltroForm` (Flatpickr dd/mm/aaaa, antes era `input type="date"` nativo); preview da Planta/Projeto na tela de detalhe do imóvel; aumento do espaço de assinatura no PDF do laudo; os 4 campos de documento GED do Contrato (`comprovante_renda`/`contrato_social`/`recibo_chaves`/`comprovante_anual`) saíram do `ContratoForm` e passaram a ser anexados na tela de detalhe via `contrato_anexar_documento` (mesmo padrão do `laudo_anexar_arquivo`); remoção completa do colapso da sidebar no desktop (sempre expandida — sem toggle, sem `localStorage`, sem `.sidebar-collapsed`/`.brand-compact`) e ajuste do CSS da logo (`#sidebar .sidebar-brand img`) para preencher a largura do container.
-- **Rodada 4** (`planner-docs/redesign-pdfs-documentos-gerados/`, migrações 0009–0010): **redesign visual dos 3 PDFs** (Contrato/Laudo/Recibo) para replicar 1:1 os mockups de `docs/pdf-models/*.html`, mantendo xhtml2pdf — `base_pdf.html` concentra o CSS comum, cada template filho tem o CSS exclusivo (laudo: `.data-table`/`.badge-*`; recibo: caixa de destaque da quantia); logo sempre `Shelter_LOGO.jpg`; cabeçalho usa `{{ objeto.pk }}` + data de criação (sem campo de número formatado). **GED versionado**: novo model imutável `DocumentoGerado` (migração 0009; 0010 registra retroativamente os PDFs existentes como versão 1); `imoveis/pdf.py` ganhou `registrar_documento_gerado()` e `gerar_e_anexar(..., usuario=None)` (cria versão sequencial por origem + espelha no FileField legado); views `*_gerar_pdf` passam `request.user`; view `documentos` (GED) lista **todas** as versões via `DocumentoGerado.objects.filter(tipo=...)`; `DocumentoGeradoAdmin` somente leitura. **Storage plugável**: `STORAGES` (Django 4.2+) via `STORAGE_BACKEND` no `.env` (`filesystem` default / `s3` preparado mas não ativado — `ImproperlyConfigured` se setado sem libs; `boto3`/`django-storages` não instalados).
-- **Correção visual dos PDFs** (`planner-docs/fix-visual-pdfs-gerados/`): ajustes **100% CSS/HTML** dos templates de PDF (`base_pdf.html` + `{contrato,laudo,recibo}_pdf.html`) para compatibilizar o redesign da Rodada 4 com o **xhtml2pdf 0.2.17** — `text-transform: uppercase` é ignorado pelo motor (textos estáticos passam a CAIXA ALTA literal; valores dinâmicos usam `|upper`), `margin: ... auto ...` não é suportado (a barra `.doc-title-underline` é centralizada via `<table align="center">`, não por `margin: auto`) e `border` em `<div>` com múltiplos filhos block-level vira grade (o wrapper `.card` foi eliminado — `border`/`padding` migraram para `.cards td`). Nenhum model/view/form/signal/migration alterado.
-- Suíte de testes: **72 testes** em `imoveis/tests.py` (nova classe `DocumentoGeradoTests` + asserts de PDF ajustados ao redesign; helper `limpar_arquivos_gerados()` no `tearDown`), todos passando.
-
-
-### Convenções obrigatórias (estabelecidas nas Rodadas 1–4)
-- **PDF nunca é gerado ao salvar** — create/edit fazem redirect + toast; só as views `*_gerar_pdf` geram/baixam PDF.
-- **GED versionado é a fonte de verdade dos PDFs gerados** (Rodada 4) — cada geração de PDF cria uma nova versão **imutável** em `DocumentoGerado` (`numero_versao` sequencial **por origem**; `save()` bloqueia updates). Sempre gerar via `imoveis/pdf.py:gerar_e_anexar(instance, ..., usuario=request.user)`, nunca gravar direto no FileField legado — os campos `Contrato.documento_gerado`/`LaudoVistoria.documento_gerado`/`Recibo.arquivo` são **espelho automático** da última versão, não fonte de verdade. Não editar/deletar uma versão para "corrigir"; gerar outra.
-- **Uploads via storage `default` do `STORAGES`** (Rodada 4) — plugável por `STORAGE_BACKEND` no `.env` (mesmo padrão de `DB_ENGINE`); não instalar `boto3`/`django-storages` nem trocar o backend `s3` sem seguir o passo a passo comentado em `core/settings.py`.
-- **Campos de data novos** usam `_date_widget()` de `imoveis/forms.py` (Flatpickr dd/mm/yyyy); **moeda** usa `_moeda_widget()` + campo em `localized_fields` (aceita "1500,00"; máscara **sem** separador de milhar — `USE_THOUSAND_SEPARATOR` está desligado, não ligar).
-- **Documentos**: `imoveis/validators.py` tem `validate_cpf`, `validate_cnpj`, `validate_cpf_cnpj` (condicional 11/14 dígitos), `validate_rg`, `validate_rg_cpf` (condicional: 11 dígitos → CPF, senão RG — usado em `Fiador.rg_cpf`) e `validate_telefone` (exige 10 ou 11 dígitos incluindo DDD, com ou sem máscara — usado em `Proprietario.telefone`/`Inquilino.telefone`) — reutilizar, não duplicar.
-- **Checklist do laudo**: laudo novo exige `item_vistoria_formset_factory(extra=len(catalogo))`; `extra=0` renderiza 0 linhas e o checklist some.
-- **Templates de PDF (xhtml2pdf 0.2.17)**: o motor **ignora `text-transform`** e **não suporta `margin: ... auto ...`** — escrever textos estáticos já em CAIXA ALTA (ou aplicar `|upper` em valores dinâmicos) e centralizar com `<table align="center">`, nunca `margin: auto`; cartões (`.cards`) recebem `border`/`padding` na `<td>` (não existe wrapper `.card` — `border` em `<div>` com múltiplos filhos block-level renderiza como grade). As regras CSS `text-transform` permanecem nos templates só como documentação da intenção visual. Detalhado em `docs/07_design_ui_ux.md` §17.
-- **Encoding (Windows)**: nunca editar templates com `Get-Content`/`Set-Content` do PowerShell 5.1 — corrompe UTF-8. Usar o Edit tool.
+- **PDF nunca é gerado ao salvar** — create/edit fazem redirect + toast (PRG); só as views `*_gerar_pdf` geram/baixam PDF.
+- **GED é a fonte de verdade dos PDFs** — cada geração cria uma versão **imutável** em `DocumentoGerado` (`save()` bloqueia updates). Gerar sempre via `imoveis/pdf.py:gerar_e_anexar(instance, ..., usuario=request.user)`; nunca gravar direto no FileField legado. Para "corrigir", gerar outra versão — não editar/deletar.
+- **Uploads via storage `default` do `STORAGES`** — plugável por `STORAGE_BACKEND` no `.env`. Não instalar `boto3`/`django-storages` nem ativar o backend `s3` sem seguir o passo a passo comentado em `core/settings.py`.
+- **Campos de data** usam `_date_widget()` (`imoveis/forms.py`, Flatpickr dd/mm/yyyy); **moeda** usa `_moeda_widget()` + `localized_fields` (aceita "1500,00"; **sem** separador de milhar — `USE_THOUSAND_SEPARATOR` fica desligado).
+- **Validadores** (`imoveis/validators.py`): `validate_cpf`, `validate_cnpj`, `validate_cpf_cnpj`, `validate_rg`, `validate_rg_cpf` (`Fiador.rg_cpf`), `validate_telefone` (`Proprietario`/`Inquilino.telefone`). **Reutilizar, não duplicar.**
+- **Checklist do laudo**: laudo novo exige `item_vistoria_formset_factory(extra=len(catalogo))` — `extra=0` renderiza 0 linhas e o checklist some.
+- **Templates de PDF (xhtml2pdf 0.2.17)**: o motor **ignora `text-transform`** e **não suporta `margin: ... auto ...`** — textos estáticos em CAIXA ALTA literal (ou `|upper`), centralizar com `<table align="center">`; `border`/`padding` de cartão vão na `<td>` (não em `<div>` com múltiplos filhos block-level). Detalhes em [docs/07_design_ui_ux.md](docs/07_design_ui_ux.md) §17.
+- **Camada visual**: estilo global em `static/css/shelter.css` (não `custom.css`). Usar tokens (`var(--brand)`/`var(--ink)`/`var(--surface)`/pares `--x`/`--x-bg`), nunca hex da paleta antiga. Overrides de Bootstrap redefinem as vars `--bs-*` e o `<link>` do `shelter.css` vem **depois** do bundle. Todo estilo novo funciona nos dois temas (`data-theme` no `<html>`) — testar claro **e** escuro.
+- **Encoding (Windows)**: nunca editar templates com `Get-Content`/`Set-Content` do PowerShell 5.1 (corrompe UTF-8) — usar o Edit tool.
 
 ---
 
-## Banco de dados
-Controlado por variáveis de ambiente no `.env`:
-- `DB_ENGINE=django.db.backends.sqlite3` (padrão dev)
-- `DB_ENGINE=django.db.backends.mysql` + `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` (prod)
+## Configuração
 
-## Autenticação
-Sistema de autenticação padrão do Django. Todas as views exigem login (`@login_required`). Rotas: `/login/`, `/logout/`. Após login redireciona para `/` (dashboard).
-
-## Dashboard (BI)
-A view do dashboard agrega dados de `Lancamento` para gerar gráficos de barras e pizza, passados como contexto ao template `dashboard.html`.
+- **Banco** (`.env`): `DB_ENGINE=django.db.backends.sqlite3` (dev) ou `django.db.backends.mysql` + `DB_NAME`/`DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT` (prod).
+- **Storage** (`.env`): `STORAGE_BACKEND=filesystem` (default) / `s3` (preparado, não ativado).
+- **Auth**: padrão Django; todas as views com `@login_required`. Rotas `/login/`, `/logout/`; login redireciona para `/` (dashboard).
+- **Dashboard (BI)**: agrega `Lancamento` em gráficos de barras/pizza (Chart.js lê CSS vars e redesenha no toggle de tema).
 
 ---
 
-## Documentação do projeto em `/docs/`
+## Documentação
+
+Referência viva do sistema em `/docs/`:
 
 | Arquivo | Conteúdo |
 |---|---|
-| [01_visao_geral.md](docs/01_visao_geral.md) | Descrição do sistema, público-alvo, stack tecnológica, módulos e requisitos funcionais |
-| [03_modelagem_dados.md](docs/03_modelagem_dados.md) | Entidades, campos, tipos, relacionamentos e caminhos de upload |
-| [04_regras_de_negocio.md](docs/04_regras_de_negocio.md) | Signals, automações, restrições, campos condicionais, GED, dashboard e acesso |
-| [07_design_ui_ux.md](docs/07_design_ui_ux.md) | Paleta, tipografia, layout, componentes, responsividade e bibliotecas frontend |
+| [01_visao_geral.md](docs/01_visao_geral.md) | Sistema, público-alvo, stack, módulos, requisitos funcionais |
+| [03_modelagem_dados.md](docs/03_modelagem_dados.md) | Entidades, campos, relacionamentos, caminhos de upload |
+| [04_regras_de_negocio.md](docs/04_regras_de_negocio.md) | Signals, automações, restrições, GED, dashboard, acesso |
+| [07_design_ui_ux.md](docs/07_design_ui_ux.md) | Paleta/tokens, tipografia, layout, componentes, responsividade, dark mode, PDFs |
+
+### Histórico de rodadas (o "porquê" de cada mudança)
+O detalhamento de cada entrega vive nos planos, não aqui:
+
+| Rodada / entrega | Onde |
+|---|---|
+| Geração de PDFs (Rodada 1) | [docs/PLANO_GERACAO_DOCUMENTOS.md](docs/PLANO_GERACAO_DOCUMENTOS.md) |
+| Ajustes (Rodada 2) | [docs/PLANO_AJUSTES_RODADA2.md](docs/PLANO_AJUSTES_RODADA2.md) |
+| Validação/visualização + sidebar/logo (Rodada 3) | `planner-docs/melhorias-validacao-visualizacao-documentos/`, `planner-docs/remover-colapso-sidebar-e-ajustar-logo/` |
+| Redesign dos PDFs + GED versionado (Rodada 4) | `planner-docs/redesign-pdfs-documentos-gerados/` |
+| Correção visual dos PDFs | `planner-docs/fix-visual-pdfs-gerados/` |
+| Redesign Visual UI (paleta/tokens, dark mode, `shelter.css`) | `planner-docs/redesign-ui-shelter/` |
+| Contrato jurídico | `planner-docs/contrato-juridico-completo/` |

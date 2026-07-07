@@ -3,6 +3,32 @@
 {% block page_title %}<i class="bi bi-clipboard-check me-2"></i>{{ titulo }}{% endblock %}
 {% block nav_laudos %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* Segmented de estado sobre o <select> do formset (progressive enhancement):
+     o select só é ocultado depois de o JS marcar .enhanced no wrapper. */
+  .seg-estado-wrap.enhanced > select { display: none; }
+  .seg-estado .segmented-item.active[data-val="bom"]     { color: var(--ok); }
+  .seg-estado .segmented-item.active[data-val="regular"] { color: var(--warn); }
+  .seg-estado .segmented-item.active[data-val="ruim"]    { color: var(--danger); }
+  /* Cabeçalho de cômodo (header sunken) e cabeçalho de colunas do checklist. */
+  .checklist-table > tbody > tr.comodo-head > th {
+    background: var(--sunken);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: .85rem;
+    border-top: 1px solid var(--border);
+  }
+  .checklist-table > tbody > tr.col-head > th {
+    color: var(--muted);
+    font-size: .69rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-10">
@@ -13,14 +39,17 @@
 
       <!-- Dados do Laudo -->
       <div class="section-card mb-4">
-        <div class="section-card-header"><i class="bi bi-clipboard-check me-1"></i> Dados do Laudo</div>
+        <div class="section-card-header"><i class="bi bi-clipboard-check"></i> Dados do Laudo</div>
         <div class="section-card-body">
           <div class="row g-3">
-            <div class="col-md-6"><label class="form-label">Imóvel *</label>{{ form.imovel }}</div>
-            <div class="col-md-6"><label class="form-label">Contrato *</label>{{ form.contrato }}</div>
-            <div class="col-md-4"><label class="form-label">Tipo *</label>{{ form.tipo }}</div>
-            <div class="col-md-4"><label class="form-label">Data *</label>{{ form.data }}</div>
-            <div class="col-md-4"><label class="form-label">Responsável pela Vistoria *</label>{{ form.responsavel }}</div>
+            <div class="col-md-6"><label class="form-label">Imóvel <span class="text-danger">*</span></label>{{ form.imovel }}</div>
+            <div class="col-md-6">
+              <label class="form-label">Contrato <span class="text-danger">*</span></label>{{ form.contrato }}
+              <div class="form-text">Filtrado pelo imóvel selecionado.</div>
+            </div>
+            <div class="col-md-4"><label class="form-label">Tipo <span class="text-danger">*</span></label>{{ form.tipo }}</div>
+            <div class="col-md-4"><label class="form-label">Data <span class="text-danger">*</span></label>{{ form.data }}</div>
+            <div class="col-md-4"><label class="form-label">Responsável pela Vistoria <span class="text-danger">*</span></label>{{ form.responsavel }}</div>
             <div class="col-12"><label class="form-label">Observações Gerais</label>{{ form.observacoes }}</div>
           </div>
         </div>
@@ -28,21 +57,21 @@
 
       <!-- Itens vistoriados por cômodo -->
       <div class="section-card mb-4">
-        <div class="section-card-header"><i class="bi bi-house-check me-1"></i> Cômodos e Itens Vistoriados</div>
+        <div class="section-card-header"><i class="bi bi-house-check"></i> Cômodos e Itens Vistoriados</div>
         <div class="section-card-body">
-          <p class="text-muted small mb-3">Selecione o estado apenas dos itens vistoriados — itens sem estado não entram no laudo.</p>
+          <div class="alert alert-info small mb-3">Selecione o estado apenas dos itens vistoriados — itens sem estado não entram no laudo.</div>
           {{ item_formset.management_form }}
           <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
+            <table class="table table-sm align-middle mb-0 checklist-table">
               <tbody>
                 {% for f in item_formset %}
                 {% ifchanged f.comodo.value %}
-                <tr class="table-light"><th colspan="4">{{ f.comodo.value }}</th></tr>
-                <tr class="small text-muted"><th style="width:40%;">Item</th><th style="width:20%;">Estado</th><th>Observação</th><th style="width:5%;"></th></tr>
+                <tr class="comodo-head"><th colspan="4">{{ f.comodo.value }}</th></tr>
+                <tr class="col-head"><th style="width:40%;">Item</th><th style="width:25%;">Estado</th><th>Observação</th><th style="width:5%;"></th></tr>
                 {% endifchanged %}
                 <tr>
                   <td>{{ f.item.value }}{{ f.comodo }}{{ f.item }}{{ f.ordem }}{{ f.id }}</td>
-                  <td>{{ f.estado }}</td>
+                  <td><div class="seg-estado-wrap">{{ f.estado }}</div></td>
                   <td>{{ f.observacao }}</td>
                   <td>
                     {% if f.instance.pk %}
@@ -59,25 +88,40 @@
 
       <!-- Assinatura e Testemunhas -->
       <div class="section-card mb-4">
-        <div class="section-card-header"><i class="bi bi-pen me-1"></i> Assinatura e Testemunhas</div>
+        <div class="section-card-header">
+          <i class="bi bi-pen"></i> Assinatura e Testemunhas
+          <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" id="add-testemunha"><i class="bi bi-plus-lg me-1"></i> Adicionar</button>
+        </div>
         <div class="section-card-body">
-          <div class="row g-3 mb-3">
+          <div class="row g-3 mb-4">
             <div class="col-md-8"><label class="form-label">Local da Assinatura</label>{{ form.local_assinatura }}</div>
             <div class="col-md-4"><label class="form-label">Data da Assinatura</label>{{ form.data_assinatura }}</div>
           </div>
           {{ testemunha_formset.management_form }}
-          {% for tf in testemunha_formset %}
-          <div class="row g-2 mb-2 align-items-end">
-            <div class="col-md-6"><label class="form-label small">Testemunha — Nome</label>{{ tf.nome }}</div>
-            <div class="col-md-4"><label class="form-label small">CPF</label>{{ tf.cpf }}</div>
-            <div class="col-md-2">
-              {% if tf.instance.pk %}
-              <div class="form-check">{{ tf.DELETE }}<label class="form-check-label small text-danger" for="{{ tf.DELETE.id_for_label }}">Del</label></div>
-              {% endif %}
-              {{ tf.id }}
+          <div id="testemunhas-rows">
+            {% for tf in testemunha_formset %}
+            <div class="row g-2 mb-2 align-items-end testemunha-row">
+              <div class="col-md-6"><label class="form-label small">Testemunha — Nome</label>{{ tf.nome }}</div>
+              <div class="col-md-4"><label class="form-label small">CPF</label>{{ tf.cpf }}</div>
+              <div class="col-md-2">
+                {% if tf.instance.pk %}
+                <div class="form-check">{{ tf.DELETE }}<label class="form-check-label small text-danger" for="{{ tf.DELETE.id_for_label }}">Del</label></div>
+                {% endif %}
+                {{ tf.id }}
+              </div>
             </div>
+            {% endfor %}
           </div>
-          {% endfor %}
+          <!-- Template do empty_form para novas testemunhas (clonado via JS) -->
+          <template id="testemunha-empty-form">
+            <div class="row g-2 mb-2 align-items-end testemunha-row">
+              <div class="col-md-6"><label class="form-label small">Testemunha — Nome</label>{{ testemunha_formset.empty_form.nome }}</div>
+              <div class="col-md-4"><label class="form-label small">CPF</label>{{ testemunha_formset.empty_form.cpf }}</div>
+              <div class="col-md-2">
+                <button type="button" class="btn btn-outline-danger btn-sm remover-testemunha"><i class="bi bi-trash"></i></button>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -91,7 +135,7 @@
 
       <div class="d-flex gap-2 justify-content-end mb-4">
         <a href="{% url 'laudo_list' %}" class="btn btn-outline-secondary">Cancelar</a>
-        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Salvar</button>
+        <button type="submit" class="btn btn-graphite"><i class="bi bi-check-lg me-1"></i> Salvar</button>
       </div>
     </form>
   </div>
@@ -131,6 +175,73 @@
 
   imovelSelect.addEventListener('change', atualizarContratos);
   atualizarContratos();
+})();
+
+(function () {
+  // Segmented control visual sobre o <select> real de estado (progressive
+  // enhancement): o select só é ocultado depois que o segmented é montado.
+  // O segmento escreve no select via .value + evento 'change' para manter a
+  // validação do Django e qualquer listener intactos.
+  document.querySelectorAll('.seg-estado-wrap').forEach(function (wrap) {
+    const select = wrap.querySelector('select');
+    if (!select) return;
+
+    const seg = document.createElement('div');
+    seg.className = 'segmented seg-estado';
+
+    // Constrói os botões a partir das próprias opções do select (ignora a
+    // opção vazia "---------", que representa "item não vistoriado").
+    Array.prototype.forEach.call(select.options, function (opt) {
+      if (opt.value === '') return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'segmented-item';
+      btn.dataset.val = opt.value;
+      btn.textContent = opt.textContent;
+      if (select.value === opt.value) btn.classList.add('active');
+      btn.addEventListener('click', function () {
+        const jaAtivo = btn.classList.contains('active');
+        seg.querySelectorAll('.segmented-item').forEach(function (b) { b.classList.remove('active'); });
+        if (jaAtivo) {
+          // Clicar no segmento ativo deseleciona → volta a "sem estado".
+          select.value = '';
+        } else {
+          btn.classList.add('active');
+          select.value = opt.value;
+        }
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      seg.appendChild(btn);
+    });
+
+    wrap.appendChild(seg);
+    wrap.classList.add('enhanced');
+  });
+})();
+
+(function () {
+  // Adição dinâmica de linhas de testemunha (formset inline do Django).
+  const addBtn = document.getElementById('add-testemunha');
+  const rows = document.getElementById('testemunhas-rows');
+  const tmpl = document.getElementById('testemunha-empty-form');
+  const totalInput = document.getElementById('id_testemunhas-TOTAL_FORMS');
+  if (!addBtn || !rows || !tmpl || !totalInput) return;
+
+  addBtn.addEventListener('click', function () {
+    const index = parseInt(totalInput.value, 10);
+    const html = tmpl.innerHTML.replace(/__prefix__/g, index);
+    const temp = document.createElement('div');
+    temp.innerHTML = html.trim();
+    const novaLinha = temp.firstElementChild;
+    rows.appendChild(novaLinha);
+    totalInput.value = index + 1;
+  });
+
+  rows.addEventListener('click', function (e) {
+    const btn = e.target.closest('.remover-testemunha');
+    if (!btn) return;
+    btn.closest('.testemunha-row').remove();
+  });
 })();
 </script>
 {% endblock %}

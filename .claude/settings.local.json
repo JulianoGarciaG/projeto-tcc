@@ -55,7 +55,8 @@
       "Bash(find .claude -iname \"*.md\")",
       "Skill(dataviz)",
       "Bash(node scripts/validate_palette.js \"#1F7A4D,#C0392B,#B5730E\" --mode light --surface \"#FFFFFF\")",
-      "Bash(node scripts/validate_palette.js \"#4FB07E,#E0685A,#E0A044\" --mode dark --surface \"#1E2126\")"
+      "Bash(node scripts/validate_palette.js \"#4FB07E,#E0685A,#E0A044\" --mode dark --surface \"#1E2126\")",
+      "Bash(grep -nP '^#{1,3} ' docs/07_design_ui_ux.md)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Pichau\\AppData\\Local\\Temp\\claude\\c--Users-Pichau-projeto-tcc\\f1a45682-3382-42a9-96e1-ace329e59eac\\scratchpad",

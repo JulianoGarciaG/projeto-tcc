@@ -196,7 +196,7 @@ a { text-decoration: none; }
 
 /* Logo (imagem branca do projeto, ajuste da Rodada 3) centralizada
    no header de 64px */
-#sidebar .sidebar-brand { justify-content: center; }
+#sidebar .sidebar-brand { justify-content: center; min-height: 106px;}
 
 #sidebar .sidebar-brand img {
   display: block;

@@ -176,28 +176,31 @@ A sidebar é **sempre expandida no desktop** (o colapso introduzido na Rodada 2 
 
 ## 7. Botões
 
-### Botão Principal (ação primária)
-- Fundo: `#F2B441`
-- Texto: `#3A3A3A`, Gotham Medium
-- Border-radius: `6px`
-- Padding: `0.5rem 1.1rem`
-- Hover: opacidade `0.88` ou leve escurecimento do fundo
+Tokens do redesign "Shelter" (`static/css/shelter.css`); os overrides
+redefinem as variáveis `--bs-btn-*` do Bootstrap, então os estados
+(hover/active/disabled/focus) reagem ao tema claro/escuro via `data-theme`.
 
-### Botão Secundário (outline)
-- Fundo: transparente
-- Borda: `1px solid #3A3A3A`
-- Texto: `#3A3A3A`
-- Hover: fundo `#3A3A3A`, texto `#FFFFFF`
+### Botão Principal laranja (`.btn-primary`)
+- Fundo: `var(--brand)`
+- Texto: `var(--brand-contrast)`, peso `700`
+- Hover: fundo `var(--brand-hover)`
 
-### Botão de Perigo (exclusão)
-- Fundo: `#C62828`
+### Botão Grafite (ação primária escura — `.btn-graphite` / `.btn-secondary` / `.btn-dark`)
+- Fundo: `var(--graphite)`
 - Texto: `#FFFFFF`
-- Hover: leve escurecimento
+- Hover: fundo `var(--graphite-hi)`
+- Uso: **Salvar** nos formulários CRUD (§8.1)
 
-### Botão Outline Perigo
-- Borda: `1px solid #C62828`
-- Texto: `#C62828`
-- Hover: fundo `#C62828`, texto `#FFFFFF`
+### Botão Secundário / outline neutro (`.btn-outline-secondary`)
+- Fundo: `var(--surface)`
+- Borda: `1px solid var(--border-strong)`
+- Texto: `var(--ink)`
+- Hover: fundo `var(--sunken)`
+- Uso: **Voltar** / **Cancelar** / ação de linha "Ver"
+
+### Botão de Perigo (`.btn-danger`) e Outline Perigo (`.btn-outline-danger`)
+- Sólido: fundo `var(--danger)`, texto `#FFFFFF`
+- Outline: borda/texto `var(--danger)`, hover preenche com `var(--danger)`
 
 ---
 
@@ -236,38 +239,41 @@ altera o markup do campo em si.
 
 ## 9. Cards e Superfícies
 
+Superfícies do redesign "Shelter"; reagem ao tema via `data-theme` no `<html>`.
+
 ### Section Card (container padrão)
-- Fundo: `#F7F7F7`
-- Border-radius: `6px`
-- Sombra: `0 1px 3px rgba(0, 0, 0, 0.06)`
-- **Header:** padding `1rem 1.25rem`, borda inferior `1px solid #E0E0E0`, Gotham Medium, cor `#3A3A3A`
-- **Body:** padding `1.25rem`
+- Fundo: `var(--surface)`
+- Border-radius: `12px`
+- Sombra: `var(--shadow)`
+- Borda: `1px solid var(--border)`
+- **Header:** borda inferior `1px solid var(--border)`, Inter, cor `var(--ink)`
+- **Body:** padding interno confortável
 
 ### KPI Cards (Dashboard)
-- Fundo: `#F7F7F7`
-- Border-radius: `6px`
-- Sombra: `0 1px 3px rgba(0, 0, 0, 0.06)`
+- Fundo: `var(--surface)`, borda `1px solid var(--border)`, sombra `var(--shadow)`
 - Borda esquerda colorida por variante (`4px solid`)
 - Hover: `transform: translateY(-2px)`, sombra levemente maior
 - Estrutura: ícone (fundo colorido suave) + valor numérico + label
 
-| Variante | Cor da borda | Fundo do ícone | Cor do ícone |
-|---|---|---|---|
-| `kpi-gold` | `#F2B441` | `rgba(242,180,65,0.12)` | `#F2B441` |
-| `kpi-green` | `#2E7D32` | `rgba(46,125,50,0.10)` | `#2E7D32` |
-| `kpi-red` | `#C62828` | `rgba(198,40,40,0.10)` | `#C62828` |
-| `kpi-neutral` | `#757575` | `rgba(117,117,117,0.10)` | `#757575` |
-| `kpi-info` | `#1565C0` | `rgba(21,101,192,0.10)` | `#1565C0` |
+| Variante | Cor da borda / ícone | Fundo do ícone |
+|---|---|---|
+| `kpi-gold` | `var(--brand)` | `var(--brand-soft)` |
+| `kpi-green` | `var(--ok)` | `var(--ok-bg)` |
+| `kpi-red` | `var(--danger)` | `var(--danger-bg)` |
+| `kpi-neutral` | `var(--neu)` | `var(--neu-bg)` |
+| `kpi-info` | `var(--info)` | `var(--info-bg)` |
 
 ---
 
 ## 10. Tabelas
 
-- **Cabeçalho:** fundo `#F7F3EA`, texto `#3A3A3A` Gotham Medium, `0.78rem`, caixa alta
-- **Borda inferior do cabeçalho:** `2px solid #E0E0E0`
-- **Células:** padding `0.7rem 1rem`, borda `1px solid #E0E0E0`
-- **Hover de linha:** fundo `rgba(242, 180, 65, 0.05)`
-- **Texto de células:** `0.88rem`, cor `#3A3A3A`
+Tokens do redesign "Shelter"; reagem ao tema via `data-theme` no `<html>`.
+
+- **Cabeçalho:** fundo `var(--sunken)`, texto `var(--muted)` Inter `700`, `0.78rem`, caixa alta
+- **Borda inferior do cabeçalho:** `2px solid var(--border)`
+- **Células:** padding `0.7rem 1rem`, borda `1px solid var(--border)`
+- **Hover de linha:** fundo `var(--sunken)`
+- **Texto de células:** `0.88rem`, cor `var(--ink)`
 
 ### 10.1. Vista Tabela de Imóveis (alternativa aos Cards)
 
@@ -284,19 +290,17 @@ mesmo modal de exclusão; nenhuma consulta nova é feita.
 
 ## 11. Badges de Status
 
-Padrão: pill arredondado (`border-radius: 999px`), padding `0.25rem 0.65rem`, Gotham Bold `0.74rem`.
+Padrão: pill arredondado (`border-radius: 999px`), padding `0.25rem 0.65rem`,
+Inter `700` `0.74rem`. As cores vêm dos pares de token semânticos
+(`--x-bg` / `--x`), portanto reagem ao tema claro/escuro via `data-theme`.
 
-| Classe | Fundo | Texto | Uso |
-|---|---|---|---|
-| `badge-ocupado` | `rgba(46,125,50,0.12)` | `#2E7D32` | Imóvel ocupado |
-| `badge-vago` | `rgba(198,40,40,0.12)` | `#C62828` | Imóvel vago |
-| `badge-manutencao` | `rgba(242,180,65,0.15)` | `#B8860B` | Em manutenção |
-| `badge-ativo` | `rgba(21,101,192,0.12)` | `#1565C0` | Contrato ativo |
-| `badge-encerrado` | `rgba(117,117,117,0.12)` | `#757575` | Contrato encerrado |
-| `badge-rescindido` | `rgba(198,40,40,0.12)` | `#C62828` | Contrato rescindido |
-| `badge-pago` | `rgba(46,125,50,0.12)` | `#2E7D32` | Lançamento pago |
-| `badge-pendente` | `rgba(242,180,65,0.15)` | `#B8860B` | Lançamento pendente |
-| `badge-atrasado` | `rgba(198,40,40,0.12)` | `#C62828` | Lançamento atrasado |
+| Classe | Par de token (fundo / texto) | Uso |
+|---|---|---|
+| `badge-ocupado`, `badge-pago` | `--ok-bg` / `--ok` | Imóvel ocupado · Lançamento pago |
+| `badge-vago`, `badge-atrasado`, `badge-rescindido` | `--danger-bg` / `--danger` | Imóvel vago · Lançamento atrasado · Contrato rescindido |
+| `badge-manutencao`, `badge-pendente` | `--warn-bg` / `--warn` | Em manutenção · Lançamento pendente |
+| `badge-ativo` | `--info-bg` / `--info` | Contrato ativo |
+| `badge-encerrado` | `--neu-bg` / `--neu` | Contrato encerrado |
 
 ---
 
@@ -333,7 +337,7 @@ Padrão: pill arredondado (`border-radius: 999px`), padding `0.25rem 0.65rem`, G
 
 - Padrão Bootstrap 5
 - Tamanho: `modal-sm`
-- Título em vermelho (`#C62828`) para ações destrutivas
+- Título em vermelho (`var(--danger)`) para ações destrutivas
 - Dois botões: cancelar (outline secundário) + confirmar (danger)
 - Sem bordas no header e footer (`border-0`)
 
