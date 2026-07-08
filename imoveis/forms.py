@@ -27,6 +27,25 @@ def _moeda_widget():
 _telefone_attrs = {**_ctrl, 'data-mask': 'telefone', 'placeholder': '(00) 00000-0000'}
 
 
+# Selects de Imóvel/Contrato/Laudo exibem o `rotulo_curto` legível (código +
+# contexto) no lugar do `str(obj)` padrão. Três classes quase idênticas (não
+# uma genérica) para tipar cada campo ao model correto e deixar explícito, em
+# cada ModelForm, qual entidade está sendo escolhida.
+class ImovelChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return obj.rotulo_curto
+
+
+class ContratoChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return obj.rotulo_curto
+
+
+class LaudoChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return obj.rotulo_curto
+
+
 class DashboardFiltroForm(forms.Form):
     """Filtro de período do Dashboard — datas em dd/mm/aaaa (Flatpickr)."""
     data_inicio = forms.DateField(required=False, widget=_date_widget())
@@ -122,6 +141,8 @@ class InquilinoForm(forms.ModelForm):
 
 
 class ContratoForm(forms.ModelForm):
+    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel))
+
     class Meta:
         model = Contrato
         fields = [
@@ -130,7 +151,6 @@ class ContratoForm(forms.ModelForm):
             'local_assinatura', 'data_assinatura', 'observacoes',
         ]
         widgets = {
-            'imovel': forms.Select(attrs=_sel),
             'inquilino': forms.Select(attrs=_sel),
             'tipo_contrato': forms.Select(attrs=_sel),
             'finalidade': forms.Select(attrs=_sel),
@@ -178,13 +198,15 @@ FiadorFormSet = inlineformset_factory(
 
 
 class LaudoVistoriaForm(forms.ModelForm):
+    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel))
+    # queryset inicial vazio: o __init__ sempre reatribui conforme o imóvel.
+    contrato = ContratoChoiceField(queryset=Contrato.objects.none(), widget=forms.Select(attrs=_sel))
+
     class Meta:
         model = LaudoVistoria
         fields = ['imovel', 'contrato', 'tipo', 'data', 'responsavel',
                   'local_assinatura', 'data_assinatura', 'observacoes']
         widgets = {
-            'imovel': forms.Select(attrs=_sel),
-            'contrato': forms.Select(attrs=_sel),
             'tipo': forms.Select(attrs=_sel),
             'responsavel': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome do vistoriador'}),
             'local_assinatura': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Cidade da assinatura'}),
@@ -254,11 +276,12 @@ TestemunhaFormSet = inlineformset_factory(
 
 
 class LancamentoForm(forms.ModelForm):
+    contrato = ContratoChoiceField(queryset=Contrato.objects.all(), widget=forms.Select(attrs=_sel))
+
     class Meta:
         model = Lancamento
         fields = ['contrato', 'tipo', 'status', 'valor', 'data_vencimento', 'data_pagamento', 'comprovante', 'observacoes']
         widgets = {
-            'contrato': forms.Select(attrs=_sel),
             'tipo': forms.Select(attrs=_sel),
             'status': forms.Select(attrs=_sel),
             'valor': forms.NumberInput(attrs={**_ctrl, 'step': '0.01'}),
@@ -273,11 +296,12 @@ class LancamentoForm(forms.ModelForm):
 
 
 class NotificacaoForm(forms.ModelForm):
+    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel))
+
     class Meta:
         model = Notificacao
         fields = ['imovel', 'tipo', 'titulo', 'data_recebimento', 'data_resposta', 'arquivo', 'observacoes', 'status']
         widgets = {
-            'imovel': forms.Select(attrs=_sel),
             'tipo': forms.Select(attrs=_sel),
             'titulo': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Título da notificação'}),
             'arquivo': forms.ClearableFileInput(attrs=_ctrl),
@@ -307,13 +331,15 @@ class RenovacaoContratoForm(forms.ModelForm):
 
 
 class DistratoForm(forms.ModelForm):
+    laudo_saida = LaudoChoiceField(queryset=LaudoVistoria.objects.all(), required=False,
+                                   widget=forms.Select(attrs=_sel))
+
     class Meta:
         model = Distrato
         fields = ['tipo', 'data_distrato', 'recibo_chaves', 'laudo_saida', 'observacoes']
         widgets = {
             'tipo': forms.Select(attrs=_sel),
             'recibo_chaves': forms.ClearableFileInput(attrs=_ctrl),
-            'laudo_saida': forms.Select(attrs=_sel),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 3}),
         }
 
@@ -323,6 +349,9 @@ class DistratoForm(forms.ModelForm):
 
 
 class ReciboForm(forms.ModelForm):
+    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel))
+    contrato = ContratoChoiceField(queryset=Contrato.objects.all(), widget=forms.Select(attrs=_sel))
+
     class Meta:
         model = Recibo
         fields = [
@@ -336,8 +365,6 @@ class ReciboForm(forms.ModelForm):
         localized_fields = ['quantia', 'valor_aluguel', 'valor_impostos',
                             'valor_seguros', 'valor_condominio']
         widgets = {
-            'imovel': forms.Select(attrs=_sel),
-            'contrato': forms.Select(attrs=_sel),
             'parcela_atual': forms.NumberInput(attrs={**_ctrl, 'min': 1, 'placeholder': 'Nº'}),
             'parcela_total': forms.NumberInput(attrs={**_ctrl, 'min': 1, 'placeholder': 'Total'}),
             'quem_pagou': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome de quem pagou'}),

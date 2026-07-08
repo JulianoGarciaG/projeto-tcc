@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load imoveis_tags %}
-{% block title %}Recibo #{{ recibo.pk }} — GestImóveis{% endblock %}
-{% block page_title %}<i class="bi bi-receipt me-2"></i>Recibo #{{ recibo.pk }}{% endblock %}
+{% block title %}Recibo {{ recibo.codigo }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-receipt me-2"></i>Recibo {{ recibo.codigo }}{% endblock %}
 {% block nav_recibos %}active{% endblock %}
 
 {% block content %}
@@ -21,7 +21,7 @@
       <div class="section-card-body">
         <dl class="row mb-0 small">
           {% if recibo.imovel %}<dt class="col-5 text-muted">Imóvel</dt><dd class="col-7">{{ recibo.imovel.endereco }}</dd>{% endif %}
-          {% if recibo.contrato %}<dt class="col-5 text-muted">Contrato</dt><dd class="col-7">#{{ recibo.contrato.pk }} — {{ recibo.contrato.inquilino.nome }}</dd>{% endif %}
+          {% if recibo.contrato %}<dt class="col-5 text-muted">Contrato</dt><dd class="col-7">{{ recibo.contrato.rotulo_curto }}</dd>{% endif %}
           {% if recibo.parcela_atual %}<dt class="col-5 text-muted">Parcela</dt><dd class="col-7">{{ recibo.parcela_atual }}{% if recibo.parcela_total %}/{{ recibo.parcela_total }}{% endif %}</dd>{% endif %}
           {% if recibo.quem_pagou %}<dt class="col-5 text-muted">Quem Pagou</dt><dd class="col-7">{{ recibo.quem_pagou }}</dd>{% endif %}
           {% if recibo.periodo_inicio and recibo.periodo_fim %}<dt class="col-5 text-muted">Período</dt><dd class="col-7">de {{ recibo.periodo_inicio|date:"d/m/Y" }} a {{ recibo.periodo_fim|date:"d/m/Y" }}</dd>{% endif %}

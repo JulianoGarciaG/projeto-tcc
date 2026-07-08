@@ -87,6 +87,7 @@
             {{ im.endereco|truncatechars:45 }}
           </a>
         </h6>
+        <p class="text-muted small mb-1">{{ im.codigo }}</p>
         <p class="text-muted small mb-2">
           <i class="bi bi-geo-alt me-1"></i>{{ im.bairro|default:"" }}{% if im.bairro %}, {% endif %}{{ im.cidade }}
         </p>
@@ -145,7 +146,10 @@
       <tbody>
         {% for im in imoveis %}
         <tr>
-          <td><a href="{% url 'imovel_detail' im.pk %}" class="fw-semibold text-primary">{{ im.endereco|truncatechars:40 }}</a></td>
+          <td>
+            <a href="{% url 'imovel_detail' im.pk %}" class="fw-semibold text-primary">{{ im.endereco|truncatechars:40 }}</a>
+            <div class="small text-muted">{{ im.codigo }}</div>
+          </td>
           <td class="small text-muted">{{ im.bairro|default:"" }}{% if im.bairro %}, {% endif %}{{ im.cidade }}</td>
           <td class="small">{{ im.get_tipo_display }}</td>
           <td class="small">{{ im.proprietario.nome }}</td>

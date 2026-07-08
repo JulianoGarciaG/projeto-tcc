@@ -39,6 +39,17 @@ DocumentoGerado (GED versionado — 1 registro imutável por geração de PDF)
 
 > O módulo financeiro **não possui** mais os models `Entrada`/`Saida` (removidos na Rodada 2) — o único model financeiro é `Lancamento`, vinculado ao `Contrato` (não diretamente ao `Imovel`).
 
+### Camada de identidade (`imoveis/identidade.py`)
+
+`Imovel`, `Contrato`, `LaudoVistoria` e `Recibo` herdam de `IdentificavelMixin`, que expõe atributos **derivados em runtime** (não persistidos, sem migration):
+
+- `codigo` — código de negócio `{PREFIXO}-{pk:04d}` (`IMV`/`CTR`/`LAU`/`REC`); com `pk=None` retorna `{PREFIXO}-????`.
+- `rotulo_curto` / `rotulo_longo` — rótulos legíveis para selects e templates (cada model implementa os seus). Nas telas: listas e tabelas do GED exibem `codigo` (coluna/texto secundário, sem remover o nome/endereço já mostrado); os cabeçalhos de detalhe de Contrato/Recibo/Laudo usam `codigo` e o `<title>` do detalhe de Imóvel usa `rotulo_longo`. A tabela de comprovantes (GED) mostra o `codigo` do contrato de origem, pois `Lancamento` não herda o mixin.
+
+O módulo também fornece `nome_arquivo(instance, versao=None)` (nome determinístico do PDF, via `slugify`) e `mes_ano_abreviado(data)`. Os `__str__` dos models permanecem inalterados — a camada é **aditiva**.
+
+Cobertura em `imoveis/tests.py`: `IdentidadeCodigoTests` (`codigo` das 4 entidades + placeholder sem pk), `IdentidadeRotulosTests` (`rotulo_curto`/`rotulo_longo`), `NomeArquivoTests` (função pura: sem acentos, sufixo `_v{n}`, truncamento) e `LabelSelectTests` (selects exibindo `rotulo_curto`); `GeracaoPdfViewTests` confere o `codigo` e o incremento de versão (`_v1`→`_v2`) no `Content-Disposition`.
+
 ---
 
 ## 2. Entidades

@@ -38,7 +38,10 @@
       <tbody>
         {% for l in laudos %}
         <tr>
-          <td class="fw-semibold"><a href="{% url 'laudo_detail' l.pk %}">{{ l.imovel.endereco|truncatechars:35 }}</a></td>
+          <td class="fw-semibold">
+            <a href="{% url 'laudo_detail' l.pk %}">{{ l.imovel.endereco|truncatechars:35 }}</a>
+            <div class="small text-muted">{{ l.codigo }}</div>
+          </td>
           <td>{{ l.get_tipo_display }}</td>
           <td>{{ l.data|date:"d/m/Y" }}</td>
           <td>{{ l.responsavel }}</td>

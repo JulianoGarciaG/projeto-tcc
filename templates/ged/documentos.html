@@ -16,17 +16,18 @@
       </div>
       <div class="table-responsive">
         <table class="table mb-0">
-          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Data</th><th class="text-end">Arquivo</th></tr></thead>
+          <thead><tr><th>Código</th><th>Imóvel</th><th>Tipo</th><th>Data</th><th class="text-end">Arquivo</th></tr></thead>
           <tbody>
             {% for l in laudos %}
             <tr>
+              <td class="small">{{ l.codigo }}</td>
               <td class="small">{{ l.imovel.endereco|truncatechars:25 }}</td>
               <td class="small">{{ l.get_tipo_display }}</td>
               <td class="small">{{ l.data|date:"d/m/Y" }}</td>
               <td class="text-end"><a href="{{ l.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum laudo com arquivo.</div></td></tr>
+            <tr><td colspan="5" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum laudo com arquivo.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -43,17 +44,18 @@
       </div>
       <div class="table-responsive">
         <table class="table mb-0">
-          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Data Pgto</th><th class="text-end">Arquivo</th></tr></thead>
+          <thead><tr><th>Código</th><th>Imóvel</th><th>Tipo</th><th>Data Pgto</th><th class="text-end">Arquivo</th></tr></thead>
           <tbody>
             {% for l in comprovantes %}
             <tr>
+              <td class="small">{{ l.contrato.codigo }}</td>
               <td class="small">{{ l.contrato.imovel.endereco|truncatechars:25 }}</td>
               <td class="small">{{ l.get_tipo_display }}</td>
               <td class="small">{{ l.data_pagamento|date:"d/m/Y"|default:"—" }}</td>
               <td class="text-end"><a href="{{ l.comprovante.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum comprovante.</div></td></tr>
+            <tr><td colspan="5" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum comprovante.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -70,10 +72,11 @@
       </div>
       <div class="table-responsive">
         <table class="table mb-0">
-          <thead><tr><th>Inquilino</th><th>Imóvel</th><th>Versão</th><th>Gerado em</th><th class="text-end">Arquivo</th></tr></thead>
+          <thead><tr><th>Código</th><th>Inquilino</th><th>Imóvel</th><th>Versão</th><th>Gerado em</th><th class="text-end">Arquivo</th></tr></thead>
           <tbody>
             {% for d in contratos_gerados %}
             <tr>
+              <td class="small">{{ d.contrato.codigo }}</td>
               <td class="small">{{ d.contrato.inquilino.nome }}</td>
               <td class="small">{{ d.contrato.imovel.endereco|truncatechars:25 }}</td>
               <td class="small">v{{ d.numero_versao }}</td>
@@ -81,7 +84,7 @@
               <td class="text-end"><a href="{{ d.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum contrato gerado pelo sistema.</div></td></tr>
+            <tr><td colspan="6" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum contrato gerado pelo sistema.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -98,10 +101,11 @@
       </div>
       <div class="table-responsive">
         <table class="table mb-0">
-          <thead><tr><th>Imóvel</th><th>Tipo</th><th>Versão</th><th>Gerado em</th><th class="text-end">Arquivo</th></tr></thead>
+          <thead><tr><th>Código</th><th>Imóvel</th><th>Tipo</th><th>Versão</th><th>Gerado em</th><th class="text-end">Arquivo</th></tr></thead>
           <tbody>
             {% for d in laudos_gerados %}
             <tr>
+              <td class="small">{{ d.laudo.codigo }}</td>
               <td class="small">{{ d.laudo.imovel.endereco|truncatechars:25 }}</td>
               <td class="small">{{ d.laudo.get_tipo_display }}</td>
               <td class="small">v{{ d.numero_versao }}</td>
@@ -109,7 +113,7 @@
               <td class="text-end"><a href="{{ d.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf me-1"></i> Abrir</a></td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum laudo gerado pelo sistema.</div></td></tr>
+            <tr><td colspan="6" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum laudo gerado pelo sistema.</div></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -126,11 +130,11 @@
       </div>
       <div class="table-responsive">
         <table class="table mb-0">
-          <thead><tr><th>#</th><th>Imóvel</th><th>Quem Pagou</th><th>Versão</th><th>Gerado em</th><th class="text-end">Arquivo</th></tr></thead>
+          <thead><tr><th>Código</th><th>Imóvel</th><th>Quem Pagou</th><th>Versão</th><th>Gerado em</th><th class="text-end">Arquivo</th></tr></thead>
           <tbody>
             {% for d in recibos %}
             <tr>
-              <td class="small">{{ d.recibo.pk }}</td>
+              <td class="small">{{ d.recibo.codigo }}</td>
               <td class="small">{{ d.recibo.imovel.endereco|default:"—"|truncatechars:25 }}</td>
               <td class="small">{{ d.recibo.quem_pagou|default:"—" }}</td>
               <td class="small">v{{ d.numero_versao }}</td>

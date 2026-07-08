@@ -31,12 +31,12 @@
   <div class="table-responsive">
     <table class="table mb-0">
       <thead>
-        <tr><th>#</th><th>Imóvel</th><th>Quem Pagou</th><th>Quantia</th><th>Emitido em</th><th>PDF</th><th class="text-end">Ações</th></tr>
+        <tr><th>Código</th><th>Imóvel</th><th>Quem Pagou</th><th>Quantia</th><th>Emitido em</th><th>PDF</th><th class="text-end">Ações</th></tr>
       </thead>
       <tbody>
         {% for r in recibos %}
         <tr>
-          <td class="fw-semibold"><a href="{% url 'recibo_detail' r.pk %}">#{{ r.pk }}</a></td>
+          <td class="fw-semibold"><a href="{% url 'recibo_detail' r.pk %}">{{ r.codigo }}</a></td>
           <td>{{ r.imovel.endereco|default:"—"|truncatechars:30 }}</td>
           <td>{{ r.quem_pagou|default:"—" }}</td>
           <td>{% if r.quantia %}R$ {{ r.quantia|brl }}{% else %}—{% endif %}</td>
@@ -48,7 +48,7 @@
             <div class="modal fade" id="del{{ r.pk }}" tabindex="-1">
               <div class="modal-dialog modal-sm"><div class="modal-content">
                 <div class="modal-header border-0"><h6 class="modal-title text-danger">Confirmar exclusão</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body small">Excluir o recibo <strong>#{{ r.pk }}</strong>?</div>
+                <div class="modal-body small">Excluir o recibo <strong>{{ r.codigo }}</strong>?</div>
                 <div class="modal-footer border-0"><button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><form method="post" action="{% url 'recibo_delete' r.pk %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-danger">Excluir</button></form></div>
               </div></div>
             </div>

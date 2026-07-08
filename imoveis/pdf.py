@@ -66,28 +66,42 @@ def save_pdf_to_field(instance, field_name, pdf_bytes, filename):
     field.save(filename, ContentFile(pdf_bytes), save=True)
 
 
-def registrar_documento_gerado(instance, pdf_bytes, filename, usuario=None):
-    """Cria a próxima versão imutável de DocumentoGerado para a origem.
-
-    Fonte de verdade do GED versionado: numero_versao sequencial por origem
-    (1, 2, 3...), hash SHA-256 do arquivo e autor da geração.
-    """
-    from .models import Contrato, DocumentoGerado, LaudoVistoria, Recibo
+def _tipo_de(instance):
+    """'contrato' | 'laudo' | 'recibo' a partir da classe da instância."""
+    from .models import Contrato, LaudoVistoria, Recibo
 
     if isinstance(instance, Contrato):
-        tipo = 'contrato'
-    elif isinstance(instance, LaudoVistoria):
-        tipo = 'laudo'
-    elif isinstance(instance, Recibo):
-        tipo = 'recibo'
-    else:
-        raise ValueError(f'Origem não suportada para DocumentoGerado: {type(instance).__name__}')
+        return 'contrato'
+    if isinstance(instance, LaudoVistoria):
+        return 'laudo'
+    if isinstance(instance, Recibo):
+        return 'recibo'
+    raise ValueError(f'Origem não suportada para DocumentoGerado: {type(instance).__name__}')
+
+
+def _proxima_versao(instance, tipo):
+    """Próximo numero_versao sequencial (1, 2, 3...) da origem no GED."""
+    from .models import DocumentoGerado
 
     ultima = (DocumentoGerado.objects.filter(**{tipo: instance})
               .aggregate(m=Max('numero_versao'))['m']) or 0
+    return ultima + 1
+
+
+def registrar_documento_gerado(instance, pdf_bytes, filename, usuario=None, versao=None):
+    """Cria a próxima versão imutável de DocumentoGerado para a origem.
+
+    Fonte de verdade do GED versionado: numero_versao sequencial por origem
+    (1, 2, 3...), hash SHA-256 do arquivo e autor da geração. `versao` pode ser
+    passada por quem já a calculou (gerar_e_anexar) para não repetir a query.
+    """
+    from .models import DocumentoGerado
+
+    tipo = _tipo_de(instance)
+    versao = versao or _proxima_versao(instance, tipo)
     doc = DocumentoGerado(
         tipo=tipo,
-        numero_versao=ultima + 1,
+        numero_versao=versao,
         sha256=hashlib.sha256(pdf_bytes).hexdigest(),
         gerado_por=usuario if getattr(usuario, 'is_authenticated', False) else None,
         **{tipo: instance},
@@ -97,10 +111,19 @@ def registrar_documento_gerado(instance, pdf_bytes, filename, usuario=None):
     return doc
 
 
-def gerar_e_anexar(instance, template_name, context, field_name, filename, usuario=None):
-    """Gera o PDF, registra uma versão imutável no GED (DocumentoGerado) e
-    espelha o arquivo no FileField legado do registro. Retorna os bytes."""
+def gerar_e_anexar(instance, template_name, context, field_name, usuario=None):
+    """Gera o PDF, registra a versão no GED e espelha no FileField legado.
+
+    Retorna (pdf_bytes, filename) — filename é determinístico (via
+    nome_arquivo) e já inclui o número de versão, para o chamador reaproveitar
+    no download (Content-Disposition).
+    """
+    from .identidade import nome_arquivo
+
     pdf_bytes = render_pdf(template_name, context)
-    registrar_documento_gerado(instance, pdf_bytes, filename, usuario)
+    tipo = _tipo_de(instance)
+    versao = _proxima_versao(instance, tipo)
+    filename = nome_arquivo(instance, versao=versao)
+    registrar_documento_gerado(instance, pdf_bytes, filename, usuario, versao=versao)
     save_pdf_to_field(instance, field_name, pdf_bytes, filename)
-    return pdf_bytes
+    return pdf_bytes, filename

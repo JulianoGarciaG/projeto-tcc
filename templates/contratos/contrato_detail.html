@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load imoveis_tags %}
-{% block title %}Contrato #{{ contrato.pk }} — GestImóveis{% endblock %}
-{% block page_title %}<i class="bi bi-file-earmark-text me-2"></i>Contrato #{{ contrato.pk }}{% endblock %}
+{% block title %}Contrato {{ contrato.codigo }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-file-earmark-text me-2"></i>Contrato {{ contrato.codigo }}{% endblock %}
 {% block nav_contratos %}active{% endblock %}
 
 {% block content %}

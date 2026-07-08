@@ -13,7 +13,11 @@ from django.urls import reverse
 from .extenso import (
     dia_ordinal_extenso, meses_entre, meses_por_extenso, valor_por_extenso,
 )
-from .forms import ContratoForm, FiadorForm, LaudoVistoriaForm, ReciboForm
+from .forms import (
+    ContratoForm, DistratoForm, FiadorForm, LancamentoForm, LaudoVistoriaForm,
+    NotificacaoForm, ReciboForm,
+)
+from .identidade import nome_arquivo
 from .models import (
     Contrato, DocumentoGerado, Fiador, Imovel, Inquilino, ItemVistoria,
     Lancamento, LaudoVistoria, Proprietario, Recibo, TestemunhaLaudo,
@@ -442,6 +446,9 @@ class FluxoViewTests(TestCase):
         self.assertEqual(len(dados), 1)
         self.assertEqual(dados[0]['id'], self.contrato.pk)
         self.assertIn('João Locatário', dados[0]['label'])
+        # label agora é o rotulo_curto legível (código + contexto), não '#pk'
+        self.assertEqual(dados[0]['label'], self.contrato.rotulo_curto)
+        self.assertIn(self.contrato.codigo, dados[0]['label'])
 
         outro = Imovel.objects.create(proprietario=self.imovel.proprietario, tipo='casa',
                                       endereco='Rua B', cidade='Maringá')
@@ -485,9 +492,15 @@ class GeracaoPdfViewTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp['Content-Type'], 'application/pdf')
         self.assertTrue(resp.content.startswith(b'%PDF-'))
+        # nome de arquivo determinístico: contém o código e a versão
+        disp = resp['Content-Disposition']
+        self.assertIn(self.contrato.codigo, disp)
+        self.assertIn('_v1.pdf', disp)
         self.contrato.refresh_from_db()
         self.assertTrue(self.contrato.documento_gerado)
-        self.contrato.documento_gerado.delete(save=False)
+        # segunda geração incrementa a versão para _v2
+        resp2 = self.client.get(reverse('contrato_gerar_pdf', args=[self.contrato.pk]))
+        self.assertIn('_v2.pdf', resp2['Content-Disposition'])
 
     def test_laudo_gerar_pdf_view(self):
         laudo = LaudoVistoria.objects.create(
@@ -497,9 +510,13 @@ class GeracaoPdfViewTests(TestCase):
         resp = self.client.get(reverse('laudo_gerar_pdf', args=[laudo.pk]))
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.content.startswith(b'%PDF-'))
+        disp = resp['Content-Disposition']
+        self.assertIn(laudo.codigo, disp)
+        self.assertIn('_v1.pdf', disp)
         laudo.refresh_from_db()
         self.assertTrue(laudo.documento_gerado)
-        laudo.documento_gerado.delete(save=False)
+        resp2 = self.client.get(reverse('laudo_gerar_pdf', args=[laudo.pk]))
+        self.assertIn('_v2.pdf', resp2['Content-Disposition'])
 
     def test_recibo_gerar_pdf_view(self):
         recibo = Recibo.objects.create(imovel=self.imovel, contrato=self.contrato,
@@ -508,9 +525,13 @@ class GeracaoPdfViewTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp['Content-Type'], 'application/pdf')
         self.assertTrue(resp.content.startswith(b'%PDF-'))
+        disp = resp['Content-Disposition']
+        self.assertIn(recibo.codigo, disp)
+        self.assertIn('_v1.pdf', disp)
         recibo.refresh_from_db()
         self.assertTrue(recibo.arquivo)
-        recibo.arquivo.delete(save=False)
+        resp2 = self.client.get(reverse('recibo_gerar_pdf', args=[recibo.pk]))
+        self.assertIn('_v2.pdf', resp2['Content-Disposition'])
 
     def test_gerar_pdf_exige_login(self):
         self.client.logout()
@@ -914,3 +935,169 @@ class FiadorCamposNovosTests(TestCase):
         fiador = contrato.fiadores.get()
         self.assertEqual(fiador.cpf, CPF_VALIDO_2)
         self.assertEqual(fiador.conjuge_nome, 'Francisco Marques')
+
+
+class IdentidadeCodigoTests(TestCase):
+    """codigo derivado do PK: PREFIXO-0001 (zero-padded a 4 dígitos)."""
+
+    def setUp(self):
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+
+    def test_codigo_imovel(self):
+        self.assertEqual(self.imovel.codigo, f'IMV-{self.imovel.pk:04d}')
+        self.assertTrue(self.imovel.codigo.startswith('IMV-'))
+
+    def test_codigo_contrato(self):
+        self.assertEqual(self.contrato.codigo, f'CTR-{self.contrato.pk:04d}')
+
+    def test_codigo_recibo(self):
+        recibo = Recibo.objects.create(imovel=self.imovel, contrato=self.contrato)
+        self.assertEqual(recibo.codigo, f'REC-{recibo.pk:04d}')
+
+    def test_codigo_laudo(self):
+        laudo = LaudoVistoria.objects.create(
+            imovel=self.imovel, contrato=self.contrato, tipo='entrada',
+            data=date(2026, 7, 1), responsavel='Carlos',
+        )
+        self.assertEqual(laudo.codigo, f'LAU-{laudo.pk:04d}')
+
+    def test_codigo_objeto_nao_salvo_usa_placeholder(self):
+        # acessar .codigo sem pk não deve levantar exceção
+        self.assertEqual(Imovel().codigo, 'IMV-????')
+        self.assertEqual(Contrato().codigo, 'CTR-????')
+
+
+class IdentidadeRotulosTests(TestCase):
+    """rotulo_curto / rotulo_longo das 4 entidades."""
+
+    def setUp(self):
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+
+    def test_recibo_rotulo_curto_com_periodo_e_parcela(self):
+        recibo = Recibo.objects.create(
+            imovel=self.imovel, contrato=self.contrato,
+            periodo_inicio=date(2026, 3, 1), parcela_atual=2, parcela_total=12,
+        )
+        rotulo = recibo.rotulo_curto
+        self.assertIn('mar/2026', rotulo)
+        self.assertIn('parcela 2/12', rotulo)
+        self.assertIn(recibo.codigo, rotulo)
+
+    def test_recibo_rotulo_curto_sem_campos_opcionais(self):
+        # só imovel/contrato: não quebra e ainda mostra código + inquilino
+        recibo = Recibo.objects.create(imovel=self.imovel, contrato=self.contrato)
+        rotulo = recibo.rotulo_curto
+        self.assertIn(recibo.codigo, rotulo)
+        self.assertIn(self.inquilino.nome, rotulo)
+
+    def test_contrato_rotulo_curto(self):
+        rotulo = self.contrato.rotulo_curto
+        self.assertIn(self.contrato.codigo, rotulo)
+        self.assertIn(self.inquilino.nome, rotulo)
+        self.assertIn(self.imovel.endereco, rotulo)
+        self.assertIn('01/26–01/27', rotulo)  # período abreviado mm/aa–mm/aa
+        self.assertIn(self.contrato.get_status_display(), rotulo)
+
+    def test_laudo_rotulo_curto(self):
+        laudo = LaudoVistoria.objects.create(
+            imovel=self.imovel, contrato=self.contrato, tipo='entrada',
+            data=date(2026, 7, 1), responsavel='Carlos',
+        )
+        rotulo = laudo.rotulo_curto
+        self.assertIn(laudo.get_tipo_display(), rotulo)
+        self.assertIn(self.imovel.endereco, rotulo)
+        self.assertIn(laudo.locatario_nome(), rotulo)
+
+    def test_imovel_rotulo_curto_usa_bairro_quando_presente(self):
+        self.imovel.bairro = 'Centro'
+        rotulo = self.imovel.rotulo_curto
+        self.assertIn('Centro', rotulo)
+
+    def test_imovel_rotulo_curto_cai_para_cidade_sem_bairro(self):
+        self.imovel.bairro = ''
+        rotulo = self.imovel.rotulo_curto
+        self.assertIn(self.imovel.cidade, rotulo)
+
+
+class NomeArquivoTests(TestCase):
+    """nome_arquivo() — função pura, instâncias em memória (sem .save())."""
+
+    def _instancias(self):
+        inq = Inquilino(nome='João Sá')
+        imv = Imovel(endereco='Rua Açaí', numero='10', cidade='Maringá')
+        contrato = Contrato(inquilino=inq, imovel=imv,
+                            data_inicio=date(2026, 1, 1), data_fim=date(2027, 1, 1))
+        contrato.pk = 7
+        laudo = LaudoVistoria(imovel=imv, contrato=contrato, tipo='entrada',
+                              data=date(2026, 7, 1))
+        laudo.pk = 7
+        recibo = Recibo(imovel=imv, contrato=contrato, quem_pagou='João Sá',
+                        periodo_inicio=date(2026, 3, 1))
+        recibo.pk = 7
+        return contrato, laudo, recibo
+
+    def test_sem_acentos_e_apenas_chars_seguros(self):
+        import re
+        for instance in self._instancias():
+            nome = nome_arquivo(instance)
+            self.assertNotIn('ã', nome)
+            self.assertNotIn('ç', nome)
+            self.assertNotIn('í', nome)
+            # slugify garante nome seguro no Windows: [A-Za-z0-9._-]
+            self.assertRegex(nome, r'^[A-Za-z0-9._-]+$')
+
+    def test_sufixo_de_versao(self):
+        contrato, _, _ = self._instancias()
+        self.assertIn('_v2', nome_arquivo(contrato, versao=2))
+        self.assertNotIn('_v', nome_arquivo(contrato, versao=None))
+        self.assertNotIn('_v', nome_arquivo(contrato))
+
+    def test_nome_longo_e_truncado(self):
+        inq = Inquilino(nome='João Sá')
+        imv = Imovel(endereco='A' * 200, numero='10', cidade='Maringá')
+        contrato = Contrato(inquilino=inq, imovel=imv,
+                            data_inicio=date(2026, 1, 1), data_fim=date(2027, 1, 1))
+        contrato.pk = 7
+        nome = nome_arquivo(contrato, versao=2)
+        self.assertLess(len(nome), 150)
+
+
+class LabelSelectTests(TestCase):
+    """ModelChoiceFields exibem rotulo_curto em vez de str(obj)."""
+
+    def setUp(self):
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+        self.laudo = LaudoVistoria.objects.create(
+            imovel=self.imovel, contrato=self.contrato, tipo='saida',
+            data=date(2026, 7, 1), responsavel='Carlos',
+        )
+
+    def test_contrato_form_imovel_label(self):
+        campo = ContratoForm().fields['imovel']
+        self.assertEqual(campo.label_from_instance(self.imovel), self.imovel.rotulo_curto)
+
+    def test_laudo_form_labels(self):
+        form = LaudoVistoriaForm()
+        self.assertEqual(form.fields['imovel'].label_from_instance(self.imovel),
+                         self.imovel.rotulo_curto)
+        self.assertEqual(form.fields['contrato'].label_from_instance(self.contrato),
+                         self.contrato.rotulo_curto)
+
+    def test_recibo_form_labels(self):
+        form = ReciboForm()
+        self.assertEqual(form.fields['imovel'].label_from_instance(self.imovel),
+                         self.imovel.rotulo_curto)
+        self.assertEqual(form.fields['contrato'].label_from_instance(self.contrato),
+                         self.contrato.rotulo_curto)
+
+    def test_lancamento_form_contrato_label(self):
+        campo = LancamentoForm().fields['contrato']
+        self.assertEqual(campo.label_from_instance(self.contrato), self.contrato.rotulo_curto)
+
+    def test_notificacao_form_imovel_label(self):
+        campo = NotificacaoForm().fields['imovel']
+        self.assertEqual(campo.label_from_instance(self.imovel), self.imovel.rotulo_curto)
+
+    def test_distrato_form_laudo_saida_label(self):
+        campo = DistratoForm().fields['laudo_saida']
+        self.assertEqual(campo.label_from_instance(self.laudo), self.laudo.rotulo_curto)

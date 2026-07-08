@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
-{% block title %}Laudo #{{ laudo.pk }} — GestImóveis{% endblock %}
-{% block page_title %}<i class="bi bi-clipboard-check me-2"></i>Laudo de Vistoria #{{ laudo.pk }}{% endblock %}
+{% block title %}Laudo {{ laudo.codigo }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-clipboard-check me-2"></i>Laudo de Vistoria {{ laudo.codigo }}{% endblock %}
 {% block nav_laudos %}active{% endblock %}
 
 {% block content %}

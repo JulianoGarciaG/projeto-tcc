@@ -27,15 +27,13 @@ from .pdf import gerar_e_anexar, pdf_download_response
 # ============================================================
 
 def _gerar_pdf_contrato(contrato, usuario=None):
-    filename = f'contrato_{contrato.pk}.pdf'
     contexto = {
         'contrato': contrato,
         'locador': settings.SHELTER_LOCADOR,
         'prazo_meses': meses_entre(contrato.data_inicio, contrato.data_fim),
     }
-    pdf_bytes = gerar_e_anexar(contrato, 'documentos/contrato_pdf.html',
-                               contexto, 'documento_gerado', filename,
-                               usuario=usuario)
+    pdf_bytes, filename = gerar_e_anexar(contrato, 'documentos/contrato_pdf.html',
+                                         contexto, 'documento_gerado', usuario=usuario)
     return pdf_download_response(pdf_bytes, filename)
 
 
@@ -50,22 +48,20 @@ def _itens_agrupados(laudo):
 
 
 def _gerar_pdf_laudo(laudo, usuario=None):
-    filename = f'laudo_{laudo.pk}.pdf'
     contexto = {
         'laudo': laudo,
         'grupos': _itens_agrupados(laudo),
         'resumo': laudo.resumo_vistoria(),
         'testemunhas': laudo.testemunhas.all(),
     }
-    pdf_bytes = gerar_e_anexar(laudo, 'documentos/laudo_pdf.html',
-                               contexto, 'documento_gerado', filename, usuario=usuario)
+    pdf_bytes, filename = gerar_e_anexar(laudo, 'documentos/laudo_pdf.html',
+                                         contexto, 'documento_gerado', usuario=usuario)
     return pdf_download_response(pdf_bytes, filename)
 
 
 def _gerar_pdf_recibo(recibo, usuario=None):
-    filename = f'recibo_{recibo.pk}.pdf'
-    pdf_bytes = gerar_e_anexar(recibo, 'documentos/recibo_pdf.html',
-                               {'recibo': recibo}, 'arquivo', filename, usuario=usuario)
+    pdf_bytes, filename = gerar_e_anexar(recibo, 'documentos/recibo_pdf.html',
+                                         {'recibo': recibo}, 'arquivo', usuario=usuario)
     return pdf_download_response(pdf_bytes, filename)
 
 
@@ -622,8 +618,8 @@ def laudo_anexar_arquivo(request, pk):
 def contratos_por_imovel_json(request, imovel_pk):
     """L1 — contratos de um imóvel, para popular o select dependente do laudo."""
     contratos = Contrato.objects.filter(imovel_id=imovel_pk).select_related('inquilino').order_by('-data_inicio')
-    dados = [{'id': c.pk, 'label': f'Contrato #{c.pk} — {c.inquilino.nome} ({c.get_status_display()})'}
-             for c in contratos]
+    # rotulo_curto acessa self.inquilino.nome — o select_related acima o cobre.
+    dados = [{'id': c.pk, 'label': c.rotulo_curto} for c in contratos]
     return JsonResponse({'contratos': dados})
 
 

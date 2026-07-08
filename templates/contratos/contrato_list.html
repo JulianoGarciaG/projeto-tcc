@@ -44,7 +44,10 @@
       <tbody>
         {% for c in contratos %}
         <tr>
-          <td><a href="{% url 'contrato_detail' c.pk %}" class="fw-semibold text-primary">{{ c.inquilino.nome }}</a></td>
+          <td>
+            <a href="{% url 'contrato_detail' c.pk %}" class="fw-semibold text-primary">{{ c.inquilino.nome }}</a>
+            <div class="small text-muted">{{ c.codigo }}</div>
+          </td>
           <td class="small text-muted">{{ c.imovel.endereco|truncatechars:30 }}</td>
           <td class="small">{{ c.data_inicio|date:"d/m/Y" }} → {{ c.data_fim|date:"d/m/Y" }}</td>
           <td><strong>R$ {{ c.valor_mensal|brl }}</strong></td>

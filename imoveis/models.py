@@ -2,6 +2,7 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from .identidade import IdentificavelMixin, mes_ano_abreviado
 from .validators import (
     validate_cpf, validate_cnpj, validate_cpf_cnpj, validate_rg,
     validate_rg_cpf, validate_telefone,
@@ -25,7 +26,9 @@ class Proprietario(models.Model):
         return self.nome
 
 
-class Imovel(models.Model):
+class Imovel(IdentificavelMixin, models.Model):
+    PREFIXO_CODIGO = 'IMV'
+
     TIPO_CHOICES = [
         ('apartamento', 'Apartamento'),
         ('casa', 'Casa'),
@@ -74,6 +77,23 @@ class Imovel(models.Model):
 
     def __str__(self):
         return f'{self.get_tipo_display()} — {self.endereco}'
+
+    @property
+    def rotulo_curto(self):
+        end = self.endereco
+        if self.numero:
+            end = f'{end}, {self.numero}'
+        local = self.bairro or self.cidade or ''
+        if local:
+            end = f'{end} – {local}'
+        return f'{self.codigo} · {self.get_tipo_display()} · {end}'
+
+    @property
+    def rotulo_longo(self):
+        base = self.rotulo_curto
+        if self.cidade and self.cidade not in base:
+            return f'{base}, {self.cidade}'
+        return base
 
 
 class FotoImovel(models.Model):
@@ -124,7 +144,9 @@ class Inquilino(models.Model):
         return self.nome
 
 
-class Contrato(models.Model):
+class Contrato(IdentificavelMixin, models.Model):
+    PREFIXO_CODIGO = 'CTR'
+
     STATUS_CHOICES = [
         ('ativo', 'Ativo'),
         ('encerrado', 'Encerrado'),
@@ -178,6 +200,26 @@ class Contrato(models.Model):
     def __str__(self):
         return f'Contrato #{self.pk} — {self.inquilino} / {self.imovel}'
 
+    @property
+    def rotulo_curto(self):
+        periodo = f'{self.data_inicio:%m/%y}–{self.data_fim:%m/%y}'
+        end = self.imovel.endereco
+        if self.imovel.numero:
+            end = f'{end} {self.imovel.numero}'
+        return (f'{self.codigo} · {self.inquilino.nome} · {end} · '
+                f'{periodo} · {self.get_status_display()}')
+
+    @property
+    def rotulo_longo(self):
+        end = self.imovel.endereco
+        if self.imovel.numero:
+            end = f'{end}, {self.imovel.numero}'
+        if self.imovel.bairro:
+            end = f'{end} – {self.imovel.bairro}'
+        periodo = f'{self.data_inicio:%d/%m/%Y} a {self.data_fim:%d/%m/%Y}'
+        return (f'Contrato {self.codigo} — {self.inquilino.nome} — {end} — '
+                f'{periodo} — {self.get_status_display()}')
+
 
 class Fiador(models.Model):
     contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='fiadores')
@@ -209,7 +251,9 @@ class Fiador(models.Model):
         return f'{self.nome} (Fiador do Contrato #{self.contrato_id})'
 
 
-class LaudoVistoria(models.Model):
+class LaudoVistoria(IdentificavelMixin, models.Model):
+    PREFIXO_CODIGO = 'LAU'
+
     TIPO_CHOICES = [
         ('entrada', 'Vistoria de Entrada'),
         ('saida', 'Vistoria de Saída'),
@@ -251,6 +295,18 @@ class LaudoVistoria(models.Model):
 
     def __str__(self):
         return f'{self.get_tipo_display()} — {self.imovel} ({self.data})'
+
+    @property
+    def rotulo_curto(self):
+        end = self.imovel.endereco
+        if self.imovel.numero:
+            end = f'{end} {self.imovel.numero}'
+        return (f'{self.codigo} · {self.get_tipo_display()} · {end} · '
+                f'{self.locatario_nome()}')
+
+    @property
+    def rotulo_longo(self):
+        return f'{self.rotulo_curto} · {self.data:%d/%m/%Y}'
 
 
 class ComodoTemplate(models.Model):
@@ -435,13 +491,15 @@ class Distrato(models.Model):
         return f'{self.get_tipo_display()} — Contrato #{self.contrato_id}'
 
 
-class Recibo(models.Model):
+class Recibo(IdentificavelMixin, models.Model):
     """Recibo de pagamento — imóvel/contrato obrigatórios, demais campos opcionais.
 
     No PDF aparecem apenas os campos preenchidos. `quantia` é o valor total
     recebido; os valores de aluguel/impostos/seguros/condomínio são as
     parcelas que compõem esse total (ver somatorio()).
     """
+    PREFIXO_CODIGO = 'REC'
+
     imovel = models.ForeignKey(Imovel, on_delete=models.PROTECT, related_name='recibos')
     contrato = models.ForeignKey(Contrato, on_delete=models.PROTECT, related_name='recibos')
     parcela_atual = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name='Parcela Atual')
@@ -479,6 +537,21 @@ class Recibo(models.Model):
 
     def __str__(self):
         return f'Recibo #{self.pk} — {self.imovel}'
+
+    @property
+    def rotulo_curto(self):
+        quem = self.quem_pagou or self.contrato.inquilino.nome
+        partes = [self.codigo, quem]
+        periodo = mes_ano_abreviado(self.periodo_inicio)
+        if periodo:
+            partes.append(periodo)
+        if self.parcela_atual and self.parcela_total:
+            partes.append(f'parcela {self.parcela_atual}/{self.parcela_total}')
+        return ' · '.join(partes)
+
+    @property
+    def rotulo_longo(self):
+        return f'Recibo {self.rotulo_curto}'
 
 
 def documento_gerado_upload_to(instance, filename):
