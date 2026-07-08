@@ -258,9 +258,13 @@ def imovel_edit(request, pk):
 def imovel_delete(request, pk):
     imovel = get_object_or_404(Imovel, pk=pk)
     if request.method == 'POST':
-        imovel.delete()
+        try:
+            imovel.delete()
+        except ProtectedError:
+            messages.error(request, 'Este imóvel não pode ser excluído: há contratos '
+                                    'ou recibos vinculados a ele. Exclua-os primeiro.')
+            return redirect('imovel_list')
         messages.success(request, 'Imóvel removido.')
-        return redirect('imovel_list')
     return redirect('imovel_list')
 
 
@@ -302,7 +306,12 @@ def proprietario_edit(request, pk):
 def proprietario_delete(request, pk):
     obj = get_object_or_404(Proprietario, pk=pk)
     if request.method == 'POST':
-        obj.delete()
+        try:
+            obj.delete()
+        except ProtectedError:
+            messages.error(request, 'Este proprietário não pode ser excluído: possui '
+                                    'imóveis vinculados. Exclua-os primeiro.')
+            return redirect('proprietario_list')
         messages.success(request, 'Proprietário removido.')
     return redirect('proprietario_list')
 
@@ -345,7 +354,12 @@ def inquilino_edit(request, pk):
 def inquilino_delete(request, pk):
     obj = get_object_or_404(Inquilino, pk=pk)
     if request.method == 'POST':
-        obj.delete()
+        try:
+            obj.delete()
+        except ProtectedError:
+            messages.error(request, 'Este inquilino não pode ser excluído: possui '
+                                    'contratos vinculados. Exclua-os primeiro.')
+            return redirect('inquilino_list')
         messages.success(request, 'Inquilino removido.')
     return redirect('inquilino_list')
 

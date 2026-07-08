@@ -20,8 +20,8 @@ from .forms import (
 from .identidade import nome_arquivo
 from .models import (
     Contrato, DocumentoGerado, Fiador, FotoItemVistoria, Imovel, Inquilino,
-    ItemVistoria, Lancamento, LaudoVistoria, Proprietario, Recibo,
-    TestemunhaLaudo,
+    ItemVistoria, Lancamento, LaudoVistoria, Notificacao, Proprietario,
+    Recibo, TestemunhaLaudo,
 )
 
 
@@ -42,6 +42,8 @@ from .validators import (
 
 CPF_VALIDO = '529.982.247-25'
 CPF_VALIDO_2 = '111.444.777-35'
+CPF_VALIDO_3 = '390.533.447-05'
+CPF_VALIDO_4 = '148.745.392-20'
 CPF_INVALIDO = '111.111.111-11'
 CNPJ_VALIDO = '11.222.333/0001-81'
 CNPJ_INVALIDO = '11.222.333/0001-99'
@@ -449,6 +451,73 @@ class FluxoViewTests(TestCase):
         resp = self.client.post(reverse('contrato_delete', args=[contrato_pk]))
         self.assertRedirects(resp, reverse('contrato_list'))
         self.assertFalse(Contrato.objects.filter(pk=contrato_pk).exists())
+
+    def test_imovel_delete_protegido_nao_da_500(self):
+        # self.contrato já vincula self.imovel (criado em setUp via criar_base())
+        resp = self.client.post(reverse('imovel_delete', args=[self.imovel.pk]), follow=True)
+        self.assertRedirects(resp, reverse('imovel_list'))
+        self.assertTrue(Imovel.objects.filter(pk=self.imovel.pk).exists())
+        mensagens = [str(m) for m in resp.context['messages']]
+        self.assertTrue(any('não pode ser excluído' in m for m in mensagens))
+
+    def test_imovel_delete_sem_vinculos_funciona(self):
+        imovel_pk = self.imovel.pk
+        self.contrato.delete()  # remove o vínculo PROTECT antes de excluir o imóvel
+        resp = self.client.post(reverse('imovel_delete', args=[imovel_pk]))
+        self.assertRedirects(resp, reverse('imovel_list'))
+        self.assertFalse(Imovel.objects.filter(pk=imovel_pk).exists())
+
+    def test_proprietario_delete_protegido_nao_da_500(self):
+        resp = self.client.post(
+            reverse('proprietario_delete', args=[self.imovel.proprietario.pk]), follow=True)
+        self.assertRedirects(resp, reverse('proprietario_list'))
+        self.assertTrue(Proprietario.objects.filter(pk=self.imovel.proprietario.pk).exists())
+        mensagens = [str(m) for m in resp.context['messages']]
+        self.assertTrue(any('não pode ser excluído' in m for m in mensagens))
+
+    def test_proprietario_delete_sem_vinculos_funciona(self):
+        outro = Proprietario.objects.create(nome='Outro Dono', cpf_cnpj=CPF_VALIDO_3)
+        resp = self.client.post(reverse('proprietario_delete', args=[outro.pk]))
+        self.assertRedirects(resp, reverse('proprietario_list'))
+        self.assertFalse(Proprietario.objects.filter(pk=outro.pk).exists())
+
+    def test_inquilino_delete_protegido_nao_da_500(self):
+        resp = self.client.post(reverse('inquilino_delete', args=[self.inquilino.pk]), follow=True)
+        self.assertRedirects(resp, reverse('inquilino_list'))
+        self.assertTrue(Inquilino.objects.filter(pk=self.inquilino.pk).exists())
+        mensagens = [str(m) for m in resp.context['messages']]
+        self.assertTrue(any('não pode ser excluído' in m for m in mensagens))
+
+    def test_inquilino_delete_sem_vinculos_funciona(self):
+        outro = Inquilino.objects.create(nome='Outro Locatário', cpf=CPF_VALIDO_3)
+        resp = self.client.post(reverse('inquilino_delete', args=[outro.pk]))
+        self.assertRedirects(resp, reverse('inquilino_list'))
+        self.assertFalse(Inquilino.objects.filter(pk=outro.pk).exists())
+
+    def test_imovel_dependentes_cascata_conta_fotos_e_notificacoes(self):
+        Notificacao.objects.create(
+            imovel=self.imovel, tipo='prefeitura', titulo='Aviso',
+            data_recebimento=date(2026, 7, 1),
+        )
+        deps = dict(self.imovel.dependentes_cascata)
+        self.assertEqual(deps.get('notificação(ões)'), 1)
+
+    def test_contrato_dependentes_cascata_conta_lancamentos_e_fiadores(self):
+        Lancamento.objects.create(
+            contrato=self.contrato, tipo='aluguel', valor=Decimal('1500.00'),
+            data_vencimento=date(2026, 8, 10),
+        )
+        deps = dict(self.contrato.dependentes_cascata)
+        self.assertEqual(deps.get('lançamento(s) financeiro(s)'), 1)
+
+    def test_contrato_dependentes_cascata_vazio_quando_sem_vinculos(self):
+        outro_inquilino = Inquilino.objects.create(nome='Outro Locatário 2', cpf=CPF_VALIDO_4)
+        contrato_novo = Contrato.objects.create(
+            imovel=self.imovel, inquilino=outro_inquilino, tipo_contrato='PF',
+            data_inicio=date(2027, 1, 1), data_fim=date(2028, 1, 1),
+            valor_mensal=Decimal('1500.00'), dia_vencimento=10,
+        )
+        self.assertEqual(contrato_novo.dependentes_cascata, [])
 
     def test_contratos_por_imovel_json(self):
         # L1 — endpoint retorna apenas os contratos do imóvel

@@ -95,6 +95,15 @@ class Imovel(IdentificavelMixin, models.Model):
             return f'{base}, {self.cidade}'
         return base
 
+    @property
+    def dependentes_cascata(self):
+        pares = [
+            ('foto(s)', self.fotos.count()),
+            ('notificação(ões)', self.notificacoes.count()),
+            ('laudo(s) de vistoria', self.laudos.count()),
+        ]
+        return [(label, n) for label, n in pares if n > 0]
+
 
 class FotoImovel(models.Model):
     imovel = models.ForeignKey(Imovel, on_delete=models.CASCADE, related_name='fotos')
@@ -220,6 +229,17 @@ class Contrato(IdentificavelMixin, models.Model):
         return (f'Contrato {self.codigo} — {self.inquilino.nome} — {end} — '
                 f'{periodo} — {self.get_status_display()}')
 
+    @property
+    def dependentes_cascata(self):
+        pares = [
+            ('fiador(es)', self.fiadores.count()),
+            ('lançamento(s) financeiro(s)', self.lancamentos.count()),
+            ('renovação', 1 if hasattr(self, 'renovacao') else 0),
+            ('distrato', 1 if hasattr(self, 'distrato') else 0),
+            ('documento(s) gerado(s)', self.documentos_gerados.count()),
+        ]
+        return [(label, n) for label, n in pares if n > 0]
+
 
 class Fiador(models.Model):
     contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='fiadores')
@@ -307,6 +327,15 @@ class LaudoVistoria(IdentificavelMixin, models.Model):
     @property
     def rotulo_longo(self):
         return f'{self.rotulo_curto} · {self.data:%d/%m/%Y}'
+
+    @property
+    def dependentes_cascata(self):
+        pares = [
+            ('item(ns) de vistoria', self.itens.count()),
+            ('testemunha(s)', self.testemunhas.count()),
+            ('documento(s) gerado(s)', self.documentos_gerados.count()),
+        ]
+        return [(label, n) for label, n in pares if n > 0]
 
 
 class ComodoTemplate(models.Model):
@@ -559,6 +588,13 @@ class Recibo(IdentificavelMixin, models.Model):
 
     def __str__(self):
         return f'Recibo #{self.pk} — {self.imovel}'
+
+    @property
+    def dependentes_cascata(self):
+        pares = [
+            ('documento(s) gerado(s)', self.documentos_gerados.count()),
+        ]
+        return [(label, n) for label, n in pares if n > 0]
 
     @property
     def rotulo_curto(self):
