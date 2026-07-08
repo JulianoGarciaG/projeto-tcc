@@ -29,6 +29,7 @@ ComodoTemplate (catálogo de vistoria, seed na migração 0004)
 
 LaudoVistoria
     ├── ItemVistoria (CASCADE) [snapshot do catálogo no momento da vistoria]
+    │       └── FotoItemVistoria (CASCADE) [0..N fotos, visível só no detalhe]
     └── TestemunhaLaudo (CASCADE)
 
 DocumentoGerado (GED versionado — 1 registro imutável por geração de PDF)
@@ -270,6 +271,20 @@ Item avaliado em um laudo — snapshot do catálogo na data da vistoria (não re
 `bom`, `regular`, `ruim`
 
 **Ordenação:** `ordem`, `pk`
+
+---
+
+### 2.10a FotoItemVistoria
+Foto anexada a um `ItemVistoria` (0..N). Visível apenas no detalhe do laudo — nunca no PDF nem na central GED.
+
+| Campo | Tipo | Obrigatório | Observações |
+|---|---|---|---|
+| `id` | BigAutoField | — | PK automática |
+| `item` | ForeignKey → ItemVistoria | ✓ | CASCADE, `related_name='fotos'` |
+| `imagem` | ImageField | ✓ | Upload em `itens_vistoria/{item_id}/{filename}` |
+| `criado_em` | DateTimeField | — | `auto_now_add` |
+
+**Ordenação:** `criado_em`
 
 ---
 

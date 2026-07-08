@@ -362,6 +362,28 @@ class ItemVistoria(models.Model):
         return f'{self.comodo} — {self.item} ({self.get_estado_display()})'
 
 
+def foto_item_vistoria_upload_to(instance, filename):
+    """itens_vistoria/{item_id}/{filename} — usa instance.item_id (FK id),
+    sem precisar carregar o ItemVistoria nem o LaudoVistoria relacionado."""
+    return f'itens_vistoria/{instance.item_id}/{filename}'
+
+
+class FotoItemVistoria(models.Model):
+    """Foto anexada a um item do checklist de vistoria. Visível apenas no
+    detalhe do laudo — nunca no PDF nem na central GED."""
+    item = models.ForeignKey(ItemVistoria, on_delete=models.CASCADE, related_name='fotos')
+    imagem = models.ImageField(upload_to=foto_item_vistoria_upload_to)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Foto do Item de Vistoria'
+        verbose_name_plural = 'Fotos do Item de Vistoria'
+        ordering = ['criado_em']
+
+    def __str__(self):
+        return f'Foto de {self.item} ({self.criado_em:%d/%m/%Y})'
+
+
 class TestemunhaLaudo(models.Model):
     laudo = models.ForeignKey(LaudoVistoria, on_delete=models.CASCADE, related_name='testemunhas')
     nome = models.CharField(max_length=200)

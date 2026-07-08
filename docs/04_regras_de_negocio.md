@@ -81,6 +81,10 @@ Os documentos do contrato variam conforme o `tipo_contrato`:
 - O vínculo é **opcional** (`null=True`, `blank=True`).
 - Na view de distrato, o queryset de laudos é filtrado para exibir **somente os laudos do imóvel vinculado ao contrato**.
 
+### Fotos por item do checklist
+- Cada linha do checklist (`ItemVistoria`) aceita 0..N fotos (`FotoItemVistoria`), enviadas no **mesmo** formset de itens do laudo (create/edit). As views passam `request.FILES` ao formset e gravam as fotos via `_salvar_fotos_itens()` **após** `item_formset.save()` (precisa do PK do item). As fotos aparecem **só no detalhe** do laudo — nunca no PDF nem na central GED.
+- Anexar foto marca a linha como alterada: uma linha nova (create) com foto mas **sem `estado`** passa a exigir `estado` e falha a validação (extensão natural da regra "só o item vistoriado é salvo").
+
 ---
 
 ## 7. Proteção Contra Exclusão de Registros Vinculados

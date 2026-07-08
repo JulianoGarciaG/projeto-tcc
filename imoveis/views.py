@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Notificacao, RenovacaoContrato, Distrato,
-    Recibo, ItemVistoriaTemplate, DocumentoGerado,
+    Recibo, ItemVistoriaTemplate, DocumentoGerado, FotoItemVistoria,
 )
 from .forms import (
     ImovelForm, FotoImovelFormSet, ProprietarioForm, InquilinoForm,
@@ -45,6 +45,24 @@ def _itens_agrupados(laudo):
             grupos.append({'comodo': item.comodo, 'itens': []})
         grupos[-1]['itens'].append(item)
     return grupos
+
+
+def _salvar_fotos_itens(item_formset):
+    """Roda depois de item_formset.save(): mapeia os arquivos enviados em
+    cada linha do formset para o ItemVistoria já persistido (precisa de PK).
+    Linhas puladas (extra sem mudança) não têm cleaned_data — ignorar."""
+    for f in item_formset.forms:
+        cleaned = getattr(f, 'cleaned_data', None)
+        if not cleaned or cleaned.get('DELETE'):
+            continue
+        instance = f.instance
+        if not instance.pk:
+            continue
+        arquivos = cleaned.get('fotos') or []
+        if arquivos:
+            FotoItemVistoria.objects.bulk_create(
+                FotoItemVistoria(item=instance, imagem=arquivo) for arquivo in arquivos
+            )
 
 
 def _gerar_pdf_laudo(laudo, usuario=None):
@@ -530,7 +548,8 @@ def _initial_itens_catalogo():
 @login_required
 def laudo_detail(request, pk):
     laudo = get_object_or_404(
-        LaudoVistoria.objects.select_related('imovel__proprietario', 'contrato__inquilino'), pk=pk)
+        LaudoVistoria.objects.select_related('imovel__proprietario', 'contrato__inquilino')
+        .prefetch_related('itens__fotos'), pk=pk)
     return render(request, 'laudos/laudo_detail.html', {
         'laudo': laudo,
         'grupos': _itens_agrupados(laudo),
@@ -549,12 +568,13 @@ def laudo_create(request):
         form = LaudoVistoriaForm(request.POST)
         # initial também no POST: linhas com estado em branco continuam
         # "inalteradas" (não vistoriadas) e são ignoradas pelo formset.
-        item_formset = CatalogoFormSet(request.POST, prefix='itens', initial=catalogo)
+        item_formset = CatalogoFormSet(request.POST, request.FILES, prefix='itens', initial=catalogo)
         testemunha_formset = TestemunhaFormSet(request.POST, prefix='testemunhas')
         if form.is_valid() and item_formset.is_valid() and testemunha_formset.is_valid():
             laudo = form.save()
             item_formset.instance = laudo
             item_formset.save()
+            _salvar_fotos_itens(item_formset)
             testemunha_formset.instance = laudo
             testemunha_formset.save()
             messages.success(request, 'Laudo registrado com sucesso. Use "Regerar PDF" para gerar o documento.')
@@ -574,11 +594,12 @@ def laudo_edit(request, pk):
     obj = get_object_or_404(LaudoVistoria, pk=pk)
     if request.method == 'POST':
         form = LaudoVistoriaForm(request.POST, instance=obj)
-        item_formset = ItemVistoriaFormSet(request.POST, instance=obj, prefix='itens')
+        item_formset = ItemVistoriaFormSet(request.POST, request.FILES, instance=obj, prefix='itens')
         testemunha_formset = TestemunhaFormSet(request.POST, instance=obj, prefix='testemunhas')
         if form.is_valid() and item_formset.is_valid() and testemunha_formset.is_valid():
             laudo = form.save()
             item_formset.save()
+            _salvar_fotos_itens(item_formset)
             testemunha_formset.save()
             messages.success(request, 'Laudo atualizado.')
             return redirect('laudo_detail', pk=laudo.pk)

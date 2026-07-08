@@ -34,7 +34,7 @@
   <div class="col-lg-10">
     <div class="mb-3"><a href="{% url 'laudo_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar</a></div>
 
-    <form method="post" novalidate>
+    <form method="post" enctype="multipart/form-data" novalidate>
       {% csrf_token %}
 
       <!-- Dados do Laudo -->
@@ -66,13 +66,14 @@
               <tbody>
                 {% for f in item_formset %}
                 {% ifchanged f.comodo.value %}
-                <tr class="comodo-head"><th colspan="4">{{ f.comodo.value }}</th></tr>
-                <tr class="col-head"><th style="width:40%;">Item</th><th style="width:25%;">Estado</th><th>Observação</th><th style="width:5%;"></th></tr>
+                <tr class="comodo-head"><th colspan="5">{{ f.comodo.value }}</th></tr>
+                <tr class="col-head"><th style="width:35%;">Item</th><th style="width:20%;">Estado</th><th>Observação</th><th style="width:15%;">Fotos</th><th style="width:5%;"></th></tr>
                 {% endifchanged %}
                 <tr>
                   <td>{{ f.item.value }}{{ f.comodo }}{{ f.item }}{{ f.ordem }}{{ f.id }}</td>
                   <td><div class="seg-estado-wrap">{{ f.estado }}</div></td>
                   <td>{{ f.observacao }}</td>
+                  <td>{{ f.fotos }}</td>
                   <td>
                     {% if f.instance.pk %}
                     <div class="form-check">{{ f.DELETE }}<label class="form-check-label small text-danger" for="{{ f.DELETE.id_for_label }}">Del</label></div>

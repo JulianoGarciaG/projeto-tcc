@@ -19,8 +19,9 @@ from .forms import (
 )
 from .identidade import nome_arquivo
 from .models import (
-    Contrato, DocumentoGerado, Fiador, Imovel, Inquilino, ItemVistoria,
-    Lancamento, LaudoVistoria, Proprietario, Recibo, TestemunhaLaudo,
+    Contrato, DocumentoGerado, Fiador, FotoItemVistoria, Imovel, Inquilino,
+    ItemVistoria, Lancamento, LaudoVistoria, Proprietario, Recibo,
+    TestemunhaLaudo,
 )
 
 
@@ -44,6 +45,17 @@ CPF_VALIDO_2 = '111.444.777-35'
 CPF_INVALIDO = '111.111.111-11'
 CNPJ_VALIDO = '11.222.333/0001-81'
 CNPJ_INVALIDO = '11.222.333/0001-99'
+
+# PNG 1x1 válido (Pillow precisa de bytes de imagem reais, não conteúdo arbitrário)
+PNG_1X1 = (
+    b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
+    b'\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0'
+    b'\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0\x00\x00\x00\x00IEND\xaeB`\x82'
+)
+
+
+def _imagem_teste(nome='foto.png'):
+    return SimpleUploadedFile(nome, PNG_1X1, content_type='image/png')
 
 
 def criar_base():
@@ -579,6 +591,156 @@ class GeracaoPdfViewTests(TestCase):
         resp = self.client.get(reverse('documentos'))
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.context['contratos_gerados'].count(), 0)
+
+
+class FotoItemVistoriaTests(TestCase):
+    """Fotos por item do checklist de vistoria (0..N por ItemVistoria)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester', password='x')
+        self.client.force_login(self.user)
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+
+    def tearDown(self):
+        for foto in FotoItemVistoria.objects.all():
+            foto.imagem.delete(save=False)
+        limpar_arquivos_gerados()
+
+    def _payload_item_unico(self, estado='bom'):
+        from .views import _initial_itens_catalogo
+        itens = _initial_itens_catalogo()
+        n = len(itens)
+        data = {
+            'imovel': str(self.imovel.pk), 'contrato': str(self.contrato.pk),
+            'tipo': 'entrada', 'data': '2026-07-05', 'responsavel': 'Vistoriador Teste',
+            'local_assinatura': 'Maringá', 'data_assinatura': '2026-07-05',
+            'itens-TOTAL_FORMS': str(n), 'itens-INITIAL_FORMS': '0',
+            'itens-MIN_NUM_FORMS': '0', 'itens-MAX_NUM_FORMS': '1000',
+            'testemunhas-TOTAL_FORMS': '2', 'testemunhas-INITIAL_FORMS': '0',
+            'testemunhas-MIN_NUM_FORMS': '0', 'testemunhas-MAX_NUM_FORMS': '1000',
+            'testemunhas-0-nome': '', 'testemunhas-0-cpf': '',
+            'testemunhas-1-nome': '', 'testemunhas-1-cpf': '',
+        }
+        for i, item in enumerate(itens):
+            data[f'itens-{i}-comodo'] = item['comodo']
+            data[f'itens-{i}-item'] = item['item']
+            data[f'itens-{i}-ordem'] = str(item['ordem'])
+            data[f'itens-{i}-estado'] = estado if i == 0 else ''
+            data[f'itens-{i}-observacao'] = ''
+        return data
+
+    def test_criacao_com_foto_e_estado_preenchido(self):
+        data = self._payload_item_unico(estado='bom')
+        data['itens-0-fotos'] = _imagem_teste()
+        resp = self.client.post(reverse('laudo_create'), data)
+        laudo = LaudoVistoria.objects.latest('criado_em')
+        self.assertRedirects(resp, reverse('laudo_detail', args=[laudo.pk]))
+        item = laudo.itens.get()
+        self.assertEqual(FotoItemVistoria.objects.filter(item=item).count(), 1)
+        self.assertTrue(item.fotos.first().imagem)
+
+    def test_multiplas_fotos_na_mesma_linha(self):
+        data = self._payload_item_unico(estado='bom')
+        data['itens-0-fotos'] = [_imagem_teste('a.png'), _imagem_teste('b.png')]
+        resp = self.client.post(reverse('laudo_create'), data)
+        laudo = LaudoVistoria.objects.latest('criado_em')
+        self.assertRedirects(resp, reverse('laudo_detail', args=[laudo.pk]))
+        item = laudo.itens.get()
+        self.assertEqual(FotoItemVistoria.objects.filter(item=item).count(), 2)
+
+    def test_foto_sem_estado_nao_salva_silenciosamente(self):
+        data = self._payload_item_unico(estado='')
+        data['itens-0-fotos'] = _imagem_teste()
+        antes = LaudoVistoria.objects.count()
+        resp = self.client.post(reverse('laudo_create'), data)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(LaudoVistoria.objects.count(), antes)
+        self.assertEqual(ItemVistoria.objects.count(), 0)
+        self.assertEqual(FotoItemVistoria.objects.count(), 0)
+
+    def test_edicao_adiciona_foto_a_item_existente(self):
+        data = self._payload_item_unico(estado='bom')
+        resp = self.client.post(reverse('laudo_create'), data)
+        laudo = LaudoVistoria.objects.latest('criado_em')
+        self.assertRedirects(resp, reverse('laudo_detail', args=[laudo.pk]))
+        item = laudo.itens.get()
+
+        edit_data = {
+            'imovel': str(self.imovel.pk), 'contrato': str(self.contrato.pk),
+            'tipo': 'entrada', 'data': '2026-07-05', 'responsavel': 'Vistoriador Teste',
+            'local_assinatura': 'Maringá', 'data_assinatura': '2026-07-05',
+            'itens-TOTAL_FORMS': '1', 'itens-INITIAL_FORMS': '1',
+            'itens-MIN_NUM_FORMS': '0', 'itens-MAX_NUM_FORMS': '1000',
+            'itens-0-id': str(item.pk),
+            'itens-0-comodo': item.comodo, 'itens-0-item': item.item,
+            'itens-0-ordem': str(item.ordem), 'itens-0-estado': 'bom',
+            'itens-0-observacao': '', 'itens-0-fotos': _imagem_teste('nova.png'),
+            'testemunhas-TOTAL_FORMS': '2', 'testemunhas-INITIAL_FORMS': '0',
+            'testemunhas-MIN_NUM_FORMS': '0', 'testemunhas-MAX_NUM_FORMS': '1000',
+            'testemunhas-0-nome': '', 'testemunhas-0-cpf': '',
+            'testemunhas-1-nome': '', 'testemunhas-1-cpf': '',
+        }
+        resp = self.client.post(reverse('laudo_edit', args=[laudo.pk]), edit_data)
+        self.assertRedirects(resp, reverse('laudo_detail', args=[laudo.pk]))
+        self.assertEqual(FotoItemVistoria.objects.filter(item=item).count(), 1)
+        self.assertEqual(FotoItemVistoria.objects.first().item_id, item.pk)
+
+    def test_detalhe_exibe_fotos_agrupadas_por_item(self):
+        laudo = LaudoVistoria.objects.create(
+            imovel=self.imovel, contrato=self.contrato, tipo='entrada',
+            data=date(2026, 7, 1), responsavel='Carlos',
+        )
+        item = ItemVistoria.objects.create(laudo=laudo, comodo='Sala', item='Piso', estado='bom', ordem=0)
+        FotoItemVistoria.objects.create(item=item, imagem=_imagem_teste('a.png'))
+        FotoItemVistoria.objects.create(item=item, imagem=_imagem_teste('b.png'))
+
+        resp = self.client.get(reverse('laudo_detail', args=[laudo.pk]))
+        self.assertEqual(resp.status_code, 200)
+        grupos = resp.context['grupos']
+        item_no_contexto = grupos[0]['itens'][0]
+        self.assertEqual(item_no_contexto.fotos.count(), 2)
+        self.assertContains(resp, 'Foto de Piso', count=2)
+
+    def test_regressao_pdf_nao_contem_fotos(self):
+        # Confirma que _gerar_pdf_laudo não foi alterado para incluir fotos
+        # no contexto do PDF (RF4) — se este teste falhar, sinaliza que o
+        # módulo 03-views-laudo passou a expor fotos no PDF.
+        import inspect
+        from . import views
+        fonte = inspect.getsource(views._gerar_pdf_laudo)
+        self.assertNotIn('foto', fonte.lower())
+
+        laudo = LaudoVistoria.objects.create(
+            imovel=self.imovel, contrato=self.contrato, tipo='entrada',
+            data=date(2026, 7, 1), responsavel='Carlos',
+        )
+        item = ItemVistoria.objects.create(laudo=laudo, comodo='Sala', item='Piso', estado='bom', ordem=0)
+        FotoItemVistoria.objects.create(item=item, imagem=_imagem_teste())
+
+        resp = self.client.get(reverse('laudo_gerar_pdf', args=[laudo.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.content.startswith(b'%PDF-'))
+
+    def test_regressao_ged_nao_lista_fotos_de_item(self):
+        laudo = LaudoVistoria.objects.create(
+            imovel=self.imovel, contrato=self.contrato, tipo='entrada',
+            data=date(2026, 7, 1), responsavel='Carlos',
+        )
+        item = ItemVistoria.objects.create(laudo=laudo, comodo='Sala', item='Piso', estado='bom', ordem=0)
+        FotoItemVistoria.objects.create(item=item, imagem=_imagem_teste())
+
+        resp = self.client.get(reverse('documentos'))
+        self.assertEqual(resp.status_code, 200)
+        chaves_esperadas = {
+            'contratos_gerados', 'laudos', 'laudos_gerados', 'comprovantes',
+            'contratos_recibo', 'contratos_anual', 'recibos',
+        }
+        chaves_contexto = set(resp.context.keys()) & (chaves_esperadas | {
+            k for k in resp.context.keys() if 'foto' in k.lower()
+        })
+        self.assertEqual(chaves_contexto, chaves_esperadas)
+        for chave in chaves_esperadas:
+            self.assertIn(chave, resp.context)
 
 
 class DocumentoGeradoTests(TestCase):

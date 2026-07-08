@@ -117,6 +117,19 @@
               </td>
               <td class="text-muted">{{ item.observacao|default:"—" }}</td>
             </tr>
+            {% if item.fotos.all %}
+            <tr>
+              <td colspan="3" class="pt-0">
+                <div class="d-flex flex-wrap gap-2">
+                  {% for foto in item.fotos.all %}
+                  <a href="{{ foto.imagem.url }}" target="_blank">
+                    <img src="{{ foto.imagem.url }}" alt="Foto de {{ item.item }}" class="rounded border" style="width:64px;height:64px;object-fit:cover;">
+                  </a>
+                  {% endfor %}
+                </div>
+              </td>
+            </tr>
+            {% endif %}
             {% endfor %}
             {% empty %}
             <tr><td class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum item registrado.</div></td></tr>

@@ -27,6 +27,35 @@ def _moeda_widget():
 _telefone_attrs = {**_ctrl, 'data-mask': 'telefone', 'placeholder': '(00) 00000-0000'}
 
 
+class MultiplaImagemInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultiplaImagemField(forms.FileField):
+    """Campo não-model: aceita 0..N imagens, sempre opcional (o item só
+    passa a exigir `estado` se o usuário efetivamente mudar algo na linha)."""
+    widget = MultiplaImagemInput
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('required', False)
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        if not data:
+            return []
+        arquivos = data if isinstance(data, list) else [data]
+        return [super(MultiplaImagemField, self).clean(f, initial) for f in arquivos]
+
+    def has_changed(self, initial, data):
+        # O widget multi-arquivo devolve `[]` (não `None`) quando nenhum
+        # arquivo é enviado nessa linha — sem isso, toda linha do formset
+        # de itens seria considerada "alterada" (armadilha do formset,
+        # ver CLAUDE.md) mesmo sem foto nem estado preenchidos.
+        if not data:
+            return False
+        return super().has_changed(initial, data)
+
+
 # Selects de Imóvel/Contrato/Laudo exibem o `rotulo_curto` legível (código +
 # contexto) no lugar do `str(obj)` padrão. Três classes quase idênticas (não
 # uma genérica) para tipar cada campo ao model correto e deixar explícito, em
@@ -231,6 +260,10 @@ class LaudoVistoriaForm(forms.ModelForm):
 
 
 class ItemVistoriaForm(forms.ModelForm):
+    fotos = MultiplaImagemField(
+        widget=MultiplaImagemInput(attrs={'class': 'form-control form-control-sm', 'accept': 'image/*', 'multiple': True}),
+    )
+
     class Meta:
         model = ItemVistoria
         fields = ['comodo', 'item', 'estado', 'observacao', 'ordem']
