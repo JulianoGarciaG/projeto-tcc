@@ -4,6 +4,8 @@ Guia do Claude Code (claude.ai/code) para este repositório.
 
 > Sistema Integrado de Gestão Imobiliária (GED e BI) — "Shelter"
 
+Este arquivo é lido no início de **toda** janela de trabalho. Mantenha-o enxuto: apenas o que é necessário na maioria das tarefas e as travas que evitam erro. Detalhe pertence a `/docs` (referenciado, nunca replicado). Critérios de manutenção no fim.
+
 ---
 
 ## Comandos essenciais
@@ -15,7 +17,7 @@ venv/Scripts/python manage.py runserver          # dev server
 venv/Scripts/python manage.py makemigrations
 venv/Scripts/python manage.py migrate
 venv/Scripts/python manage.py check              # integridade
-venv/Scripts/python manage.py test imoveis       # suíte (98 testes)
+venv/Scripts/python manage.py test imoveis       # suíte completa
 venv/Scripts/python manage.py test imoveis.tests.NomeDaClasse   # teste único
 venv/Scripts/python manage.py createsuperuser
 ```
@@ -34,25 +36,24 @@ venv/Scripts/python manage.py createsuperuser
 - `core/` — configuração Django (`settings.py`, `urls.py`, `wsgi.py`).
 - `imoveis/` — **único app** (models, views, urls, forms, validators, signals, admin, `pdf.py`).
 - `templates/` — por módulo: `imoveis/`, `contratos/`, `financeiro/`, `ged/`, `laudos/`, `proprietarios/`, `inquilinos/`, `recibos/` + `documentos/` (PDFs).
-- `static/css/` — `shelter.css` (estilo global atual). `custom.css` está **órfão** (não referenciado).
+- `static/css/` — `shelter.css` (estilo global; **é o único** — não usar `custom.css`).
 - `static/js/` — `masks.js`, `theme.js` (dark mode), `imovel-view-toggle.js`.
 - `media/` — uploads (fotos, PDFs gerados/anexados).
 
-### Modelos (`imoveis/models.py`) — referência rápida
-Detalhamento completo de campos/relacionamentos em **[docs/03_modelagem_dados.md](docs/03_modelagem_dados.md)**.
+### Modelos (`imoveis/models.py`)
+Entidades: `Proprietario`, `Inquilino`, `Fiador`, `Imovel`, `FotoImovel`, `Contrato`, `LaudoVistoria`, `ComodoTemplate`, `ItemVistoriaTemplate`, `ItemVistoria`, `TestemunhaLaudo`, `Recibo`, `Lancamento`, `Notificacao`, `RenovacaoContrato`, `Distrato`, `DocumentoGerado`.
 
-| Modelo | Papel / gotcha |
+Campos, relacionamentos e caminhos de upload completos em **[docs/03_modelagem_dados.md](docs/03_modelagem_dados.md)**. Abaixo, apenas os modelos com armadilhas que você precisa conhecer **antes** de mexer:
+
+| Modelo | Gotcha |
 |---|---|
-| `Proprietario` / `Inquilino` / `Fiador` | Partes; CPF/CNPJ/RG/telefone validados (ver convenções). `Inquilino.faixa_renda` em faixas de R$. |
-| `Imovel` | `numero`/`complemento`; status `vago`/`ocupado` via **signal**. **Não tem** `valor_aluguel` (vem do contrato ativo). |
-| `FotoImovel` | Fotos do imóvel. |
-| `Contrato` | Imóvel ↔ Inquilino. 4 docs GED (`comprovante_renda`/`contrato_social`/`recibo_chaves`/`comprovante_anual`) são anexados no **detail** via `contrato_anexar_documento`, não no form. |
-| `LaudoVistoria` | Tipos `entrada`/`saida`; `contrato` **obrigatório** (`PROTECT`), select dependente do imóvel (`contratos_por_imovel_json`). `arquivo` = anexo assinado (upload só no detail). |
-| `ComodoTemplate` / `ItemVistoriaTemplate` | Catálogo do checklist (seed migração 0004: 5 cômodos, 32 itens). |
-| `ItemVistoria` / `TestemunhaLaudo` | Itens vistoriados (bom/regular/ruim) e testemunhas de um laudo. |
+| `Proprietario` / `Inquilino` / `Fiador` | CPF/CNPJ/RG/telefone validados (ver convenções). `Inquilino.faixa_renda` em faixas de R$. |
+| `Imovel` | Status `vago`/`ocupado` via **signal**. **Não tem** `valor_aluguel` (vem do contrato ativo). |
+| `Contrato` | 4 docs GED (`comprovante_renda`/`contrato_social`/`recibo_chaves`/`comprovante_anual`) anexados no **detail** via `contrato_anexar_documento`, não no form. |
+| `LaudoVistoria` | `contrato` **obrigatório** (`PROTECT`), select dependente do imóvel (`contratos_por_imovel_json`). `arquivo` = anexo assinado (upload só no detail). |
+| `ItemVistoriaTemplate` | Catálogo do checklist semeado na migração 0004 (5 cômodos, 32 itens). |
 | `Recibo` | `imovel`/`contrato` obrigatórios (`PROTECT`); período `periodo_inicio`/`periodo_fim`. |
-| `Lancamento` | **Único** módulo financeiro (`Entrada`/`Saida` removidos — não recriar). |
-| `Notificacao` / `RenovacaoContrato` / `Distrato` | Compliance, renovações e distratos. |
+| `Lancamento` | **Único** módulo financeiro (`Entrada`/`Saida` removidos — **não recriar**). |
 | `DocumentoGerado` | **Versão imutável** de PDF (GED versionado). FKs opcionais `contrato`/`laudo`/`recibo` (uma via `CheckConstraint`), `numero_versao` sequencial por origem, `sha256`, `gerado_por`. Campos legados `*.documento_gerado`/`Recibo.arquivo` são **espelho** da última versão. |
 
 ### Signal crítico (`imoveis/signals.py`)
@@ -94,15 +95,17 @@ Referência viva do sistema em `/docs/`:
 | [04_regras_de_negocio.md](docs/04_regras_de_negocio.md) | Signals, automações, restrições, GED, dashboard, acesso |
 | [07_design_ui_ux.md](docs/07_design_ui_ux.md) | Paleta/tokens, tipografia, layout, componentes, responsividade, dark mode, PDFs |
 
-### Histórico de rodadas (o "porquê" de cada mudança)
-O detalhamento de cada entrega vive nos planos, não aqui:
+Histórico de entregas e o "porquê" de cada rodada (planos por rodada, mapeados aos diretórios `planner-docs/`): **[docs/historico_entregas.md](docs/historico_entregas.md)**.
 
-| Rodada / entrega | Onde |
-|---|---|
-| Geração de PDFs (Rodada 1) | [docs/PLANO_GERACAO_DOCUMENTOS.md](docs/PLANO_GERACAO_DOCUMENTOS.md) |
-| Ajustes (Rodada 2) | [docs/PLANO_AJUSTES_RODADA2.md](docs/PLANO_AJUSTES_RODADA2.md) |
-| Validação/visualização + sidebar/logo (Rodada 3) | `planner-docs/melhorias-validacao-visualizacao-documentos/`, `planner-docs/remover-colapso-sidebar-e-ajustar-logo/` |
-| Redesign dos PDFs + GED versionado (Rodada 4) | `planner-docs/redesign-pdfs-documentos-gerados/` |
-| Correção visual dos PDFs | `planner-docs/fix-visual-pdfs-gerados/` |
-| Redesign Visual UI (paleta/tokens, dark mode, `shelter.css`) | `planner-docs/redesign-ui-shelter/` |
-| Contrato jurídico | `planner-docs/contrato-juridico-completo/` |
+---
+
+## Manutenção deste arquivo
+
+CLAUDE.md é o prefixo imutável lido em toda janela; cada linha é paga muitas vezes. Antes de adicionar algo, verifique se passa nos quatro testes:
+
+1. **Frequência** — é necessário na *maioria* das tarefas? Se for específico de um subsistema, vai para `/docs` e é referenciado aqui.
+2. **Estabilidade** — é estável? Fatos voláteis (contagens, "rodada atual", changelog) desatualizam e poluem o cache; movê-los para `/docs`.
+3. **Prevenção de erro** — sua violação causa bug ou retrabalho? Invariantes e armadilhas ficam aqui mesmo se forem de nicho, porque o custo do erro supera o custo dos tokens.
+4. **Não-duplicação** — já existe em `/docs`? Então referencie, não copie.
+
+Atualize CLAUDE.md quando um **invariante** mudar (nova convenção, novo footgun, comando alterado, nova estrutura de topo) — **não** a cada feature entregue (isso vive nos planos/histórico). Durante a implementação de uma feature, trate-o como imutável.
