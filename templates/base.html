@@ -121,9 +121,25 @@
     <button type="button" class="icon-btn" id="theme-toggle" title="Alternar tema claro/escuro" aria-label="Alternar tema claro/escuro">
       <i class="bi bi-moon-stars"></i>
     </button>
-    <span class="icon-btn" title="Notificações" aria-label="Notificações">
-      <i class="bi bi-bell"></i>
-    </span>
+    <div class="dropdown notif-dropdown">
+      <button class="icon-btn" type="button" id="notifDropdown" data-bs-toggle="dropdown"
+              aria-expanded="false" title="Notificações" aria-label="Notificações">
+        <i class="bi bi-bell"></i>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end notif-menu" aria-labelledby="notifDropdown">
+        <li><h6 class="dropdown-header">Notificações</h6></li>
+        {% for n in ultimas_notificacoes_usuario %}
+        <li>
+          <div class="notif-item notif-{{ n.nivel }}">
+            <div class="notif-msg">{{ n.mensagem }}</div>
+            <div class="notif-time">{{ n.criado_em|date:"d/m/Y H:i" }}</div>
+          </div>
+        </li>
+        {% empty %}
+        <li><span class="dropdown-item-text text-muted">Nenhuma notificação.</span></li>
+        {% endfor %}
+      </ul>
+    </div>
     <div class="user-avatar">
       {{ user.get_short_name|default:user.username|first|upper }}
     </div>

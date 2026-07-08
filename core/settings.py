@@ -44,12 +44,18 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'imoveis.context_processors.notificacoes_usuario',
             ],
         },
     },
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
+
+# Storage do django.contrib.messages — persiste uma cópia de cada mensagem em
+# NotificacaoUsuario (histórico por usuário), além do comportamento padrão de
+# toast efêmero (ver imoveis/message_storage.py).
+MESSAGE_STORAGE = 'imoveis.message_storage.PersistentFallbackStorage'
 
 # Banco de dados — usar SQLite em dev, MySQL em prod via .env
 DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.sqlite3')

@@ -170,7 +170,7 @@ A sidebar é **sempre expandida no desktop** (o colapso introduzido na Rodada 2 
 - **Esquerda:** título da página (`18px`/700), alguns com ícone laranja (`--brand`).
 - **Direita:** **toggle de tema** + sino de notificações + info do usuário + botão logout.
   - **Toggle de tema (`#theme-toggle`):** botão `.icon-btn` que alterna `data-theme` no `<html>` entre `""` (claro) e `"dark"`. Ícone alterna `bi-moon-stars` (no claro, oferece o escuro) ↔ `bi-sun` (no escuro). Lógica em `static/js/theme.js`: persiste em `localStorage['shelterTheme']`, atualiza o ícone e dispara o evento `shelter:theme-changed` no `document` a cada troca (consumido pelos gráficos, ver seção 13).
-  - **Sino de notificações:** restilizado como `.icon-btn`.
+  - **Sino de notificações (`#notifDropdown`):** botão `.icon-btn` que abre um dropdown Bootstrap (`.notif-dropdown`) com as últimas notificações do usuário logado (`ultimas_notificacoes_usuario`, via context processor). Cada item usa `.notif-{nivel}` (`success`/`error`/`warning`/`info`) para a borda esquerda colorida (tokens `--ok`/`--danger`/`--warn`/`--info`). Sem badge de contagem não-lida, sem paginação.
 
 ---
 

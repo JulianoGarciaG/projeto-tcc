@@ -751,6 +751,16 @@ input[type="file"].input-dashed {
 .badge-pendente, .badge-manutencao   { background: var(--warn-bg);   color: var(--warn); }
 .badge-encerrado                     { background: var(--neu-bg);    color: var(--neu); }
 
+/* Dropdown de notificacoes (sino da topbar) */
+.notif-dropdown .dropdown-menu { min-width: 320px; max-height: 400px; overflow-y: auto; }
+.notif-item { padding: .5rem .75rem; border-left: 3px solid transparent; }
+.notif-success { border-left-color: var(--ok); }
+.notif-error   { border-left-color: var(--danger); }
+.notif-warning { border-left-color: var(--warn); }
+.notif-info    { border-left-color: var(--info); }
+.notif-msg  { font-size: .875rem; color: var(--ink); }
+.notif-time { font-size: .75rem; color: var(--neu); }
+
 /* ============================================================
    12. SEGMENTED CONTROL (brief secao 4)
    ============================================================ */

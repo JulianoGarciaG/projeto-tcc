@@ -210,3 +210,12 @@ Todos os validadores customizados aceitam o valor com ou sem máscara e removem 
   - `filesystem` (default) → `FileSystemStorage`.
   - `s3` → preparado, mas **não ativado** nesta rodada. Setar `STORAGE_BACKEND=s3` sem as libs instaladas levanta `ImproperlyConfigured` explicitamente (mesmo comportamento de `DB_ENGINE=mysql` sem `mysqlclient`).
 - `boto3`/`django-storages` **não** foram adicionados ao projeto — apenas a arquitetura está pronta. Todos os `FileField` usam o storage `default`, então a troca para S3 não exige mudança no código de aplicação. O `upload_to` determinístico de `DocumentoGerado` já serve como key de objeto S3.
+
+---
+
+## 15. Histórico de Notificações por Usuário
+
+- Toda mensagem disparada via `django.contrib.messages` (`success`/`error`/`warning`/`info`) é persistida em `NotificacaoUsuario` para o usuário autenticado que gerou a request, sem alterar os 36+ pontos de chamada existentes em `imoveis/views.py`.
+- **Captura centralizada:** `MESSAGE_STORAGE = 'imoveis.message_storage.PersistentFallbackStorage'` (`core/settings.py`) substitui o storage padrão do Django. `PersistentFallbackStorage.add()` mantém o comportamento normal (toast efêmero em `base.html`) e adicionalmente cria um `NotificacaoUsuario` quando `request.user.is_authenticated`; para usuário anônimo, só o toast é exibido (sem persistência).
+- **Leitura via context processor:** `imoveis.context_processors.notificacoes_usuario` (registrado em `TEMPLATES[0]['OPTIONS']['context_processors']`) injeta `ultimas_notificacoes_usuario` (últimas 8, slicing simples sem `Paginator`, mesmo precedente do dashboard) em todo template renderizado com `render()`. Para usuário anônimo, retorna dict vazio.
+- **Sem estado de lida/não lida, sem paginação, sem link para o objeto de origem** — histórico é somente leitura, append-only, exibido no dropdown do sino da topbar.

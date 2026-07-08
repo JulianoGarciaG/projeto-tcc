@@ -3,13 +3,14 @@ from datetime import date
 from decimal import Decimal
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template.loader import render_to_string
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
+from .context_processors import LIMITE_NOTIFICACOES_TOPBAR, notificacoes_usuario
 from .extenso import (
     dia_ordinal_extenso, meses_entre, meses_por_extenso, valor_por_extenso,
 )
@@ -20,8 +21,8 @@ from .forms import (
 from .identidade import nome_arquivo
 from .models import (
     Contrato, DocumentoGerado, Fiador, FotoItemVistoria, Imovel, Inquilino,
-    ItemVistoria, Lancamento, LaudoVistoria, Notificacao, Proprietario,
-    Recibo, TestemunhaLaudo,
+    ItemVistoria, Lancamento, LaudoVistoria, Notificacao, NotificacaoUsuario,
+    Proprietario, Recibo, TestemunhaLaudo,
 )
 
 
@@ -1332,3 +1333,53 @@ class LabelSelectTests(TestCase):
     def test_distrato_form_laudo_saida_label(self):
         campo = DistratoForm().fields['laudo_saida']
         self.assertEqual(campo.label_from_instance(self.laudo), self.laudo.rotulo_curto)
+
+
+class NotificacaoUsuarioTests(TestCase):
+    """Histórico de notificações por usuário: captura, isolamento e limite."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester', password='x')
+        self.client.force_login(self.user)
+        self.factory = RequestFactory()
+
+    def test_acao_crud_cria_notificacao_usuario(self):
+        resp = self.client.post(reverse('proprietario_create'), {
+            'nome': 'Maria Dona', 'cpf_cnpj': CPF_VALIDO_3,
+        })
+        self.assertRedirects(resp, reverse('proprietario_list'))
+        notificacao = NotificacaoUsuario.objects.filter(usuario=self.user).latest('criado_em')
+        self.assertEqual(notificacao.nivel, 'success')
+        self.assertTrue(notificacao.mensagem)
+
+    def test_isolamento_por_usuario(self):
+        outro_user = User.objects.create_user('outro', password='x')
+        NotificacaoUsuario.objects.create(usuario=self.user, mensagem='Minha notificação', nivel='success')
+        NotificacaoUsuario.objects.create(usuario=outro_user, mensagem='Notificação do outro', nivel='success')
+
+        request = self.factory.get('/')
+        request.user = self.user
+        contexto = notificacoes_usuario(request)
+
+        mensagens = [n.mensagem for n in contexto['ultimas_notificacoes_usuario']]
+        self.assertIn('Minha notificação', mensagens)
+        self.assertNotIn('Notificação do outro', mensagens)
+
+    def test_limite_de_n_no_context_processor(self):
+        for i in range(LIMITE_NOTIFICACOES_TOPBAR + 3):
+            NotificacaoUsuario.objects.create(
+                usuario=self.user, mensagem=f'Notificação {i}', nivel='success')
+
+        request = self.factory.get('/')
+        request.user = self.user
+        contexto = notificacoes_usuario(request)
+        ultimas = list(contexto['ultimas_notificacoes_usuario'])
+
+        self.assertEqual(len(ultimas), LIMITE_NOTIFICACOES_TOPBAR)
+        criados_em = [n.criado_em for n in ultimas]
+        self.assertEqual(criados_em, sorted(criados_em, reverse=True))
+
+    def test_usuario_anonimo_nao_quebra(self):
+        request = self.factory.get('/')
+        request.user = AnonymousUser()
+        self.assertEqual(notificacoes_usuario(request), {})

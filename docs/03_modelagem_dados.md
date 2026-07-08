@@ -36,6 +36,9 @@ DocumentoGerado (GED versionado — 1 registro imutável por geração de PDF)
     ├── Contrato (CASCADE) [uma das 3 FKs preenchida]
     ├── LaudoVistoria (CASCADE)
     └── Recibo (CASCADE)
+
+User (auth)
+    └── NotificacaoUsuario (CASCADE) [histórico append-only de django.contrib.messages]
 ```
 
 > O módulo financeiro **não possui** mais os models `Entrada`/`Saida` (removidos na Rodada 2) — o único model financeiro é `Lancamento`, vinculado ao `Contrato` (não diretamente ao `Imovel`).
@@ -458,6 +461,26 @@ A origem é modelada com **três FKs explícitas** (uma por tipo) + campo `tipo`
 **Ordenação:** `-gerado_em`, `-pk`
 
 > Os campos legados `Contrato.documento_gerado`, `LaudoVistoria.documento_gerado` e `Recibo.arquivo` são **mantidos**, mas deixam de ser fonte de verdade: passam a ser espelhos automáticos da última versão, sincronizados por `imoveis.pdf.gerar_e_anexar()`. Ver Regras de Negócio, seção 14.
+
+---
+
+### 2.18 NotificacaoUsuario
+Histórico persistido, por usuário, das mensagens que o sistema já emite via `django.contrib.messages` (sucesso de CRUD, geração de PDF, erros, avisos). Espelho **append-only** do texto e nível (tag) da mensagem exibida — sem estado de lida/não lida, sem FK genérica para o objeto de origem. Não confundir com o model de negócio `Notificacao` (avisos de órgãos públicos sobre um imóvel).
+
+| Campo | Tipo | Obrigatório | Observações |
+|---|---|---|---|
+| `id` | BigAutoField | — | PK automática |
+| `usuario` | ForeignKey → User | ✓ | CASCADE; `related_name='notificacoes'` |
+| `mensagem` | TextField | ✓ | Texto da mensagem exibida |
+| `nivel` | CharField (10) | ✓ | Choices espelhando as tags do Django messages |
+| `criado_em` | DateTimeField | — | Auto now add |
+
+**Choices — nivel:**
+`success`, `error`, `warning`, `info`
+
+**Ordenação:** `-criado_em`, `-pk`
+
+> Criado exclusivamente pelo storage backend customizado de `django.contrib.messages` (`imoveis/message_storage.py`) — nunca instanciado manualmente em views.
 
 ---
 

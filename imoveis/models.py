@@ -697,3 +697,34 @@ class DocumentoGerado(models.Model):
 
     def __str__(self):
         return f'{self.get_tipo_display()} #{self.origem_pk} — v{self.numero_versao}'
+
+
+class NotificacaoUsuario(models.Model):
+    """Histórico persistido das mensagens do django.contrib.messages, por
+    usuário. Alimentado automaticamente pelo storage backend customizado
+    (imoveis/message_storage.py) — nunca criado manualmente em views.
+
+    Não possui estado de lida/não lida nem referência ao objeto de origem:
+    é um espelho append-only do texto e nível (tag) da mensagem exibida.
+    """
+
+    NIVEL_CHOICES = [
+        ('success', 'Sucesso'),
+        ('error', 'Erro'),
+        ('warning', 'Aviso'),
+        ('info', 'Informação'),
+    ]
+
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                related_name='notificacoes')
+    mensagem = models.TextField()
+    nivel = models.CharField(max_length=10, choices=NIVEL_CHOICES)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Notificação de Usuário'
+        verbose_name_plural = 'Notificações de Usuário'
+        ordering = ['-criado_em', '-pk']
+
+    def __str__(self):
+        return f'{self.usuario} — {self.get_nivel_display()} — {self.mensagem[:50]}'

@@ -3,7 +3,7 @@ from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato,
     Recibo, ComodoTemplate, ItemVistoriaTemplate, ItemVistoria, TestemunhaLaudo,
-    DocumentoGerado,
+    DocumentoGerado, NotificacaoUsuario,
 )
 
 
@@ -112,6 +112,20 @@ class DocumentoGeradoAdmin(admin.ModelAdmin):
     date_hierarchy = 'gerado_em'
     readonly_fields = ['tipo', 'contrato', 'laudo', 'recibo', 'numero_versao',
                        'arquivo', 'sha256', 'gerado_por', 'gerado_em']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(NotificacaoUsuario)
+class NotificacaoUsuarioAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'nivel', 'mensagem', 'criado_em')
+    list_filter = ('nivel', 'criado_em')
+    date_hierarchy = 'criado_em'
+    readonly_fields = ('usuario', 'mensagem', 'nivel', 'criado_em')
 
     def has_add_permission(self, request):
         return False
