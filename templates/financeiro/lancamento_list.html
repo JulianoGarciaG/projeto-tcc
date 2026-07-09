@@ -1,35 +1,192 @@
 {% extends 'base.html' %}
 {% load imoveis_tags %}
 {% block title %}Financeiro — GestImóveis{% endblock %}
-{% block page_title %}<i class="bi bi-cash-coin me-2"></i>Financeiro — Lançamentos{% endblock %}
+{% block page_title %}<i class="bi bi-cash-coin me-2"></i>Financeiro{% endblock %}
 {% block nav_financeiro %}active{% endblock %}
 
 {% block content %}
 
-<!-- Totalizadores -->
+<!-- Dashboard Financeiro -->
+<div class="card mb-4">
+  <div class="card-body">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-12 col-md-6">
+      <label class="form-label">Imóvel</label>
+      <select name="imovel_id" class="form-select">
+        <option value="">Todos os imóveis</option>
+        {% for im in dash_imoveis_lista %}
+        <option value="{{ im.pk }}" {% if dash_filtro_imovel_id == im.pk|stringformat:"s" %}selected{% endif %}>
+          {{ im.endereco|truncatechars:40 }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Vencimento início</label>
+      {{ dash_filtro_form.data_inicio }}
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Vencimento fim</label>
+      {{ dash_filtro_form.data_fim }}
+    </div>
+    <div class="col-6 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-graphite flex-fill">
+        <i class="bi bi-funnel me-1"></i> Filtrar
+      </button>
+      <a href="{% url 'lancamento_list' %}" class="btn btn-outline-secondary" title="Limpar filtros">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </form>
+  </div>
+</div>
+
+<!-- KPI Cards -->
 <div class="row g-3 mb-4">
-  <div class="col-md-4">
+  <div class="col-6 col-md-4 col-lg">
     <div class="kpi-card">
-      <div class="kpi-label"><span class="kpi-dot kpi-dot-ok"></span>Ganhos Efetivados (filtro)</div>
-      <div class="kpi-value">R$ {{ total_efetivado|brl }}</div>
-      <div class="kpi-aux"><i class="bi bi-check-circle"></i> recebimentos confirmados</div>
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-ok"></span>Ganhos do Período</div>
+      <div class="kpi-value">R$ {{ ganhos_periodo|brl }}</div>
+      <div class="kpi-aux"><i class="bi bi-graph-up"></i> ganhos efetivados</div>
     </div>
   </div>
-  <div class="col-md-4">
+  <div class="col-6 col-md-4 col-lg">
     <div class="kpi-card">
-      <div class="kpi-label"><span class="kpi-dot kpi-dot-danger"></span>Ganhos Pendentes (filtro)</div>
-      <div class="kpi-value">R$ {{ total_pendente|brl }}</div>
-      <div class="kpi-aux"><i class="bi bi-exclamation-triangle"></i> em aberto no período</div>
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-danger"></span>Despesas do Período</div>
+      <div class="kpi-value">R$ {{ despesas_periodo|brl }}</div>
+      <div class="kpi-aux"><i class="bi bi-graph-down"></i> despesas do período</div>
     </div>
   </div>
-  <div class="col-md-4">
+  <div class="col-6 col-md-4 col-lg">
     <div class="kpi-card">
-      <div class="kpi-label"><span class="kpi-dot"></span>Despesas (filtro)</div>
-      <div class="kpi-value">R$ {{ total_despesas|brl }}</div>
-      <div class="kpi-aux"><i class="bi bi-dash-circle"></i> saídas no período</div>
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-info"></span>Saldo</div>
+      <div class="kpi-value">R$ {{ saldo_periodo|brl }}</div>
+      <div class="kpi-aux"><i class="bi bi-wallet2"></i> ganhos − despesas</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-warn"></span>Total Pendente</div>
+      <div class="kpi-value">R$ {{ dash_total_pendente|brl }}</div>
+      <div class="kpi-aux"><i class="bi bi-hourglass-split"></i> {{ pendentes_antigos|length }} lançamentos em aberto</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-brand"></span>Ticket Médio de Aluguel</div>
+      <div class="kpi-value">R$ {{ ticket_medio_aluguel|brl }}</div>
+      <div class="kpi-aux"><i class="bi bi-house-check"></i> média entre contratos ativos</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-danger"></span>% de Inadimplência</div>
+      <div class="kpi-value">{{ pct_inadimplencia }}%</div>
+      <div class="kpi-aux"><i class="bi bi-exclamation-triangle"></i> lançamentos em atraso</div>
     </div>
   </div>
 </div>
+
+<!-- Ranking + Evolução mensal -->
+<div class="row g-3 mb-4">
+  <div class="col-md-5">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-graph-up-arrow"></i> Ranking de imóveis por rentabilidade
+      </div>
+      <div class="card-body">
+        {% for r in rentabilidade_por_imovel %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between small mb-1">
+            <span>{{ forloop.counter }} {{ r.imovel.endereco|truncatechars:30 }}</span>
+            <strong class="{% if r.saldo < 0 %}text-danger{% else %}text-success{% endif %}">R$ {{ r.saldo|brl }}</strong>
+          </div>
+          <div class="progress" style="height: 6px;">
+            <div class="progress-bar {% if r.saldo < 0 %}bg-danger{% else %}bg-success{% endif %}" role="progressbar" style="width: 100%;"></div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-state"><i class="bi bi-inbox"></i>Nenhum lançamento registrado.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card h-100">
+      <div class="card-header">
+        Evolução mensal
+        <span class="ms-1 small text-muted fw-normal">&middot; {{ evolucao_titulo }}</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrapper">
+          <canvas id="chartBarras"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Composição de despesas + Pendentes -->
+<div class="row g-3 mb-4">
+  <div class="col-md-5">
+    <div class="card h-100">
+      <div class="card-header">
+        Composição de despesas por categoria
+      </div>
+      <div class="card-body">
+        <div class="chart-wrapper" style="height: 320px;">
+          <canvas id="chartCategorias"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-clock-history"></i> Lançamentos pendentes mais antigos
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead>
+            <tr>
+              <th>Imóvel</th>
+              <th>Tipo</th>
+              <th>Valor</th>
+              <th>Vencimento</th>
+              <th>Atraso</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in pendentes_antigos %}
+            <tr>
+              <td class="text-muted small">{{ p.lancamento.imovel.endereco|truncatechars:25 }}</td>
+              <td>{{ p.lancamento.get_tipo_display }}</td>
+              <td><strong>R$ {{ p.lancamento.valor|brl }}</strong></td>
+              <td>{{ p.lancamento.data_vencimento|date:"d/m/Y" }}</td>
+              <td>
+                {% if p.atraso_dias > 0 %}
+                <span class="status-badge badge-atrasado">{{ p.atraso_dias }} dias</span>
+                {% else %}
+                <span class="status-badge badge-pendente">em dia</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="border-0">
+                <div class="empty-state"><i class="bi bi-inbox"></i>Nenhum lançamento pendente.</div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lançamentos -->
+<h5 class="mb-3"><i class="bi bi-list-ul me-2"></i>Lançamentos</h5>
 
 <!-- Filtros -->
 <div class="section-card mb-4">
@@ -117,4 +274,123 @@
     </table>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const mesesLabels   = {{ meses_labels|safe }};
+  const mesesGanhos   = {{ meses_ganhos|safe }};
+  const mesesDespesas = {{ meses_despesas|safe }};
+  const categoriaLabels = {{ categoria_labels|safe }};
+  const categoriaData   = {{ categoria_data|safe }};
+
+  let chartBarras = null;
+  let chartCategorias = null;
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function legendConfig(muted) {
+    return {
+      position: 'bottom',
+      labels: {
+        color: muted,
+        font: { size: 12, family: 'Inter' },
+        padding: 16,
+        boxWidth: 10,
+        boxHeight: 10,
+        usePointStyle: true,
+        pointStyleWidth: 10,
+      }
+    };
+  }
+
+  function renderCharts() {
+    if (chartBarras) chartBarras.destroy();
+    if (chartCategorias) chartCategorias.destroy();
+
+    const ok      = cssVar('--ok');
+    const danger  = cssVar('--danger');
+    const warn    = cssVar('--warn');
+    const info    = cssVar('--info');
+    const brand   = cssVar('--brand');
+    const surface = cssVar('--surface');
+    const border  = cssVar('--border');
+    const muted   = cssVar('--muted');
+
+    chartBarras = new Chart(document.getElementById('chartBarras'), {
+      type: 'bar',
+      data: {
+        labels: mesesLabels,
+        datasets: [
+          {
+            label: 'Ganhos',
+            data: mesesGanhos,
+            backgroundColor: ok,
+            borderRadius: 4,
+            borderSkipped: false,
+          },
+          {
+            label: 'Despesas',
+            data: mesesDespesas,
+            backgroundColor: danger,
+            borderRadius: 4,
+            borderSkipped: false,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: legendConfig(muted) },
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { color: border },
+            ticks: { color: muted, font: { family: 'Inter' } },
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: border },
+            border: { display: false },
+            ticks: {
+              color: muted,
+              font: { family: 'Inter' },
+              callback: function(v) {
+                if (v >= 1000) return 'R$ ' + (v/1000).toLocaleString('pt-BR') + 'k';
+                return 'R$ ' + v.toLocaleString('pt-BR');
+              }
+            }
+          }
+        }
+      }
+    });
+
+    chartCategorias = new Chart(document.getElementById('chartCategorias'), {
+      type: 'doughnut',
+      data: {
+        labels: categoriaLabels,
+        datasets: [{
+          data: categoriaData,
+          backgroundColor: [info, warn, brand, danger, muted, ok],
+          borderWidth: 2,
+          borderColor: surface,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '64%',
+        plugins: { legend: legendConfig(muted) },
+      }
+    });
+  }
+
+  renderCharts();
+  document.addEventListener('shelter:theme-changed', renderCharts);
+})();
+</script>
 {% endblock %}

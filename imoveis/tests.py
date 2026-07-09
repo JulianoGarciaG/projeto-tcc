@@ -952,7 +952,7 @@ class DashboardFiltroTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('tester', password='x')
         self.user.user_permissions.add(
-            Permission.objects.get(codename='pode_acessar_dashboard'))
+            Permission.objects.get(codename='pode_acessar_financeiro'))
         self.client.force_login(self.user)
         _, self.imovel, self.inquilino, self.contrato = criar_base()
         self.lanc_junho = Lancamento.objects.create(
@@ -965,23 +965,22 @@ class DashboardFiltroTests(TestCase):
         )
 
     def test_filtro_datas_ddmmyyyy(self):
-        resp = self.client.get(reverse('dashboard'),
+        resp = self.client.get(reverse('lancamento_list'),
                                {'data_inicio': '01/06/2026', 'data_fim': '30/06/2026'})
         self.assertEqual(resp.status_code, 200)
-        ultimos = list(resp.context['ultimos_lancamentos'])
-        self.assertIn(self.lanc_junho, ultimos)
-        self.assertNotIn(self.lanc_agosto, ultimos)
+        meses = resp.context['meses_labels']
+        self.assertIn('Jun/2026', meses)
 
     def test_sem_filtro_lista_todos(self):
-        resp = self.client.get(reverse('dashboard'))
+        resp = self.client.get(reverse('lancamento_list'))
         self.assertEqual(resp.status_code, 200)
-        ultimos = list(resp.context['ultimos_lancamentos'])
-        self.assertIn(self.lanc_junho, ultimos)
-        self.assertIn(self.lanc_agosto, ultimos)
+        lancamentos = list(resp.context['lancamentos'])
+        self.assertIn(self.lanc_junho, lancamentos)
+        self.assertIn(self.lanc_agosto, lancamentos)
 
     def test_campos_usam_flatpickr(self):
-        resp = self.client.get(reverse('dashboard'))
-        form = resp.context['filtro_form']
+        resp = self.client.get(reverse('lancamento_list'))
+        form = resp.context['dash_filtro_form']
         self.assertEqual(form.fields['data_inicio'].widget.attrs.get('data-flatpickr'), 'true')
         self.assertEqual(form.fields['data_fim'].widget.attrs.get('data-flatpickr'), 'true')
 

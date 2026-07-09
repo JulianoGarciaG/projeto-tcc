@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% load imoveis_tags %}
+{% block title %}Dashboard Imobiliário — Shelter{% endblock %}
+{% block page_title %}Dashboard Imobiliário{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+
+<!-- Filtros do Dashboard -->
+<div class="card mb-4">
+  <div class="card-body">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-12 col-md-5">
+      <label class="form-label">Imóvel</label>
+      <select name="imovel_id" class="form-select">
+        <option value="">Todos os imóveis</option>
+        {% for im in imoveis_lista %}
+        <option value="{{ im.pk }}" {% if filtro_imovel_id == im.pk|stringformat:"s" %}selected{% endif %}>
+          {{ im.endereco|truncatechars:40 }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label">Tipo de imóvel</label>
+      <select name="tipo" class="form-select">
+        <option value="">Todos</option>
+        {% for val, label in tipo_choices %}
+        <option value="{{ val }}" {% if filtro_tipo == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        <option value="">Todos</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if filtro_status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-graphite flex-fill">
+        <i class="bi bi-funnel me-1"></i> Filtrar
+      </button>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary" title="Limpar filtros">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </form>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-brand"></span>Total de Imóveis</div>
+      <div class="kpi-value">{{ total_imoveis }}</div>
+      <div class="kpi-aux"><i class="bi bi-house-door"></i> imóveis cadastrados</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-ok"></span>Ocupados / Vagos</div>
+      <div class="kpi-value">{{ ocupados }} / {{ vagos }}</div>
+      <div class="kpi-aux"><i class="bi bi-house-gear"></i> {{ manutencao }} em manutenção</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-danger"></span>Taxa de Vacância</div>
+      <div class="kpi-value">{{ taxa_vacancia }}%</div>
+      <div class="kpi-aux"><i class="bi bi-percent"></i> {{ vagos }} de {{ total_imoveis }} imóveis vagos</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-info"></span>Contratos Ativos</div>
+      <div class="kpi-value">{{ contratos_ativos }}</div>
+      <div class="kpi-aux"><i class="bi bi-file-earmark-text"></i> em vigência</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card">
+      <div class="d-flex align-items-start justify-content-between w-100">
+        <div class="kpi-label mb-0"><span class="kpi-dot kpi-dot-warn"></span>Contratos que Precisam de Atenção</div>
+        <span class="badge text-bg-warning">EXEMPLO</span>
+      </div>
+      <div class="kpi-value">{{ contratos_atencao|length }}</div>
+      <div class="kpi-aux"><i class="bi bi-exclamation-triangle"></i> dado de exemplo · indicador pendente</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-lg">
+    <div class="kpi-card">
+      <div class="d-flex align-items-start justify-content-between w-100">
+        <div class="kpi-label mb-0"><span class="kpi-dot kpi-dot-warn"></span>Tempo Médio de Vacância</div>
+        <span class="badge text-bg-warning">EXEMPLO</span>
+      </div>
+      <div class="kpi-value">{% if tempo_medio_vacancia %}{{ tempo_medio_vacancia }} dias{% else %}—{% endif %}</div>
+      <div class="kpi-aux"><i class="bi bi-clock-history"></i> dado de exemplo · indicador pendente</div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header">
+        Distribuição por situação do imóvel
+      </div>
+      <div class="card-body">
+        <div class="chart-wrapper" style="height: 320px;">
+          <canvas id="chartSituacao"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header">
+        Distribuição por tipo de imóvel
+      </div>
+      <div class="card-body">
+        <div class="chart-wrapper" style="height: 320px;">
+          <canvas id="chartTipo"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Contratos que precisam de atenção -->
+<div class="card">
+  <div class="card-header">
+    <i class="bi bi-exclamation-triangle"></i> Contratos que precisam de atenção
+    <span class="badge text-bg-warning ms-1">EXEMPLO — INDICADOR EM DESENVOLVIMENTO</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>Imóvel</th>
+          <th>Inquilino</th>
+          <th>Motivo</th>
+          <th>Prazo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in contratos_atencao %}
+        <tr>
+          <td class="text-muted small">{{ c.imovel }}</td>
+          <td>{{ c.inquilino }}</td>
+          <td>{{ c.motivo }}</td>
+          <td>{{ c.prazo }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="border-0">
+            <div class="empty-state"><i class="bi bi-inbox"></i>Nenhum indicador disponível ainda — funcionalidade em desenvolvimento.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const situacaoLabels = {{ pizza_labels|safe }};
+  const situacaoData   = {{ pizza_data|safe }};
+  const tipoLabels      = {{ tipo_labels|safe }};
+  const tipoData        = {{ tipo_data|safe }};
+
+  let chartSituacao = null;
+  let chartTipo = null;
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function legendConfig(muted) {
+    return {
+      position: 'bottom',
+      labels: {
+        color: muted,
+        font: { size: 12, family: 'Inter' },
+        padding: 16,
+        boxWidth: 10,
+        boxHeight: 10,
+        usePointStyle: true,
+        pointStyleWidth: 10,
+      }
+    };
+  }
+
+  function renderCharts() {
+    if (chartSituacao) chartSituacao.destroy();
+    if (chartTipo) chartTipo.destroy();
+
+    const ok      = cssVar('--ok');
+    const danger  = cssVar('--danger');
+    const warn    = cssVar('--warn');
+    const info    = cssVar('--info');
+    const brand   = cssVar('--brand');
+    const muted   = cssVar('--muted');
+    const surface = cssVar('--surface');
+
+    chartSituacao = new Chart(document.getElementById('chartSituacao'), {
+      type: 'doughnut',
+      data: {
+        labels: situacaoLabels,
+        datasets: [{
+          data: situacaoData,
+          backgroundColor: [ok, danger, warn],
+          borderWidth: 2,
+          borderColor: surface,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '64%',
+        plugins: { legend: legendConfig(muted) },
+      }
+    });
+
+    chartTipo = new Chart(document.getElementById('chartTipo'), {
+      type: 'doughnut',
+      data: {
+        labels: tipoLabels,
+        datasets: [{
+          data: tipoData,
+          backgroundColor: [brand, warn, ok, muted, danger, info],
+          borderWidth: 2,
+          borderColor: surface,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '64%',
+        plugins: { legend: legendConfig(muted) },
+      }
+    });
+  }
+
+  renderCharts();
+  document.addEventListener('shelter:theme-changed', renderCharts);
+})();
+</script>
+{% endblock %}

@@ -679,6 +679,11 @@ input[type="file"].input-dashed {
   box-shadow: var(--shadow);
   padding: 1rem 1.15rem;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .kpi-card .kpi-label {
@@ -689,6 +694,7 @@ input[type="file"].input-dashed {
   color: var(--muted);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: .45rem;
   margin-bottom: .35rem;
 }
@@ -718,6 +724,7 @@ input[type="file"].input-dashed {
   color: var(--muted);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: .35rem;
   margin-top: .1rem;
 }

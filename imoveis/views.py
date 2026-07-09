@@ -2,7 +2,7 @@ from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
-from django.db.models import Sum, Q, ProtectedError
+from django.db.models import Sum, Avg, Count, Q, ProtectedError
 from django.http import Http404, JsonResponse
 from datetime import date, timedelta
 
@@ -93,12 +93,68 @@ def erro_403(request, exception=None):
 
 @login_required
 @permission_required('imoveis.pode_acessar_dashboard', raise_exception=True)
-def dashboard(request):
+def dashboard_imobiliario(request):
+    imovel_id = request.GET.get('imovel_id', '')
+    tipo_filtro = request.GET.get('tipo', '')
+    status_filtro = request.GET.get('status', '')
+
+    imoveis_qs = Imovel.objects.all()
+    if imovel_id:
+        imoveis_qs = imoveis_qs.filter(pk=imovel_id)
+    if tipo_filtro:
+        imoveis_qs = imoveis_qs.filter(tipo=tipo_filtro)
+    if status_filtro:
+        imoveis_qs = imoveis_qs.filter(status=status_filtro)
+
+    total_imoveis = imoveis_qs.count()
+    vagos = imoveis_qs.filter(status='vago').count()
+    ocupados = imoveis_qs.filter(status='ocupado').count()
+    manutencao = imoveis_qs.filter(status='manutencao').count()
+    contratos_ativos = Contrato.objects.filter(status='ativo').count()
+    taxa_vacancia = round((vagos / total_imoveis * 100), 1) if total_imoveis else 0
+
+    # Donut — distribuição por situação do imóvel
+    pizza_labels = ['Ocupados', 'Vagos', 'Em Manutenção']
+    pizza_data = [ocupados, vagos, manutencao]
+
+    # Donut — distribuição por tipo de imóvel
+    tipo_labels = [label for _, label in Imovel.TIPO_CHOICES]
+    contagem_por_tipo = dict(
+        imoveis_qs.values_list('tipo').annotate(total=Count('pk')).values_list('tipo', 'total')
+    )
+    tipo_data = [contagem_por_tipo.get(valor, 0) for valor, _ in Imovel.TIPO_CHOICES]
+
+    context = {
+        'total_imoveis': total_imoveis,
+        'vagos': vagos,
+        'ocupados': ocupados,
+        'manutencao': manutencao,
+        'contratos_ativos': contratos_ativos,
+        'taxa_vacancia': taxa_vacancia,
+        'pizza_labels': pizza_labels,
+        'pizza_data': pizza_data,
+        'tipo_labels': tipo_labels,
+        'tipo_data': tipo_data,
+        # Placeholders — dependem de features ainda não construídas
+        'contratos_atencao': [],
+        'tempo_medio_vacancia': None,
+        # Filtros
+        'imoveis_lista': Imovel.objects.all(),
+        'filtro_imovel_id': imovel_id,
+        'filtro_tipo': tipo_filtro,
+        'filtro_status': status_filtro,
+        'tipo_choices': Imovel.TIPO_CHOICES,
+        'status_choices': Imovel.STATUS_CHOICES,
+    }
+    return render(request, 'imoveis/dashboard_imobiliario.html', context)
+
+
+def _dashboard_financeiro_context(request):
+    """Monta o contexto de KPIs/gráficos do dashboard financeiro,
+    reutilizando os filtros de data/imóvel da tela de Financeiro."""
     hoje = date.today()
 
-    # Filtros
     imovel_id = request.GET.get('imovel_id', '')
-    status_filtro = request.GET.get('status', '')
     filtro_form = DashboardFiltroForm(request.GET)
     data_inicio = data_fim = None
     if filtro_form.is_valid():
@@ -115,45 +171,67 @@ def dashboard(request):
         lancamentos_qs = lancamentos_qs.filter(data_vencimento__gte=data_inicio)
     if data_fim:
         lancamentos_qs = lancamentos_qs.filter(data_vencimento__lte=data_fim)
-    if status_filtro:
-        lancamentos_qs = lancamentos_qs.filter(status=status_filtro)
 
-    total_imoveis = imoveis_qs.count()
-    vagos = imoveis_qs.filter(status='vago').count()
-    ocupados = imoveis_qs.filter(status='ocupado').count()
-    contratos_ativos = Contrato.objects.filter(status='ativo').count()
-    inadimplentes = lancamentos_qs.filter(
+    # KPIs do período
+    ganhos_periodo = lancamentos_qs.filter(
+        natureza='ganho', status='efetivado',
+    ).aggregate(total=Sum('valor'))['total'] or 0
+    despesas_periodo = lancamentos_qs.filter(
+        natureza='despesa',
+    ).aggregate(total=Sum('valor'))['total'] or 0
+    saldo_periodo = ganhos_periodo - despesas_periodo
+    total_pendente = lancamentos_qs.filter(
+        natureza='ganho', status='pendente',
+    ).aggregate(total=Sum('valor'))['total'] or 0
+
+    alugueis_ativos = lancamentos_qs.filter(natureza='ganho', tipo='aluguel')
+    ticket_medio_aluguel = alugueis_ativos.aggregate(media=Avg('valor'))['media'] or 0
+
+    total_ganhos_count = lancamentos_qs.filter(natureza='ganho').count()
+    inadimplentes_count = lancamentos_qs.filter(
         natureza='ganho', status='pendente', data_vencimento__lt=hoje,
     ).count()
+    pct_inadimplencia = round((inadimplentes_count / total_ganhos_count * 100), 1) if total_ganhos_count else 0
 
-    taxa_vacancia = round((vagos / total_imoveis * 100), 1) if total_imoveis else 0
+    # Gráfico de barras — ganhos x despesas por mês.
+    # Sem filtro de data: últimos 6 meses fixos. Com filtro (início e/ou
+    # fim): todos os meses do período informado (mínimo 1 mês).
+    if data_inicio or data_fim:
+        evolucao_titulo = 'ganhos vs despesas · período filtrado'
+        mes_inicial = (data_inicio or data_fim).replace(day=1)
+        mes_final = (data_fim or data_inicio).replace(day=1)
+        meses_periodo = []
+        cursor = mes_inicial
+        while cursor <= mes_final:
+            meses_periodo.append(cursor)
+            cursor = (cursor.replace(day=28) + timedelta(days=4)).replace(day=1)
+    else:
+        evolucao_titulo = 'ganhos vs despesas · últimos 6 meses'
+        mes_atual = hoje.replace(day=1)
+        meses_periodo = []
+        cursor = mes_atual
+        for _ in range(6):
+            meses_periodo.append(cursor)
+            cursor = (cursor.replace(day=1) - timedelta(days=1)).replace(day=1)
+        meses_periodo.reverse()
 
-    ultimos_lancamentos = lancamentos_qs.order_by('-criado_em')[:8]
-
-    # Gráfico de pizza
-    pizza_labels = ['Ocupados', 'Vagos', 'Em Manutenção']
-    pizza_data = [
-        imoveis_qs.filter(status='ocupado').count(),
-        imoveis_qs.filter(status='vago').count(),
-        imoveis_qs.filter(status='manutencao').count(),
-    ]
-
-    # Gráfico de barras — últimos 6 meses (ganhos efetivados x pendentes)
     meses_labels = []
-    meses_pagos = []
-    meses_pendentes = []
+    meses_ganhos = []
+    meses_despesas = []
     ganhos_qs = lancamentos_qs.filter(natureza='ganho')
-    for i in range(5, -1, -1):
-        mes_ref = hoje.replace(day=1) - timedelta(days=i * 30)
+    despesas_qs = lancamentos_qs.filter(natureza='despesa')
+    for mes_ref in meses_periodo:
         meses_labels.append(mes_ref.strftime('%b/%Y'))
-        base = ganhos_qs.filter(
+        ganhos_mes = ganhos_qs.filter(
             data_vencimento__year=mes_ref.year,
             data_vencimento__month=mes_ref.month,
-        )
-        pagos = base.filter(status='efetivado').aggregate(total=Sum('valor'))['total'] or 0
-        pendentes = base.filter(status='pendente').aggregate(total=Sum('valor'))['total'] or 0
-        meses_pagos.append(float(pagos))
-        meses_pendentes.append(float(pendentes))
+        ).aggregate(total=Sum('valor'))['total'] or 0
+        despesas_mes = despesas_qs.filter(
+            data_vencimento__year=mes_ref.year,
+            data_vencimento__month=mes_ref.month,
+        ).aggregate(total=Sum('valor'))['total'] or 0
+        meses_ganhos.append(float(ganhos_mes))
+        meses_despesas.append(float(despesas_mes))
 
     # Rentabilidade por imóvel: ganhos efetivados - despesas
     ganhos_por_imovel = dict(
@@ -164,39 +242,58 @@ def dashboard(request):
         lancamentos_qs.filter(natureza='despesa')
         .values_list('imovel_id').annotate(total=Sum('valor')).values_list('imovel_id', 'total')
     )
-    rentabilidade_por_imovel = [
-        {
-            'imovel': imovel,
-            'ganhos': ganhos_por_imovel.get(imovel.pk, 0) or 0,
-            'despesas': despesas_por_imovel.get(imovel.pk, 0) or 0,
-            'saldo': (ganhos_por_imovel.get(imovel.pk, 0) or 0) - (despesas_por_imovel.get(imovel.pk, 0) or 0),
-        }
-        for imovel in imoveis_qs
-        if imovel.pk in ganhos_por_imovel or imovel.pk in despesas_por_imovel
+    rentabilidade_por_imovel = sorted(
+        (
+            {
+                'imovel': imovel,
+                'ganhos': ganhos_por_imovel.get(imovel.pk, 0) or 0,
+                'despesas': despesas_por_imovel.get(imovel.pk, 0) or 0,
+                'saldo': (ganhos_por_imovel.get(imovel.pk, 0) or 0) - (despesas_por_imovel.get(imovel.pk, 0) or 0),
+            }
+            for imovel in imoveis_qs
+            if imovel.pk in ganhos_por_imovel or imovel.pk in despesas_por_imovel
+        ),
+        key=lambda r: r['saldo'],
+        reverse=True,
+    )
+
+    # Donut — composição de despesas por categoria
+    despesas_por_tipo = dict(
+        lancamentos_qs.filter(natureza='despesa')
+        .values_list('tipo').annotate(total=Sum('valor')).values_list('tipo', 'total')
+    )
+    categoria_labels = [label for valor, label in Lancamento.TIPO_CHOICES if despesas_por_tipo.get(valor)]
+    categoria_data = [float(despesas_por_tipo[valor]) for valor, _ in Lancamento.TIPO_CHOICES if despesas_por_tipo.get(valor)]
+
+    # Lançamentos pendentes mais antigos
+    pendentes_antigos = lancamentos_qs.filter(
+        natureza='ganho', status='pendente',
+    ).order_by('data_vencimento')[:5]
+    pendentes_antigos = [
+        {'lancamento': l, 'atraso_dias': (hoje - l.data_vencimento).days if l.data_vencimento < hoje else 0}
+        for l in pendentes_antigos
     ]
 
-    context = {
-        'total_imoveis': total_imoveis,
-        'vagos': vagos,
-        'ocupados': ocupados,
-        'contratos_ativos': contratos_ativos,
-        'inadimplentes': inadimplentes,
-        'taxa_vacancia': taxa_vacancia,
-        'ultimos_lancamentos': ultimos_lancamentos,
-        'pizza_labels': pizza_labels,
-        'pizza_data': pizza_data,
+    return {
+        'ganhos_periodo': ganhos_periodo,
+        'despesas_periodo': despesas_periodo,
+        'saldo_periodo': saldo_periodo,
+        'dash_total_pendente': total_pendente,
+        'ticket_medio_aluguel': ticket_medio_aluguel,
+        'pct_inadimplencia': pct_inadimplencia,
         'meses_labels': meses_labels,
-        'meses_pagos': meses_pagos,
-        'meses_pendentes': meses_pendentes,
+        'meses_ganhos': meses_ganhos,
+        'meses_despesas': meses_despesas,
+        'evolucao_titulo': evolucao_titulo,
         'rentabilidade_por_imovel': rentabilidade_por_imovel,
-        # Filtros
-        'imoveis_lista': Imovel.objects.all(),
-        'filtro_imovel_id': imovel_id,
-        'filtro_form': filtro_form,
-        'filtro_status': status_filtro,
-        'status_choices': Lancamento.STATUS_CHOICES,
+        'categoria_labels': categoria_labels,
+        'categoria_data': categoria_data,
+        'pendentes_antigos': pendentes_antigos,
+        # Filtros do dashboard
+        'dash_imoveis_lista': Imovel.objects.all(),
+        'dash_filtro_imovel_id': imovel_id,
+        'dash_filtro_form': filtro_form,
     }
-    return render(request, 'dashboard.html', context)
 
 
 # ============================================================
@@ -722,21 +819,16 @@ def lancamento_list(request):
     if imovel_id:
         qs = qs.filter(imovel_id=imovel_id)
 
-    total_efetivado = qs.filter(natureza='ganho', status='efetivado').aggregate(t=Sum('valor'))['t'] or 0
-    total_pendente = qs.filter(natureza='ganho', status='pendente').aggregate(t=Sum('valor'))['t'] or 0
-    total_despesas = qs.filter(natureza='despesa').aggregate(t=Sum('valor'))['t'] or 0
-
-    return render(request, 'financeiro/lancamento_list.html', {
+    context = {
         'lancamentos': qs,
         'q': q, 'status': status, 'tipo': tipo, 'natureza': natureza, 'imovel_id': imovel_id,
         'status_choices': Lancamento.STATUS_CHOICES,
         'tipo_choices': Lancamento.TIPO_CHOICES,
         'natureza_choices': Lancamento.NATUREZA_CHOICES,
         'imoveis_lista': Imovel.objects.all(),
-        'total_efetivado': total_efetivado,
-        'total_pendente': total_pendente,
-        'total_despesas': total_despesas,
-    })
+    }
+    context.update(_dashboard_financeiro_context(request))
+    return render(request, 'financeiro/lancamento_list.html', context)
 
 
 @login_required
