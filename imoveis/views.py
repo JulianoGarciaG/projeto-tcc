@@ -389,6 +389,7 @@ def contrato_detail(request, pk):
     lancamentos = contrato.lancamentos.order_by('-data_vencimento')
     laudos = contrato.laudos.order_by('-data')
     fiadores = contrato.fiadores.all()
+    recibos = contrato.recibos.all()
     try:
         renovacao = contrato.renovacao
     except RenovacaoContrato.DoesNotExist:
@@ -402,6 +403,7 @@ def contrato_detail(request, pk):
         'lancamentos': lancamentos,
         'laudos': laudos,
         'fiadores': fiadores,
+        'recibos': recibos,
         'renovacao': renovacao,
         'distrato': distrato,
     })
@@ -799,6 +801,20 @@ def recibo_detail(request, pk):
 @login_required
 def recibo_create(request):
     form = ReciboForm(request.POST or None)
+    if form.is_valid():
+        recibo = form.save()
+        messages.success(request, 'Recibo registrado com sucesso. Use "Regerar PDF" para gerar o documento.')
+        return redirect('recibo_detail', pk=recibo.pk)
+    return render(request, 'recibos/recibo_form.html', {'form': form, 'titulo': 'Novo Recibo'})
+
+
+@login_required
+def recibo_create_from_contrato(request, contrato_pk):
+    contrato = get_object_or_404(Contrato, pk=contrato_pk)
+    form = ReciboForm(request.POST or None,
+                      initial={'imovel': contrato.imovel, 'contrato': contrato})
+    form.fields['imovel'].initial = contrato.imovel
+    form.fields['contrato'].initial = contrato
     if form.is_valid():
         recibo = form.save()
         messages.success(request, 'Recibo registrado com sucesso. Use "Regerar PDF" para gerar o documento.')

@@ -255,6 +255,32 @@
         </table>
       </div>
     </div>
+
+    <div class="section-card mt-3">
+      <div class="section-card-header">
+        <i class="bi bi-receipt me-1"></i> Recibos Vinculados
+        <a href="{% url 'recibo_create_from_contrato' contrato.pk %}" class="btn btn-outline-primary btn-sm ms-auto">+ Novo Recibo</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0 small">
+          <thead>
+            <tr><th>Vencimento</th><th>Valor</th><th>Parcela</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for r in recibos %}
+            <tr>
+              <td>{% if r.vencido_em %}{{ r.vencido_em|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+              <td>{% if r.quantia %}R$ {{ r.quantia|brl }}{% else %}—{% endif %}</td>
+              <td>{% if r.parcela_atual %}{{ r.parcela_atual }}{% else %}—{% endif %}/{% if r.parcela_total %}{{ r.parcela_total }}{% else %}—{% endif %}</td>
+              <td><a href="{% url 'recibo_detail' r.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="border-0"><div class="empty-state"><i class="bi bi-inbox"></i>Nenhum recibo.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

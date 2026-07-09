@@ -44,6 +44,9 @@ urlpatterns = [
          name='contrato_anexar_documento'),
     path('contratos/<int:contrato_pk>/renovar/', views.renovacao_create, name='renovacao_create'),
     path('contratos/<int:contrato_pk>/distrato/', views.distrato_create, name='distrato_create'),
+    # Recibos por contrato
+    path('contratos/<int:contrato_pk>/recibos/novo/', views.recibo_create_from_contrato,
+         name='recibo_create_from_contrato'),
 
     # Laudos
     path('laudos/', views.laudo_list, name='laudo_list'),
