@@ -10,16 +10,23 @@
 <div class="row g-3 mb-4">
   <div class="col-md-4">
     <div class="kpi-card">
-      <div class="kpi-label"><span class="kpi-dot kpi-dot-ok"></span>Total Recebido (filtro)</div>
-      <div class="kpi-value">R$ {{ total_pago|brl }}</div>
-      <div class="kpi-aux"><i class="bi bi-check-circle"></i> pagamentos confirmados</div>
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-ok"></span>Ganhos Efetivados (filtro)</div>
+      <div class="kpi-value">R$ {{ total_efetivado|brl }}</div>
+      <div class="kpi-aux"><i class="bi bi-check-circle"></i> recebimentos confirmados</div>
     </div>
   </div>
   <div class="col-md-4">
     <div class="kpi-card">
-      <div class="kpi-label"><span class="kpi-dot kpi-dot-danger"></span>Pendente / Atrasado (filtro)</div>
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-danger"></span>Ganhos Pendentes (filtro)</div>
       <div class="kpi-value">R$ {{ total_pendente|brl }}</div>
       <div class="kpi-aux"><i class="bi bi-exclamation-triangle"></i> em aberto no período</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot"></span>Despesas (filtro)</div>
+      <div class="kpi-value">R$ {{ total_despesas|brl }}</div>
+      <div class="kpi-aux"><i class="bi bi-dash-circle"></i> saídas no período</div>
     </div>
   </div>
 </div>
@@ -34,10 +41,13 @@
           <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Inquilino ou imóvel...">
         </div>
       </div>
-      <div class="col-md-3"><label class="form-label">Status</label>
+      <div class="col-md-2"><label class="form-label">Natureza</label>
+        <select name="natureza" class="form-select"><option value="">Todas</option>{% for val, label in natureza_choices %}<option value="{{ val }}" {% if natureza == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      </div>
+      <div class="col-md-2"><label class="form-label">Status</label>
         <select name="status" class="form-select"><option value="">Todos</option>{% for val, label in status_choices %}<option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
       </div>
-      <div class="col-md-3"><label class="form-label">Tipo</label>
+      <div class="col-md-2"><label class="form-label">Tipo</label>
         <select name="tipo" class="form-select"><option value="">Todos</option>{% for val, label in tipo_choices %}<option value="{{ val }}" {% if tipo == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
       </div>
       <div class="col-md-2 d-flex gap-2">
@@ -57,20 +67,34 @@
   <div class="table-responsive">
     <table class="table mb-0">
       <thead>
-        <tr><th>Inquilino</th><th>Imóvel</th><th>Tipo</th><th>Vencimento</th><th>Pagamento</th><th>Valor</th><th>Status</th><th>Comprovante</th><th class="text-end">Ações</th></tr>
+        <tr><th>Imóvel</th><th>Inquilino</th><th>Natureza</th><th>Tipo</th><th>Vencimento</th><th>Pagamento</th><th>Valor</th><th>Status</th><th>Comprovante</th><th class="text-end">Ações</th></tr>
       </thead>
       <tbody>
         {% for l in lancamentos %}
         <tr>
-          <td class="fw-semibold">{{ l.contrato.inquilino.nome }}</td>
-          <td class="small text-muted">{{ l.contrato.imovel.endereco|truncatechars:25 }}</td>
+          <td class="small text-muted">{{ l.imovel.endereco|truncatechars:25 }}</td>
+          <td class="fw-semibold">{% if l.contrato %}{{ l.contrato.inquilino.nome }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td>{{ l.get_natureza_display }}</td>
           <td>{{ l.get_tipo_display }}</td>
           <td>{{ l.data_vencimento|date:"d/m/Y" }}</td>
           <td>{% if l.data_pagamento %}{{ l.data_pagamento|date:"d/m/Y" }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
           <td><strong>R$ {{ l.valor|brl }}</strong></td>
-          <td><span class="status-badge badge-{{ l.status }}">{{ l.get_status_display }}</span></td>
+          <td>
+            {% if l.natureza == 'despesa' %}
+              <span class="status-badge badge-encerrado">Despesa</span>
+            {% elif l.vencido %}
+              <span class="status-badge badge-atrasado">Atrasado</span>
+            {% elif l.status == 'efetivado' %}
+              <span class="status-badge badge-pago">Efetivado</span>
+            {% else %}
+              <span class="status-badge badge-pendente">Pendente</span>
+            {% endif %}
+          </td>
           <td>{% if l.comprovante %}<a href="{{ l.comprovante.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark"></i></a>{% else %}—{% endif %}</td>
           <td class="text-end">
+            {% if l.natureza == 'ganho' and l.status == 'pendente' %}
+            <form method="post" action="{% url 'lancamento_efetivar' l.pk %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-success" title="Efetivar"><i class="bi bi-check-lg"></i></button></form>
+            {% endif %}
             <a href="{% url 'lancamento_edit' l.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
             <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#del{{ l.pk }}"><i class="bi bi-trash"></i></button>
             <div class="modal fade" id="del{{ l.pk }}" tabindex="-1">
@@ -84,7 +108,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="9" class="border-0">
+          <td colspan="10" class="border-0">
             <div class="empty-state"><i class="bi bi-inbox"></i>Nenhum lançamento encontrado.</div>
           </td>
         </tr>

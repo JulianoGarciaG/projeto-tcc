@@ -505,8 +505,8 @@ class FluxoViewTests(TestCase):
 
     def test_contrato_dependentes_cascata_conta_lancamentos_e_fiadores(self):
         Lancamento.objects.create(
-            contrato=self.contrato, tipo='aluguel', valor=Decimal('1500.00'),
-            data_vencimento=date(2026, 8, 10),
+            imovel=self.imovel, contrato=self.contrato, natureza='ganho', tipo='aluguel',
+            valor=Decimal('1500.00'), data_vencimento=date(2026, 8, 10),
         )
         deps = dict(self.contrato.dependentes_cascata)
         self.assertEqual(deps.get('lançamento(s) financeiro(s)'), 1)
@@ -956,12 +956,12 @@ class DashboardFiltroTests(TestCase):
         self.client.force_login(self.user)
         _, self.imovel, self.inquilino, self.contrato = criar_base()
         self.lanc_junho = Lancamento.objects.create(
-            contrato=self.contrato, tipo='aluguel', status='pago',
-            valor=Decimal('1500.00'), data_vencimento=date(2026, 6, 15),
+            imovel=self.imovel, contrato=self.contrato, natureza='ganho', tipo='aluguel',
+            status='efetivado', valor=Decimal('1500.00'), data_vencimento=date(2026, 6, 15),
         )
         self.lanc_agosto = Lancamento.objects.create(
-            contrato=self.contrato, tipo='aluguel', status='pendente',
-            valor=Decimal('1500.00'), data_vencimento=date(2026, 8, 15),
+            imovel=self.imovel, contrato=self.contrato, natureza='ganho', tipo='aluguel',
+            status='pendente', valor=Decimal('1500.00'), data_vencimento=date(2026, 8, 15),
         )
 
     def test_filtro_datas_ddmmyyyy(self):

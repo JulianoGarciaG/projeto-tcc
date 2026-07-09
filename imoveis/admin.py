@@ -100,8 +100,8 @@ class ReciboAdmin(admin.ModelAdmin):
 
 @admin.register(Lancamento)
 class LancamentoAdmin(admin.ModelAdmin):
-    list_display = ['contrato', 'tipo', 'status', 'valor', 'data_vencimento', 'data_pagamento']
-    list_filter = ['status', 'tipo']
+    list_display = ['imovel', 'natureza', 'tipo', 'status', 'valor', 'data_vencimento', 'data_pagamento']
+    list_filter = ['natureza', 'status', 'tipo']
 
 
 @admin.register(DocumentoGerado)

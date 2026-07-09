@@ -13,9 +13,11 @@
         <form method="post" enctype="multipart/form-data" novalidate>
           {% csrf_token %}
           <div class="row g-3">
-            <div class="col-12"><label class="form-label">Contrato <span class="text-danger">*</span></label>{{ form.contrato }}</div>
+            <div class="col-md-6"><label class="form-label">Imóvel <span class="text-danger">*</span></label>{{ form.imovel }}</div>
+            <div class="col-md-6"><label class="form-label">Contrato</label>{{ form.contrato }}</div>
+            <div class="col-md-4"><label class="form-label">Natureza <span class="text-danger">*</span></label>{{ form.natureza }}</div>
             <div class="col-md-4"><label class="form-label">Tipo <span class="text-danger">*</span></label>{{ form.tipo }}</div>
-            <div class="col-md-4"><label class="form-label">Status <span class="text-danger">*</span></label>{{ form.status }}</div>
+            <div class="col-md-4"><label class="form-label">Status (só ganho)</label>{{ form.status }}</div>
             <div class="col-md-4"><label class="form-label">Valor (R$) <span class="text-danger">*</span></label>{{ form.valor }}</div>
             <div class="col-md-4"><label class="form-label">Data de Vencimento <span class="text-danger">*</span></label>{{ form.data_vencimento }}</div>
             <div class="col-md-4"><label class="form-label">Data de Pagamento</label>{{ form.data_pagamento }}</div>

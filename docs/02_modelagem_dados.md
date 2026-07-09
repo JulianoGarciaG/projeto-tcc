@@ -11,7 +11,7 @@ Proprietario
             ├── FotoImovel (CASCADE)
             ├── Contrato (PROTECT)
             │       ├── Fiador (CASCADE)
-            │       ├── Lancamento (CASCADE)
+            │       ├── Lancamento (SET_NULL) [contrato opcional, origem do ganho/despesa]
             │       ├── LaudoVistoria (PROTECT) [contrato obrigatório]
             │       ├── Recibo (PROTECT)
             │       ├── RenovacaoContrato (CASCADE) [OneToOne]
@@ -19,7 +19,9 @@ Proprietario
             │               └── LaudoVistoria (SET_NULL) [laudo_saida, opcional]
             ├── LaudoVistoria (CASCADE)
             ├── Notificacao (CASCADE)
+            ├── Lancamento (PROTECT) [imovel obrigatório]
             └── Recibo (PROTECT)
+                    └── Lancamento (CASCADE) [ganho automático, ver sinal recibo_salvo]
 
 Inquilino
     └── Contrato (PROTECT)
@@ -41,7 +43,7 @@ User (auth)
     └── NotificacaoUsuario (CASCADE) [histórico append-only de django.contrib.messages]
 ```
 
-> O módulo financeiro **não possui** mais os models `Entrada`/`Saida` (removidos na Rodada 2) — o único model financeiro é `Lancamento`, vinculado ao `Contrato` (não diretamente ao `Imovel`).
+> O módulo financeiro **não possui** mais os models `Entrada`/`Saida` (removidos na Rodada 2) — o único model financeiro é `Lancamento`, indexado por `Imovel` (obrigatório) com `natureza` (`ganho`/`despesa`); `Contrato` é opcional, preenchido quando o lançamento se origina de um contrato/recibo.
 
 ### Camada de identidade (`imoveis/identidade.py`)
 
@@ -315,14 +317,17 @@ Testemunha do laudo de vistoria.
 ---
 
 ### 2.12 Lancamento
-Único model do módulo financeiro — lançamento vinculado a um contrato (não diretamente ao imóvel).
+Único model do módulo financeiro — ganho ou despesa indexado por `Imovel` (o `Contrato` é opcional, preenchido quando o lançamento se origina de um contrato/recibo).
 
 | Campo | Tipo | Obrigatório | Observações |
 |---|---|---|---|
 | `id` | BigAutoField | — | PK automática |
-| `contrato` | ForeignKey → Contrato | ✓ | CASCADE |
+| `imovel` | ForeignKey → Imovel | ✓ | PROTECT |
+| `contrato` | ForeignKey → Contrato | — | SET_NULL; preenchido quando originado de contrato/recibo |
+| `recibo` | ForeignKey → Recibo | — | CASCADE; só nos ganhos criados automaticamente (ver §3, sinal `recibo_salvo`) |
+| `natureza` | CharField (10) | ✓ | Choices abaixo |
 | `tipo` | CharField (20) | ✓ | Choices abaixo |
-| `status` | CharField (20) | — | Default `pendente`; Choices abaixo |
+| `status` | CharField (20) | condicional | Só se aplica a `natureza='ganho'`; `null` em despesas (CheckConstraint) |
 | `valor` | DecimalField (10,2) | ✓ | — |
 | `data_vencimento` | DateField | ✓ | — |
 | `data_pagamento` | DateField | — | — |
@@ -330,15 +335,20 @@ Testemunha do laudo de vistoria.
 | `observacoes` | TextField | — | — |
 | `criado_em` | DateTimeField | — | Auto now add |
 
+**Choices — natureza:**
+`ganho`, `despesa`
+
 **Choices — tipo:**
 `aluguel`, `condominio`, `iptu`, `manutencao`, `multa`, `outros`
 
-**Choices — status:**
-`pago`, `pendente`, `atrasado`
+**Choices — status (apenas ganho):**
+`pendente`, `efetivado`
 
 **Ordenação:** `-data_vencimento`
 
-> Os models `Entrada` e `Saida` (vinculados diretamente ao `Imovel`) foram **removidos na Rodada 2**. Não recriar.
+**Property `vencido`:** `natureza='ganho' and status='pendente' and data_vencimento < hoje` — calculado em runtime, não gravado (inadimplência do dashboard usa esse critério).
+
+> Os models `Entrada` e `Saida` (vinculados diretamente ao `Imovel`) foram removidos na Rodada 2 e a distinção ganho/despesa foi reintroduzida nesta rodada como o campo `Lancamento.natureza` — não recriar `Entrada`/`Saida` como models separados.
 
 ---
 

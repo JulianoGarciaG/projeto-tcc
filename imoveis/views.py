@@ -105,11 +105,11 @@ def dashboard(request):
         data_inicio = filtro_form.cleaned_data.get('data_inicio')
         data_fim = filtro_form.cleaned_data.get('data_fim')
 
-    lancamentos_qs = Lancamento.objects.select_related('contrato__inquilino', 'contrato__imovel')
+    lancamentos_qs = Lancamento.objects.select_related('imovel', 'contrato__inquilino')
     imoveis_qs = Imovel.objects.all()
 
     if imovel_id:
-        lancamentos_qs = lancamentos_qs.filter(contrato__imovel_id=imovel_id)
+        lancamentos_qs = lancamentos_qs.filter(imovel_id=imovel_id)
         imoveis_qs = imoveis_qs.filter(pk=imovel_id)
     if data_inicio:
         lancamentos_qs = lancamentos_qs.filter(data_vencimento__gte=data_inicio)
@@ -122,7 +122,9 @@ def dashboard(request):
     vagos = imoveis_qs.filter(status='vago').count()
     ocupados = imoveis_qs.filter(status='ocupado').count()
     contratos_ativos = Contrato.objects.filter(status='ativo').count()
-    inadimplentes = lancamentos_qs.filter(status='atrasado').count()
+    inadimplentes = lancamentos_qs.filter(
+        natureza='ganho', status='pendente', data_vencimento__lt=hoje,
+    ).count()
 
     taxa_vacancia = round((vagos / total_imoveis * 100), 1) if total_imoveis else 0
 
@@ -136,21 +138,42 @@ def dashboard(request):
         imoveis_qs.filter(status='manutencao').count(),
     ]
 
-    # Gráfico de barras — últimos 6 meses
+    # Gráfico de barras — últimos 6 meses (ganhos efetivados x pendentes)
     meses_labels = []
     meses_pagos = []
     meses_pendentes = []
+    ganhos_qs = lancamentos_qs.filter(natureza='ganho')
     for i in range(5, -1, -1):
         mes_ref = hoje.replace(day=1) - timedelta(days=i * 30)
         meses_labels.append(mes_ref.strftime('%b/%Y'))
-        base = lancamentos_qs.filter(
+        base = ganhos_qs.filter(
             data_vencimento__year=mes_ref.year,
             data_vencimento__month=mes_ref.month,
         )
-        pagos = base.filter(status='pago').aggregate(total=Sum('valor'))['total'] or 0
-        pendentes = base.filter(status__in=['pendente', 'atrasado']).aggregate(total=Sum('valor'))['total'] or 0
+        pagos = base.filter(status='efetivado').aggregate(total=Sum('valor'))['total'] or 0
+        pendentes = base.filter(status='pendente').aggregate(total=Sum('valor'))['total'] or 0
         meses_pagos.append(float(pagos))
         meses_pendentes.append(float(pendentes))
+
+    # Rentabilidade por imóvel: ganhos efetivados - despesas
+    ganhos_por_imovel = dict(
+        lancamentos_qs.filter(natureza='ganho', status='efetivado')
+        .values_list('imovel_id').annotate(total=Sum('valor')).values_list('imovel_id', 'total')
+    )
+    despesas_por_imovel = dict(
+        lancamentos_qs.filter(natureza='despesa')
+        .values_list('imovel_id').annotate(total=Sum('valor')).values_list('imovel_id', 'total')
+    )
+    rentabilidade_por_imovel = [
+        {
+            'imovel': imovel,
+            'ganhos': ganhos_por_imovel.get(imovel.pk, 0) or 0,
+            'despesas': despesas_por_imovel.get(imovel.pk, 0) or 0,
+            'saldo': (ganhos_por_imovel.get(imovel.pk, 0) or 0) - (despesas_por_imovel.get(imovel.pk, 0) or 0),
+        }
+        for imovel in imoveis_qs
+        if imovel.pk in ganhos_por_imovel or imovel.pk in despesas_por_imovel
+    ]
 
     context = {
         'total_imoveis': total_imoveis,
@@ -165,6 +188,7 @@ def dashboard(request):
         'meses_labels': meses_labels,
         'meses_pagos': meses_pagos,
         'meses_pendentes': meses_pendentes,
+        'rentabilidade_por_imovel': rentabilidade_por_imovel,
         # Filtros
         'imoveis_lista': Imovel.objects.all(),
         'filtro_imovel_id': imovel_id,
@@ -684,24 +708,34 @@ def lancamento_list(request):
     q = request.GET.get('q', '')
     status = request.GET.get('status', '')
     tipo = request.GET.get('tipo', '')
-    qs = Lancamento.objects.select_related('contrato__inquilino', 'contrato__imovel')
+    natureza = request.GET.get('natureza', '')
+    imovel_id = request.GET.get('imovel_id', '')
+    qs = Lancamento.objects.select_related('imovel', 'contrato__inquilino')
     if q:
-        qs = qs.filter(Q(contrato__inquilino__nome__icontains=q) | Q(contrato__imovel__endereco__icontains=q))
+        qs = qs.filter(Q(contrato__inquilino__nome__icontains=q) | Q(imovel__endereco__icontains=q))
     if status:
         qs = qs.filter(status=status)
     if tipo:
         qs = qs.filter(tipo=tipo)
+    if natureza:
+        qs = qs.filter(natureza=natureza)
+    if imovel_id:
+        qs = qs.filter(imovel_id=imovel_id)
 
-    total_pago = qs.filter(status='pago').aggregate(t=Sum('valor'))['t'] or 0
-    total_pendente = qs.filter(status__in=['pendente', 'atrasado']).aggregate(t=Sum('valor'))['t'] or 0
+    total_efetivado = qs.filter(natureza='ganho', status='efetivado').aggregate(t=Sum('valor'))['t'] or 0
+    total_pendente = qs.filter(natureza='ganho', status='pendente').aggregate(t=Sum('valor'))['t'] or 0
+    total_despesas = qs.filter(natureza='despesa').aggregate(t=Sum('valor'))['t'] or 0
 
     return render(request, 'financeiro/lancamento_list.html', {
         'lancamentos': qs,
-        'q': q, 'status': status, 'tipo': tipo,
+        'q': q, 'status': status, 'tipo': tipo, 'natureza': natureza, 'imovel_id': imovel_id,
         'status_choices': Lancamento.STATUS_CHOICES,
         'tipo_choices': Lancamento.TIPO_CHOICES,
-        'total_pago': total_pago,
+        'natureza_choices': Lancamento.NATUREZA_CHOICES,
+        'imoveis_lista': Imovel.objects.all(),
+        'total_efetivado': total_efetivado,
         'total_pendente': total_pendente,
+        'total_despesas': total_despesas,
     })
 
 
@@ -739,6 +773,18 @@ def lancamento_delete(request, pk):
     if request.method == 'POST':
         obj.delete()
         messages.success(request, 'Lançamento removido.')
+    return redirect('lancamento_list')
+
+
+@login_required
+@permission_required('imoveis.pode_acessar_financeiro', raise_exception=True)
+def lancamento_efetivar(request, pk):
+    obj = get_object_or_404(Lancamento, pk=pk, natureza='ganho')
+    if request.method == 'POST':
+        obj.status = 'efetivado'
+        obj.data_pagamento = obj.data_pagamento or date.today()
+        obj.save(update_fields=['status', 'data_pagamento'])
+        messages.success(request, 'Lançamento efetivado.')
     return redirect('lancamento_list')
 
 

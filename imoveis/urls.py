@@ -70,6 +70,7 @@ urlpatterns = [
     path('financeiro/novo/', views.lancamento_create, name='lancamento_create'),
     path('financeiro/<int:pk>/editar/', views.lancamento_edit, name='lancamento_edit'),
     path('financeiro/<int:pk>/excluir/', views.lancamento_delete, name='lancamento_delete'),
+    path('financeiro/<int:pk>/efetivar/', views.lancamento_efetivar, name='lancamento_efetivar'),
 
     # GED
     path('documentos/', views.documentos, name='documentos'),

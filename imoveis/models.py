@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -427,6 +429,10 @@ class TestemunhaLaudo(models.Model):
 
 
 class Lancamento(models.Model):
+    NATUREZA_CHOICES = [
+        ('ganho', 'Ganho'),
+        ('despesa', 'Despesa'),
+    ]
     TIPO_CHOICES = [
         ('aluguel', 'Aluguel'),
         ('condominio', 'Condomínio'),
@@ -436,14 +442,18 @@ class Lancamento(models.Model):
         ('outros', 'Outros'),
     ]
     STATUS_CHOICES = [
-        ('pago', 'Pago'),
         ('pendente', 'Pendente'),
-        ('atrasado', 'Atrasado'),
+        ('efetivado', 'Efetivado'),
     ]
 
-    contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='lancamentos')
+    imovel = models.ForeignKey(Imovel, on_delete=models.PROTECT, related_name='lancamentos')
+    contrato = models.ForeignKey(Contrato, on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name='lancamentos')
+    recibo = models.ForeignKey('Recibo', on_delete=models.CASCADE, null=True, blank=True,
+                               related_name='lancamentos')
+    natureza = models.CharField(max_length=10, choices=NATUREZA_CHOICES)
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, null=True, blank=True)
     valor = models.DecimalField(max_digits=10, decimal_places=2)
     data_vencimento = models.DateField(verbose_name='Data de Vencimento')
     data_pagamento = models.DateField(null=True, blank=True, verbose_name='Data de Pagamento')
@@ -455,8 +465,30 @@ class Lancamento(models.Model):
         verbose_name = 'Lançamento'
         verbose_name_plural = 'Lançamentos'
         ordering = ['-data_vencimento']
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(natureza='despesa', status__isnull=True)
+                    | models.Q(natureza='ganho', status__isnull=False)
+                ),
+                name='lancamento_status_apenas_ganho',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.natureza == 'despesa':
+            self.status = None
+        elif self.natureza == 'ganho' and not self.status:
+            self.status = 'pendente'
+        super().save(*args, **kwargs)
+
+    @property
+    def vencido(self):
+        return self.natureza == 'ganho' and self.status == 'pendente' and self.data_vencimento < date.today()
 
     def __str__(self):
+        if self.natureza == 'despesa':
+            return f'{self.get_tipo_display()} — R$ {self.valor} (Despesa)'
         return f'{self.get_tipo_display()} — R$ {self.valor} ({self.get_status_display()})'
 
 

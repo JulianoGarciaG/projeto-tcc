@@ -127,7 +127,7 @@ O dashboard suporta filtros combinados aplicados simultaneamente:
 
 | Filtro | Campo filtrado |
 |---|---|
-| Imóvel | `contrato__imovel_id` |
+| Imóvel | `imovel_id` |
 | Data início | `data_vencimento__gte` |
 | Data fim | `data_vencimento__lte` |
 | Status do lançamento | `status` |
@@ -138,8 +138,15 @@ O filtro de período (data início/fim) é validado e limpo por `DashboardFiltro
 - Total de imóveis, ocupados e vagos (com base no filtro de imóvel)
 - Taxa de vacância: `(vagos / total) * 100`
 - Contratos ativos (global, sem filtro)
-- Inadimplentes: lançamentos com `status = 'atrasado'` (com filtros aplicados)
-- Gráfico de barras: soma de valores pagos e pendentes/atrasados nos últimos 6 meses
+- Inadimplentes: **calculado em runtime**, nunca gravado — `natureza='ganho'`, `status='pendente'` e `data_vencimento < hoje` (mesma regra da property `Lancamento.vencido`)
+- Gráfico de barras: soma de valores de ganhos efetivados e pendentes nos últimos 6 meses (despesas não entram no gráfico)
+- Rentabilidade por imóvel: para cada imóvel com lançamentos, soma de ganhos `efetivado` menos soma de despesas — tabela própria no dashboard, sem filtro de período/imóvel aplicado além dos filtros gerais
+
+**Lançamento (`imoveis/models.py`) — ganho/despesa por imóvel:**
+- `Lancamento.imovel` é obrigatório; `Lancamento.contrato` é opcional (preenchido só quando o lançamento se origina de um contrato/recibo).
+- `natureza` distingue `ganho` de `despesa`. O ciclo `pendente` → `efetivado` (campo `status`) só existe em ganhos — uma `CheckConstraint` garante que despesa nunca tem `status` preenchido.
+- Criar um `Recibo` dispara um `post_save` (`imoveis/signals.py:recibo_salvo`) que cria automaticamente um `Lancamento` ganho `pendente` apontando pro `imovel` do recibo (preservando `contrato` e a referência `recibo` de origem). Editar o recibo depois sincroniza valor/vencimento do ganho **enquanto ele ainda estiver pendente**; um ganho já `efetivado` não é mais tocado pelo signal.
+- A view `lancamento_efetivar` marca um ganho `pendente` como `efetivado` (preenchendo `data_pagamento` se vazia) — é a única forma de fechar o ciclo, não existe efetivação automática por data.
 
 ---
 

@@ -128,8 +128,8 @@
     <table class="table mb-0">
       <thead>
         <tr>
-          <th>Inquilino</th>
           <th>Imóvel</th>
+          <th>Natureza</th>
           <th>Tipo</th>
           <th>Vencimento</th>
           <th>Valor</th>
@@ -139,16 +139,61 @@
       <tbody>
         {% for l in ultimos_lancamentos %}
         <tr>
-          <td>{{ l.contrato.inquilino.nome }}</td>
-          <td class="text-muted small">{{ l.contrato.imovel.endereco|truncatechars:35 }}</td>
+          <td class="text-muted small">{{ l.imovel.endereco|truncatechars:35 }}</td>
+          <td>{{ l.get_natureza_display }}</td>
           <td>{{ l.get_tipo_display }}</td>
           <td>{{ l.data_vencimento|date:"d/m/Y" }}</td>
           <td><strong>R$ {{ l.valor|brl }}</strong></td>
-          <td><span class="status-badge badge-{{ l.status }}">{{ l.get_status_display }}</span></td>
+          <td>
+            {% if l.natureza == 'despesa' %}
+              <span class="status-badge badge-encerrado">Despesa</span>
+            {% elif l.vencido %}
+              <span class="status-badge badge-atrasado">Atrasado</span>
+            {% elif l.status == 'efetivado' %}
+              <span class="status-badge badge-pago">Efetivado</span>
+            {% else %}
+              <span class="status-badge badge-pendente">Pendente</span>
+            {% endif %}
+          </td>
         </tr>
         {% empty %}
         <tr>
           <td colspan="6" class="border-0">
+            <div class="empty-state"><i class="bi bi-inbox"></i>Nenhum lançamento registrado.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Rentabilidade por Imóvel -->
+<div class="card mt-4">
+  <div class="card-header">
+    <i class="bi bi-graph-up-arrow"></i> Rentabilidade por Imóvel
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>Imóvel</th>
+          <th>Ganhos Efetivados</th>
+          <th>Despesas</th>
+          <th>Saldo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rentabilidade_por_imovel %}
+        <tr>
+          <td class="text-muted small">{{ r.imovel.endereco|truncatechars:35 }}</td>
+          <td>R$ {{ r.ganhos|brl }}</td>
+          <td>R$ {{ r.despesas|brl }}</td>
+          <td class="{% if r.saldo < 0 %}text-danger{% else %}text-success{% endif %}"><strong>R$ {{ r.saldo|brl }}</strong></td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="border-0">
             <div class="empty-state"><i class="bi bi-inbox"></i>Nenhum lançamento registrado.</div>
           </td>
         </tr>

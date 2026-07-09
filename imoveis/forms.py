@@ -309,12 +309,15 @@ TestemunhaFormSet = inlineformset_factory(
 
 
 class LancamentoForm(forms.ModelForm):
-    contrato = ContratoChoiceField(queryset=Contrato.objects.all(), widget=forms.Select(attrs=_sel))
+    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel))
+    contrato = ContratoChoiceField(queryset=Contrato.objects.all(), required=False, widget=forms.Select(attrs=_sel))
 
     class Meta:
         model = Lancamento
-        fields = ['contrato', 'tipo', 'status', 'valor', 'data_vencimento', 'data_pagamento', 'comprovante', 'observacoes']
+        fields = ['imovel', 'contrato', 'natureza', 'tipo', 'status', 'valor',
+                  'data_vencimento', 'data_pagamento', 'comprovante', 'observacoes']
         widgets = {
+            'natureza': forms.Select(attrs=_sel),
             'tipo': forms.Select(attrs=_sel),
             'status': forms.Select(attrs=_sel),
             'valor': forms.NumberInput(attrs={**_ctrl, 'step': '0.01'}),
@@ -324,8 +327,18 @@ class LancamentoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['status'].required = False
         self.fields['data_vencimento'].widget = _date_widget()
         self.fields['data_pagamento'].widget = _date_widget()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        natureza = cleaned_data.get('natureza')
+        if natureza == 'despesa':
+            cleaned_data['status'] = None
+        elif natureza == 'ganho' and not cleaned_data.get('status'):
+            cleaned_data['status'] = 'pendente'
+        return cleaned_data
 
 
 class NotificacaoForm(forms.ModelForm):
