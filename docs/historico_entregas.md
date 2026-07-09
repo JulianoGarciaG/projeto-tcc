@@ -3,8 +3,6 @@
 
 Registro cronológico do **"porquê"** de cada rodada de implementação — não repete o "o quê" (isso é a referência viva em `docs/01_visao_geral.md`, `docs/02_modelagem_dados.md`, `docs/03_regras_de_negocio.md`, `docs/04_design_ui_ux.md`, `docs/05_ged_documentos_versionados.md`). Cada entrada mapeia para o diretório correspondente em `planner-docs/` (plano completo, decisões e módulos) e, quando aplicável, para o plano antigo consolidado aqui.
 
-Perfis de usuário (admin/owner/comum) estão em desenvolvimento em `planner-docs/perfis-usuario-admin-owner-comum/` e **não** estão cobertos por este histórico nem pela referência viva até serem consolidados.
-
 ---
 
 ## Rodada 1 — Geração automática de documentos PDF
@@ -125,3 +123,36 @@ Reescrita total do PDF de Contrato: de um resumo em cards para um **instrumento 
 - **Retrocompatibilidade:** PDFs de contrato já gerados antes desta mudança permanecem no layout antigo (GED versionado é imutável); só uma nova geração usa o layout jurídico novo.
 
 Documentado em `docs/02_modelagem_dados.md` (`Contrato`, `Fiador`) e `docs/03_regras_de_negocio.md` §16.
+
+## Perfis de usuário Admin/Owner/Comum (`planner-docs/perfis-usuario-admin-owner-comum/`)
+
+Substitui o modelo binário `is_staff`/autenticado por 3 perfis efetivos de acesso, via `Group` do Django:
+
+- **Admin** (`is_superuser=True` + `is_staff=True`): irrestrito, incluindo `/admin/`.
+- **Owner** (Group "Owner"): tudo, exceto `/admin/`.
+- **Comum** (Group "Comum", ou nenhum Group/superuser): tudo, exceto Dashboard, Financeiro (CRUD de `Lancamento`) e `/admin/`.
+
+Principais mudanças:
+
+- Novo model `PermissaoTela` (`managed=False`, sem tabela própria) — existe só para ancorar as permissões customizadas `pode_acessar_dashboard`/`pode_acessar_financeiro`, sem acoplar a um model de negócio (migração `0014_permissaotela`).
+- Migração de dados `0015_cria_grupos_e_reclassifica_usuarios` cria os Groups Owner/Comum e reclassifica usuários existentes (`is_staff` → `is_superuser`; demais → Comum).
+- Views de Dashboard e Financeiro protegidas por `permission_required(..., raise_exception=True)` — acesso direto por URL sem permissão retorna **403** (`templates/403.html`), nunca stack trace.
+- Sidebar (`templates/base.html`) oculta os itens Dashboard/Financeiro por perfil — complementar à proteção de view, nunca a única camada.
+- Usuário pertencente a Owner **e** Comum simultaneamente tem acesso de Owner (permissões efetivas são a união dos Groups; Comum não revoga nada).
+- Não há tela de gestão de perfis no sistema — atribuição de Group é feita só via `/admin/`.
+
+Documentado em `docs/01_visao_geral.md` §4 e `docs/03_regras_de_negocio.md` §10.
+
+## Lançamento indexado por imóvel com ciclo ganho/despesa
+
+Substitui o `Lancamento` vinculado só a `Contrato` por um lançamento **indexado por `Imovel`** (obrigatório, `PROTECT`), tratando cada imóvel como unidade financeira independente do contrato vigente. Principais mudanças no model `Lancamento` (migração `0016_lancamento_ganho_despesa`):
+
+- Campo novo `natureza` (`ganho`/`despesa`), obrigatório.
+- `contrato` passa de obrigatório/`CASCADE` para **opcional**/`SET_NULL` — só preenchido quando o lançamento se origina de um contrato/recibo.
+- Campo novo `recibo` (FK opcional, `CASCADE`) — presente só nos ganhos criados automaticamente.
+- `status` (`pendente`/`efetivado`) passa a se aplicar **só a `natureza='ganho'`**; despesas ficam com `status=null` (`CheckConstraint`). Os antigos choices `pago`/`atrasado` saem — "atrasado" deixa de ser um status gravado.
+- Property `vencido` (`natureza='ganho' and status='pendente' and data_vencimento < hoje`) calculada em runtime — substitui o status `atrasado` armazenado; a inadimplência do dashboard passa a ser calculada na query, não a partir de um campo desatualizável.
+- Novo sinal (`recibo_salvo`, `imoveis/signals.py`): criar um `Recibo` cria automaticamente um ganho pendente no `Imovel` correspondente, sincronizando valor/vencimento enquanto o ganho está pendente e "congelando" quando ele é efetivado.
+- Dashboard ganha uma tabela de rentabilidade por imóvel (ganhos efetivados menos despesas).
+
+Documentado em `docs/02_modelagem_dados.md` (`Lancamento`, diagrama de relacionamentos) e `docs/03_regras_de_negocio.md` §9.
