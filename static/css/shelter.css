@@ -713,7 +713,7 @@ input[type="file"].input-dashed {
 .kpi-dot-warn   { background: var(--warn); }
 
 .kpi-card .kpi-value {
-  font-size: 34px;               /* brief: numero 34px/800 */
+  font-size: 24px;
   font-weight: 800;
   line-height: 1.15;
   color: var(--ink);

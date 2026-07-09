@@ -1,3 +1,0 @@
-# Plano de Implementação — Geração Automática de Documentos PDF (Rodada 1)
-
-> **Movido.** Este arquivo foi renomeado para [docs/historico/rodada1_plano_geracao_documentos.md](historico/rodada1_plano_geracao_documentos.md). Ver resumo em [docs/historico_entregas.md](historico_entregas.md) ("Rodada 1"). O comportamento de geração automática ao salvar descrito neste plano foi **revertido na Rodada 2** (PDF só é gerado pelo botão "Regerar PDF" — ver [docs/historico/rodada2_plano_ajustes.md](historico/rodada2_plano_ajustes.md)). Estado atual do sistema: `docs/02_modelagem_dados.md`, `docs/03_regras_de_negocio.md`, `docs/04_design_ui_ux.md`.
