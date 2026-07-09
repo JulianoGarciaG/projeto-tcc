@@ -1,4 +1,4 @@
-# 03 — Modelagem de Dados
+# 02 — Modelagem de Dados
 > Sistema Integrado de Gestão Imobiliária (GED e BI)
 
 ---
@@ -32,7 +32,7 @@ LaudoVistoria
     │       └── FotoItemVistoria (CASCADE) [0..N fotos, visível só no detalhe]
     └── TestemunhaLaudo (CASCADE)
 
-DocumentoGerado (GED versionado — 1 registro imutável por geração de PDF)
+DocumentoGerado (GED versionado — 1 registro imutável por geração de PDF; ver docs/05_ged_documentos_versionados.md)
     ├── Contrato (CASCADE) [uma das 3 FKs preenchida]
     ├── LaudoVistoria (CASCADE)
     └── Recibo (CASCADE)
@@ -164,6 +164,7 @@ Contrato de locação entre inquilino e imóvel. Campos de documentos são anexa
 | `imovel` | ForeignKey → Imovel | ✓ | PROTECT |
 | `inquilino` | ForeignKey → Inquilino | ✓ | PROTECT |
 | `tipo_contrato` | CharField (2) | — | Default `PF`; `PF` / `PJ` |
+| `finalidade` | CharField (12) | — | Default `residencial`; `residencial` / `comercial` — usada no PDF jurídico (cláusulas VI/preâmbulo) |
 | `status` | CharField (20) | — | Default `ativo`; Choices abaixo |
 | `data_inicio` | DateField | ✓ | — |
 | `data_fim` | DateField | ✓ | — |
@@ -175,6 +176,8 @@ Contrato de locação entre inquilino e imóvel. Campos de documentos são anexa
 | `comprovante_anual` | FileField | — | `contratos/comprovante_anual/`; anexado via `contrato_anexar_documento` |
 | `documento_gerado` | FileField | — | `contratos/gerados/` — PDF do contrato gerado pelo sistema (botão "Regerar PDF") |
 | `observacoes` | TextField | — | — |
+| `local_assinatura` | CharField (200) | — | Cidade da assinatura, usada no PDF jurídico |
+| `data_assinatura` | DateField | — | — |
 | `criado_em` | DateTimeField | — | Auto now add |
 
 > Não possui campo `arquivo` (removido na Rodada 2 — substituído por `documento_gerado`, preenchido apenas pela geração de PDF).
@@ -195,9 +198,17 @@ Fiador vinculado a um contrato.
 | `contrato` | ForeignKey → Contrato | ✓ | CASCADE |
 | `nome` | CharField (200) | ✓ | — |
 | `qualificacao` | CharField (300) | — | Estado civil, profissão, nacionalidade |
-| `rg_cpf` | CharField (20) | ✓ | `validate_rg_cpf` — 11 dígitos numéricos validam como CPF (dígitos verificadores), senão valida formato de RG |
+| `rg_cpf` | CharField (20) | ✓ | Campo legado de texto livre; `validate_rg_cpf` — 11 dígitos numéricos validam como CPF (dígitos verificadores), senão valida formato de RG |
+| `rg` | CharField (20) | — | `validate_rg` — RG discreto (usado no PDF jurídico do contrato) |
+| `cpf` | CharField (14) | — | `validate_cpf` — CPF discreto (usado no PDF jurídico do contrato) |
+| `endereco` | CharField (300) | — | Endereço completo do fiador (qualificação no PDF jurídico) |
+| `conjuge_nome` | CharField (200) | — | — |
+| `conjuge_rg` | CharField (20) | — | `validate_rg` |
+| `conjuge_cpf` | CharField (14) | — | `validate_cpf` |
 | `certidao_onus` | FileField | — | `certidoes/` |
 | `garantia` | CharField (200) | — | Ex: imóvel próprio, caução |
+
+> `rg_cpf` é o campo legado original (texto único, mantido por compatibilidade); `rg`/`cpf` são campos discretos adicionados para a qualificação completa do fiador no contrato jurídico (`contrato-juridico-completo`) — ambos opcionais, preenchidos conforme o documento do fiador disponível.
 
 ---
 
@@ -425,46 +436,7 @@ Recibo de pagamento. `imovel`/`contrato` obrigatórios (PROTECT); demais campos 
 
 ---
 
-### 2.17 DocumentoGerado
-Versão **imutável** de um PDF gerado pelo sistema (GED versionado). Um registro por geração de PDF — nunca atualizado após criado. O "documento atual" de uma origem é a versão de maior `numero_versao`. Introduzido na Rodada 4 (migração 0009; migração 0010 registra retroativamente os PDFs já existentes como versão 1).
-
-A origem é modelada com **três FKs explícitas** (uma por tipo) + campo `tipo`, em vez de `GenericForeignKey`: o conjunto de origens é fixo (Contrato, Laudo, Recibo), permite `select_related` e constraints reais no banco.
-
-| Campo | Tipo | Obrigatório | Observações |
-|---|---|---|---|
-| `id` | BigAutoField | — | PK automática |
-| `tipo` | CharField (10) | ✓ | Choices abaixo — identifica a origem |
-| `contrato` | ForeignKey → Contrato | — | CASCADE; `related_name='documentos_gerados'` |
-| `laudo` | ForeignKey → LaudoVistoria | — | CASCADE; `related_name='documentos_gerados'` |
-| `recibo` | ForeignKey → Recibo | — | CASCADE; `related_name='documentos_gerados'` |
-| `numero_versao` | PositiveIntegerField | ✓ | Sequencial **por origem** (começa em 1) |
-| `arquivo` | FileField | ✓ | `upload_to` determinístico — ver abaixo |
-| `sha256` | CharField (64) | ✓ | Hash SHA-256 do arquivo (vazio se ilegível na migração retroativa) |
-| `gerado_por` | ForeignKey → User | — | SET_NULL; autor da geração; `related_name='documentos_gerados'` |
-| `gerado_em` | DateTimeField | — | Auto now add |
-
-**Choices — tipo:**
-`contrato`, `laudo`, `recibo`
-
-**`upload_to` (`documento_gerado_upload_to`):** `ged/{tipo}/{origem_pk}/v{numero_versao}/{filename}` — caminho determinístico que independe de qualquer campo além de tipo, pk da origem e versão (vira a key do objeto quando o storage for trocado para S3).
-
-**Properties:**
-- `origem` — retorna o registro de negócio que originou o documento (`contrato or laudo or recibo`).
-- `origem_pk` — pk da origem.
-
-**Constraints (`Meta`):**
-- `CheckConstraint` `documentogerado_origem_unica` — exatamente **uma** das três FKs preenchida.
-- `UniqueConstraint` `documentogerado_versao_unica_{contrato,laudo,recibo}` — `numero_versao` único por origem (condicional à FK correspondente).
-
-**Imutabilidade:** o `save()` levanta `ValueError` se o registro não estiver sendo criado (`not self._state.adding`) — só permite inserção, nunca update. Para "atualizar" um documento, gera-se uma nova versão.
-
-**Ordenação:** `-gerado_em`, `-pk`
-
-> Os campos legados `Contrato.documento_gerado`, `LaudoVistoria.documento_gerado` e `Recibo.arquivo` são **mantidos**, mas deixam de ser fonte de verdade: passam a ser espelhos automáticos da última versão, sincronizados por `imoveis.pdf.gerar_e_anexar()`. Ver Regras de Negócio, seção 14.
-
----
-
-### 2.18 NotificacaoUsuario
+### 2.17 NotificacaoUsuario
 Histórico persistido, por usuário, das mensagens que o sistema já emite via `django.contrib.messages` (sucesso de CRUD, geração de PDF, erros, avisos). Espelho **append-only** do texto e nível (tag) da mensagem exibida — sem estado de lida/não lida, sem FK genérica para o objeto de origem. Não confundir com o model de negócio `Notificacao` (avisos de órgãos públicos sobre um imóvel).
 
 | Campo | Tipo | Obrigatório | Observações |
@@ -484,6 +456,8 @@ Histórico persistido, por usuário, das mensagens que o sistema já emite via `
 
 ---
 
+> **`DocumentoGerado`** (GED versionado — PDFs gerados pelo sistema) tem documento dedicado: **[docs/05_ged_documentos_versionados.md](05_ged_documentos_versionados.md)**.
+
 ## 3. Caminhos de Upload (MEDIA_ROOT)
 
 | Entidade | Campo | Caminho |
@@ -502,6 +476,6 @@ Histórico persistido, por usuário, das mensagens que o sistema já emite via `
 | Notificacao | `arquivo` | `notificacoes/` |
 | Distrato | `recibo_chaves` | `distratos/recibos/` |
 | Recibo | `arquivo` | `recibos/` |
-| DocumentoGerado | `arquivo` | `ged/{tipo}/{origem_pk}/v{numero_versao}/` |
+| DocumentoGerado | `arquivo` | `ged/{tipo}/{origem_pk}/v{numero_versao}/` (ver [docs/05_ged_documentos_versionados.md](05_ged_documentos_versionados.md)) |
 
-> Todos os `FileField` usam o storage `default` do `STORAGES` (Django 4.2+), plugável via `STORAGE_BACKEND` no `.env` (`filesystem` default; `s3` preparado, mas não ativado — ver Regras de Negócio, seção 14).
+> Todos os `FileField` usam o storage `default` do `STORAGES` (Django 4.2+), plugável via `STORAGE_BACKEND` no `.env` (`filesystem` default; `s3` preparado, mas não ativado — ver [docs/05_ged_documentos_versionados.md](05_ged_documentos_versionados.md)).

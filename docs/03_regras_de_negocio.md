@@ -1,4 +1,4 @@
-# 04 — Regras de Negócio
+# 03 — Regras de Negócio
 > Sistema Integrado de Gestão Imobiliária (GED e BI)
 
 ---
@@ -75,6 +75,14 @@ Os documentos do contrato variam conforme o `tipo_contrato`:
 
 ---
 
+## 5a. Recibos Vinculados ao Contrato (card no detalhe)
+
+- O detalhe do contrato (`contrato_detail`) exibe um card "Recibos" com todos os `Recibo` vinculados via `Recibo.contrato` (`related_name='recibos'`), cada linha linkando para `recibo_detail`.
+- O botão "Novo Recibo" do card usa a rota dedicada `contratos/<int:contrato_pk>/recibos/novo/` (view `recibo_create_from_contrato`), que pré-seleciona `imovel`/`contrato` no `ReciboForm` a partir do contrato de origem — mesmo padrão de pré-preenchimento já usado por `notificacao_create` (parâmetro de rota, não querystring). A view genérica `recibo_create` (sem contrato pré-selecionado) continua existindo para o botão "+ Novo" da listagem de recibos.
+- Este card é distinto da central GED (`DocumentoGerado` com `tipo='recibo'`, versões de PDF) — mostra os registros de negócio `Recibo`, não os PDFs gerados.
+
+---
+
 ## 6. Laudo de Vistoria Vinculado ao Distrato
 
 - O `Distrato` pode referenciar um `LaudoVistoria` do tipo `saida` como laudo de saída.
@@ -109,20 +117,7 @@ removido — sem bloquear a exclusão.
 
 ## 8. GED — Gestão Eletrônica de Documentos
 
-- Todos os documentos do sistema são armazenados digitalmente, eliminando a dependência de pastas físicas.
-- A central GED (`/documentos/`) agrega os documentos agrupados por tipo (view `documentos` em `imoveis/views.py`). Há duas naturezas de documento:
-  - **PDFs gerados pelo sistema (versionados)** — consultados em `DocumentoGerado` (**todas** as versões, não só a última), filtrando por `tipo`:
-    - Contratos gerados (`tipo='contrato'`)
-    - Laudos gerados (`tipo='laudo'`)
-    - Recibos gerados (`tipo='recibo'`)
-  - **Anexos manuais (não versionados)** — vêm direto dos campos legados dos models de negócio:
-    - Laudos de vistoria com anexo assinado (`LaudoVistoria.arquivo`)
-    - Comprovantes de pagamento (`Lancamento.comprovante`)
-    - Recibos de entrega de chaves do contrato (`Contrato.recibo_chaves`)
-    - Comprovantes anuais de pagamento do contrato (`Contrato.comprovante_anual`)
-- Um anexo manual só aparece na central GED se o campo de arquivo **não estiver vazio**.
-
-Ver a seção 14 para as regras do GED versionado (`DocumentoGerado`).
+A central de documentos (`/documentos/`), o versionamento de PDFs (`DocumentoGerado`) e o storage plugável (`STORAGE_BACKEND`) têm documento dedicado: **[docs/05_ged_documentos_versionados.md](05_ged_documentos_versionados.md)**.
 
 ---
 
@@ -191,25 +186,7 @@ Todos os validadores customizados aceitam o valor com ou sem máscara e removem 
 
 ## 14. GED Versionado e Storage Plugável (Rodada 4)
 
-### Versionamento de PDFs (`DocumentoGerado`)
-
-- Cada geração de PDF de Contrato, Laudo ou Recibo cria **uma nova versão imutável** em `DocumentoGerado`. O modelo é a **fonte de verdade** dos documentos gerados pelo sistema.
-- **Numeração sequencial por origem:** `numero_versao` começa em 1 e incrementa **independentemente por origem** (calculado via `Max('numero_versao')` filtrado pela FK da origem, em `imoveis/pdf.py:registrar_documento_gerado`). Contratos, laudos e recibos têm sequências próprias.
-- **Imutabilidade:** o `save()` do model só permite inserção; qualquer tentativa de update levanta `ValueError`. Não se edita uma versão — gera-se outra.
-- **Integridade:** cada versão guarda o `sha256` do arquivo e a autoria (`gerado_por`).
-- **Autoria:** as views `contrato_gerar_pdf`, `laudo_gerar_pdf` e `recibo_gerar_pdf` passam `request.user` para `gerar_e_anexar()`, que o repassa a `registrar_documento_gerado()` (usuário não autenticado → `gerado_por` fica nulo).
-- **Campos legados como espelho:** `Contrato.documento_gerado`, `LaudoVistoria.documento_gerado` e `Recibo.arquivo` continuam existindo, porém deixam de ser fonte de verdade — `gerar_e_anexar()` os sincroniza automaticamente com a **última** versão via `save_pdf_to_field()`. Servem apenas como atalho para o PDF mais recente.
-- **Nome de arquivo determinístico:** `gerar_e_anexar()` calcula o filename via `imoveis/identidade.py:nome_arquivo(instance, versao=n)` (padrão `{Tipo}_{codigo}_..._v{n}.pdf`) e retorna `(pdf_bytes, filename)` — o mesmo nome vai para a versão do GED, para o campo legado e para o download (`Content-Disposition`). Documentos gerados antes desta convenção mantêm o nome antigo (`contrato_3.pdf` etc.); não há reprocessamento retroativo.
-- **Convenção mantida da Rodada 2:** o PDF continua sendo gerado **somente** pelas views `*_gerar_pdf` (botão "Regerar PDF") — nunca ao salvar create/edit. Cada clique gera uma nova versão.
-- **Migração retroativa:** a migração `0010_documentogerado_retroativo` registra os PDFs pré-existentes (nos campos legados) como versão 1 de `DocumentoGerado`, sem copiar o arquivo (apenas referenciando o nome já no storage; hash calculado se o arquivo for legível, senão fica vazio).
-- **Admin:** `DocumentoGeradoAdmin` é somente leitura (`has_add_permission`/`has_change_permission` retornam `False`) — o registro só nasce pela geração de PDF.
-
-### Storage plugável (`STORAGE_BACKEND`)
-
-- O armazenamento de arquivos usa a config `STORAGES` do Django 4.2+ (`core/settings.py`), controlada pela variável de ambiente `STORAGE_BACKEND`, seguindo o **mesmo padrão** já usado para `DB_ENGINE`:
-  - `filesystem` (default) → `FileSystemStorage`.
-  - `s3` → preparado, mas **não ativado** nesta rodada. Setar `STORAGE_BACKEND=s3` sem as libs instaladas levanta `ImproperlyConfigured` explicitamente (mesmo comportamento de `DB_ENGINE=mysql` sem `mysqlclient`).
-- `boto3`/`django-storages` **não** foram adicionados ao projeto — apenas a arquitetura está pronta. Todos os `FileField` usam o storage `default`, então a troca para S3 não exige mudança no código de aplicação. O `upload_to` determinístico de `DocumentoGerado` já serve como key de objeto S3.
+Ver documento dedicado: **[docs/05_ged_documentos_versionados.md](05_ged_documentos_versionados.md)** (versionamento de `DocumentoGerado`, storage plugável `STORAGE_BACKEND`).
 
 ---
 
@@ -219,3 +196,22 @@ Todos os validadores customizados aceitam o valor com ou sem máscara e removem 
 - **Captura centralizada:** `MESSAGE_STORAGE = 'imoveis.message_storage.PersistentFallbackStorage'` (`core/settings.py`) substitui o storage padrão do Django. `PersistentFallbackStorage.add()` mantém o comportamento normal (toast efêmero em `base.html`) e adicionalmente cria um `NotificacaoUsuario` quando `request.user.is_authenticated`; para usuário anônimo, só o toast é exibido (sem persistência).
 - **Leitura via context processor:** `imoveis.context_processors.notificacoes_usuario` (registrado em `TEMPLATES[0]['OPTIONS']['context_processors']`) injeta `ultimas_notificacoes_usuario` (últimas 8, slicing simples sem `Paginator`, mesmo precedente do dashboard) em todo template renderizado com `render()`. Para usuário anônimo, retorna dict vazio.
 - **Sem estado de lida/não lida, sem paginação, sem link para o objeto de origem** — histórico é somente leitura, append-only, exibido no dropdown do sino da topbar.
+
+---
+
+## 16. Contrato Jurídico Completo (PDF)
+
+O PDF de Contrato (`templates/documentos/contrato_pdf.html`) foi reescrito como instrumento particular de locação juridicamente completo — preâmbulo + 21 cláusulas fixas (I a XXI) transcritas de um modelo jurídico fornecido pelo cliente, com variáveis do sistema injetadas no texto corrido. Mantém o motor xhtml2pdf e o padrão A4 de `base_pdf.html`.
+
+- **Locador fixo (Shelter):** o locador exibido no PDF **não é** mais `contrato.imovel.proprietario` — é sempre a própria Shelter, com dados fixos em `settings.SHELTER_LOCADOR` (`core/settings.py`): `razao_social`, `cnpj`, `representante_nome`, `representante_rg`, `representante_cpf`, `endereco`, `telefone`, `pix_chave`, `foro`. O `Proprietario` cadastrado do imóvel continua existindo e sendo usado normalmente no resto do sistema (cadastro, listagens); deixa apenas de ser "quem assina como locador" no contrato gerado. A view `_gerar_pdf_contrato` (`imoveis/views.py`) passa `locador=settings.SHELTER_LOCADOR` e `prazo_meses=meses_entre(contrato.data_inicio, contrato.data_fim)` no contexto do template.
+- **Finalidade do contrato:** `Contrato.finalidade` (`residencial`/`comercial`) determina o texto de "CONTRATO DE LOCAÇÃO RESIDENCIAL/COMERCIAL" no título e a redação da Cláusula VI (uso do imóvel).
+- **Qualificação completa do fiador:** `Fiador` ganhou campos discretos `rg`, `cpf`, `endereco`, `conjuge_nome`, `conjuge_rg`, `conjuge_cpf` (além do `rg_cpf` legado) para a qualificação jurídica completa no contrato — todos opcionais.
+- **Local/data de assinatura:** `Contrato.local_assinatura`/`data_assinatura` (mesmo padrão já existente em `LaudoVistoria`) alimentam o fechamento do contrato no PDF.
+- **Número por extenso (`imoveis/extenso.py`):** módulo puro (sem dependência de models/views) baseado em `num2words` (pt-BR), com três funções usadas via filtros de template (`imoveis/templatetags/imoveis_tags.py`):
+  - `valor_por_extenso(valor)` — valor monetário por extenso (ex.: `Decimal('1500.00')` → "mil e quinhentos reais").
+  - `meses_por_extenso(quantidade)` — quantidade de meses por extenso (ex.: 12 → "doze meses").
+  - `dia_ordinal_extenso(dia)` — ordinal por extenso do dia de vencimento (ex.: 10 → "décimo").
+  - `meses_entre(data_inicio, data_fim)` — cálculo puro de meses inteiros entre duas datas (sem `dateutil`), usado para `prazo_meses`.
+  - **Datas por extenso não usam `num2words`** — o filtro nativo `date` do Django, com `LANGUAGE_CODE = 'pt-br'`, já produz o formato desejado via `{{ valor|date:"j \d\e F \d\e Y" }}` (ex.: "1 de Junho de 2026").
+- **Retrocompatibilidade do GED versionado:** PDFs de contrato já gerados antes desta mudança (`DocumentoGerado` existentes, `tipo='contrato'`) são imutáveis e **não são regerados nem migrados** — continuam permanentemente no layout antigo (resumo em cards). Só uma nova chamada a "Regerar PDF" produz uma versão nova no layout jurídico.
+- **Paginação A4:** o CSS das cláusulas evita `page-break-inside: avoid` no corpo de texto das cláusulas (risco de página em branco no xhtml2pdf quando a cláusula é maior que o espaço restante) — apenas o número da cláusula fica inline (negrito) com o início do texto, nunca separado por quebra de página.
