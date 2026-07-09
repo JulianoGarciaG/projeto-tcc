@@ -1,7 +1,7 @@
 # Histórico de Entregas
 > Sistema Integrado de Gestão Imobiliária (GED e BI) — "Shelter"
 
-Registro cronológico do **"porquê"** de cada rodada de implementação — não repete o "o quê" (isso é a referência viva em `docs/01_visao_geral.md`, `docs/02_modelagem_dados.md`, `docs/03_regras_de_negocio.md`, `docs/04_design_ui_ux.md`, `docs/05_ged_documentos_versionados.md`). Cada entrada mapeia para o diretório correspondente em `planner-docs/` (plano completo, decisões e módulos) e, quando aplicável, para o plano antigo consolidado aqui.
+Registro cronológico do **"porquê"** de cada rodada de implementação — não repete o "o quê" (isso é a referência viva em `docs/01_visao_geral.md`, `docs/02_modelagem_dados.md`, `docs/03_regras_de_negocio.md`, `docs/04_design_ui_ux.md`). Cada entrada mapeia para o diretório correspondente em `planner-docs/` (plano completo, decisões e módulos) e, quando aplicável, para o plano antigo consolidado aqui.
 
 ---
 
@@ -46,7 +46,7 @@ Duas entregas em paralelo:
 1. **Redesign visual dos 3 PDFs** (Contrato, Laudo, Recibo) para replicar 1:1 os mockups em `docs/pdf-models/*.html`, mantendo o motor xhtml2pdf.
 2. **GED versionado (`DocumentoGerado`):** cada geração de PDF passa a criar um registro **imutável**, com `numero_versao` sequencial por origem, `sha256` e autor (`gerado_por`). Os campos legados (`Contrato.documento_gerado`, `LaudoVistoria.documento_gerado`, `Recibo.arquivo`) passam a ser espelhos automáticos da última versão. Introduzida também a config `STORAGES` plugável (`STORAGE_BACKEND=filesystem`/`s3`, S3 preparado mas não ativado).
 
-Detalhado em `docs/05_ged_documentos_versionados.md` (model `DocumentoGerado`, versionamento e storage plugável).
+Detalhado, à época, em `docs/05_ged_documentos_versionados.md` (documento descontinuado — ver entrada "Reversão do GED versionado" abaixo).
 
 ## Fix visual dos PDFs gerados (`planner-docs/fix-visual-pdfs-gerados/`)
 
@@ -156,3 +156,17 @@ Substitui o `Lancamento` vinculado só a `Contrato` por um lançamento **indexad
 - Dashboard ganha uma tabela de rentabilidade por imóvel (ganhos efetivados menos despesas).
 
 Documentado em `docs/02_modelagem_dados.md` (`Lancamento`, diagrama de relacionamentos) e `docs/03_regras_de_negocio.md` §9.
+
+## Reversão do GED versionado
+
+Reverte o versionamento imutável de PDFs introduzido na **Rodada 4** (`redesign-pdfs-documentos-gerados`). O sistema volta ao modelo "só a versão mais recente": `Contrato.documento_gerado`, `LaudoVistoria.documento_gerado` e `Recibo.arquivo` voltam a ser a **única** fonte de verdade dos PDFs gerados — cada nova geração sobrescreve o arquivo anterior (banco e storage físico), sem histórico.
+
+- **Model removido:** `DocumentoGerado` (e `documento_gerado_upload_to`) saem de `imoveis/models.py`; `DocumentoGeradoAdmin` sai de `imoveis/admin.py`. `dependentes_cascata` de `Contrato`/`LaudoVistoria` deixa de referenciar `documentos_gerados`; `Recibo.dependentes_cascata` passa a retornar sempre `[]`.
+- **`imoveis/pdf.py`:** `gerar_e_anexar(instance, template_name, context, field_name)` simplificado — sem parâmetro `usuario`, sem versão/hash/registro em GED. `save_pdf_to_field` passa a apagar o arquivo antigo do campo (`field.delete(save=False)`) antes de salvar o novo.
+- **`imoveis/identidade.py`:** `nome_arquivo(instance, versao=None)` mantido como está — o parâmetro `versao` não é mais usado por `pdf.py`, mas a função continua aceitando-o.
+- **`imoveis/views.py`:** a view `documentos()` (rota `/documentos/`, central GED) passa a listar o documento vigente direto dos campos legados (`Contrato.objects.exclude(documento_gerado='')...` etc.), não mais versões de `DocumentoGerado`.
+- **Templates:** blocos "Versões do PDF gerado" removidos de `templates/ged/documentos.html`, `templates/contratos/contrato_detail.html`, `templates/laudos/laudo_detail.html`, `templates/recibos/recibo_detail.html`.
+- **Migração `0017_remove_documentogerado`:** apaga fisicamente do storage os arquivos extras que só existiam por causa do versionamento (árvore `ged/...`), preservando os arquivos que os campos legados ainda referenciam, depois remove o model.
+- **Fora de escopo:** a arquitetura de storage plugável (`STORAGES`/`STORAGE_BACKEND`, S3 preparado não ativado) não foi tocada — é ortogonal a essa mudança e continua usada pelos anexos manuais. Anexos manuais não-versionados (`comprovante_renda`, `contrato_social`, `recibo_chaves`, `comprovante_anual`, `laudo.arquivo` assinado) também não mudaram.
+
+`docs/05_ged_documentos_versionados.md` foi descontinuado (conteúdo vigente sobre GED e storage plugável passou para `docs/03_regras_de_negocio.md` §8). A entrada da Rodada 4 acima **não foi reescrita** — registra o que foi entregue naquela época; esta entrada documenta a reversão.

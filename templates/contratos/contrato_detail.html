@@ -62,21 +62,7 @@
       <div class="section-card-body small">
         {% if contrato.documento_gerado %}
         <div class="border-bottom pb-2 mb-2">
-          <a href="{{ contrato.documento_gerado.url }}" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i> Contrato Gerado (PDF) — última versão</a>
-        </div>
-        {% endif %}
-
-        {% if contrato.documentos_gerados.all %}
-        <div class="border-bottom pb-2 mb-2">
-          <strong>Versões do PDF gerado</strong>
-          <ul class="list-unstyled mb-0 mt-1">
-            {% for d in contrato.documentos_gerados.all %}
-            <li>
-              <a href="{{ d.arquivo.url }}" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i>Versão {{ d.numero_versao }}</a>
-              <span class="text-muted">— {{ d.gerado_em|date:"d/m/Y H:i" }}{% if d.gerado_por %} — {{ d.gerado_por.username }}{% endif %}</span>
-            </li>
-            {% endfor %}
-          </ul>
+          <a href="{{ contrato.documento_gerado.url }}" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i> Contrato Gerado (PDF)</a>
         </div>
         {% endif %}
 

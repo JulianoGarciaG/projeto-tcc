@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Notificacao, RenovacaoContrato, Distrato,
-    Recibo, ItemVistoriaTemplate, DocumentoGerado, FotoItemVistoria,
+    Recibo, ItemVistoriaTemplate, FotoItemVistoria,
 )
 from .forms import (
     ImovelForm, FotoImovelFormSet, ProprietarioForm, InquilinoForm,
@@ -26,14 +26,14 @@ from .pdf import gerar_e_anexar, pdf_download_response
 # Helpers de geração de PDF (documentos GED)
 # ============================================================
 
-def _gerar_pdf_contrato(contrato, usuario=None):
+def _gerar_pdf_contrato(contrato):
     contexto = {
         'contrato': contrato,
         'locador': settings.SHELTER_LOCADOR,
         'prazo_meses': meses_entre(contrato.data_inicio, contrato.data_fim),
     }
     pdf_bytes, filename = gerar_e_anexar(contrato, 'documentos/contrato_pdf.html',
-                                         contexto, 'documento_gerado', usuario=usuario)
+                                         contexto, 'documento_gerado')
     return pdf_download_response(pdf_bytes, filename)
 
 
@@ -65,7 +65,7 @@ def _salvar_fotos_itens(item_formset):
             )
 
 
-def _gerar_pdf_laudo(laudo, usuario=None):
+def _gerar_pdf_laudo(laudo):
     contexto = {
         'laudo': laudo,
         'grupos': _itens_agrupados(laudo),
@@ -73,13 +73,13 @@ def _gerar_pdf_laudo(laudo, usuario=None):
         'testemunhas': laudo.testemunhas.all(),
     }
     pdf_bytes, filename = gerar_e_anexar(laudo, 'documentos/laudo_pdf.html',
-                                         contexto, 'documento_gerado', usuario=usuario)
+                                         contexto, 'documento_gerado')
     return pdf_download_response(pdf_bytes, filename)
 
 
-def _gerar_pdf_recibo(recibo, usuario=None):
+def _gerar_pdf_recibo(recibo):
     pdf_bytes, filename = gerar_e_anexar(recibo, 'documentos/recibo_pdf.html',
-                                         {'recibo': recibo}, 'arquivo', usuario=usuario)
+                                         {'recibo': recibo}, 'arquivo')
     return pdf_download_response(pdf_bytes, filename)
 
 
@@ -572,7 +572,7 @@ def contrato_edit(request, pk):
 @login_required
 def contrato_gerar_pdf(request, pk):
     contrato = get_object_or_404(Contrato.objects.select_related('imovel', 'inquilino'), pk=pk)
-    return _gerar_pdf_contrato(contrato, request.user)
+    return _gerar_pdf_contrato(contrato)
 
 
 # Campos de documento (GED) do contrato anexáveis pela tela de detalhe.
@@ -759,7 +759,7 @@ def laudo_edit(request, pk):
 def laudo_gerar_pdf(request, pk):
     laudo = get_object_or_404(
         LaudoVistoria.objects.select_related('imovel__proprietario', 'contrato__inquilino'), pk=pk)
-    return _gerar_pdf_laudo(laudo, request.user)
+    return _gerar_pdf_laudo(laudo)
 
 
 @login_required
@@ -983,7 +983,7 @@ def recibo_edit(request, pk):
 @login_required
 def recibo_gerar_pdf(request, pk):
     recibo = get_object_or_404(Recibo.objects.select_related('imovel', 'contrato__inquilino'), pk=pk)
-    return _gerar_pdf_recibo(recibo, request.user)
+    return _gerar_pdf_recibo(recibo)
 
 
 @login_required
@@ -1001,14 +1001,16 @@ def recibo_delete(request, pk):
 
 @login_required
 def documentos(request):
-    # Documentos gerados pelo sistema: todas as versões do GED versionado
-    # (DocumentoGerado), não apenas a última.
-    contratos_gerados = (DocumentoGerado.objects.filter(tipo='contrato')
-                         .select_related('contrato__imovel', 'contrato__inquilino', 'gerado_por'))
-    laudos_gerados = (DocumentoGerado.objects.filter(tipo='laudo')
-                      .select_related('laudo__imovel', 'gerado_por'))
-    recibos = (DocumentoGerado.objects.filter(tipo='recibo')
-               .select_related('recibo__imovel', 'recibo__contrato__inquilino', 'gerado_por'))
+    # Documentos gerados pelo sistema: apenas o documento vigente de cada
+    # origem (campos legados são a única fonte de verdade, sem histórico).
+    contratos_gerados = (Contrato.objects.exclude(documento_gerado='')
+                         .exclude(documento_gerado__isnull=True)
+                         .select_related('imovel', 'inquilino'))
+    laudos_gerados = (LaudoVistoria.objects.exclude(documento_gerado='')
+                      .exclude(documento_gerado__isnull=True)
+                      .select_related('imovel'))
+    recibos = (Recibo.objects.exclude(arquivo='').exclude(arquivo__isnull=True)
+               .select_related('imovel', 'contrato__inquilino'))
     # Anexos manuais (não versionados)
     laudos = LaudoVistoria.objects.exclude(arquivo='').exclude(arquivo__isnull=True).select_related('imovel')
     comprovantes = Lancamento.objects.exclude(comprovante='').select_related('contrato__imovel')

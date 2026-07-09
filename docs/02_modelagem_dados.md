@@ -34,11 +34,6 @@ LaudoVistoria
     │       └── FotoItemVistoria (CASCADE) [0..N fotos, visível só no detalhe]
     └── TestemunhaLaudo (CASCADE)
 
-DocumentoGerado (GED versionado — 1 registro imutável por geração de PDF; ver docs/05_ged_documentos_versionados.md)
-    ├── Contrato (CASCADE) [uma das 3 FKs preenchida]
-    ├── LaudoVistoria (CASCADE)
-    └── Recibo (CASCADE)
-
 User (auth)
     └── NotificacaoUsuario (CASCADE) [histórico append-only de django.contrib.messages]
 ```
@@ -176,7 +171,7 @@ Contrato de locação entre inquilino e imóvel. Campos de documentos são anexa
 | `contrato_social` | FileField | — | `contratos_sociais/` — somente PJ; anexado via `contrato_anexar_documento` |
 | `recibo_chaves` | FileField | — | `contratos/recibo_chaves/`; anexado via `contrato_anexar_documento` |
 | `comprovante_anual` | FileField | — | `contratos/comprovante_anual/`; anexado via `contrato_anexar_documento` |
-| `documento_gerado` | FileField | — | `contratos/gerados/` — PDF do contrato gerado pelo sistema (botão "Regerar PDF") |
+| `documento_gerado` | FileField | — | `contratos/gerados/` — PDF do contrato gerado pelo sistema (botão "Regerar PDF"); cada geração **sobrescreve** o arquivo anterior (sem histórico de versões) |
 | `observacoes` | TextField | — | — |
 | `local_assinatura` | CharField (200) | — | Cidade da assinatura, usada no PDF jurídico |
 | `data_assinatura` | DateField | — | — |
@@ -229,7 +224,7 @@ Laudo de vistoria vinculado a um imóvel e a um contrato (ambos obrigatórios).
 | `local_assinatura` | CharField (200) | — | Cidade da assinatura, usada no PDF |
 | `data_assinatura` | DateField | — | — |
 | `arquivo` | FileField | — | `laudos/` — anexo do laudo assinado (upload só na tela de detalhe, via `laudo_anexar_arquivo`) |
-| `documento_gerado` | FileField | — | `laudos/gerados/` — PDF do laudo gerado pelo sistema |
+| `documento_gerado` | FileField | — | `laudos/gerados/` — PDF do laudo gerado pelo sistema; cada geração **sobrescreve** o arquivo anterior (sem histórico de versões) |
 | `criado_em` | DateTimeField | — | Auto now add |
 
 **Choices — tipo:**
@@ -435,7 +430,7 @@ Recibo de pagamento. `imovel`/`contrato` obrigatórios (PROTECT); demais campos 
 | `assinante_nome` | CharField (200) | — | — |
 | `assinante_cpf` | CharField (14) | — | `validate_cpf` |
 | `data_assinatura` | DateField | — | — |
-| `arquivo` | FileField | — | `recibos/` — PDF do recibo gerado pelo sistema |
+| `arquivo` | FileField | — | `recibos/` — PDF do recibo gerado pelo sistema; cada geração **sobrescreve** o arquivo anterior (sem histórico de versões) |
 | `criado_em` | DateTimeField | — | Auto now add |
 
 > Não possui campo `proveniente_sitio` (removido na Rodada 2).
@@ -466,8 +461,6 @@ Histórico persistido, por usuário, das mensagens que o sistema já emite via `
 
 ---
 
-> **`DocumentoGerado`** (GED versionado — PDFs gerados pelo sistema) tem documento dedicado: **[docs/05_ged_documentos_versionados.md](05_ged_documentos_versionados.md)**.
-
 ## 3. Caminhos de Upload (MEDIA_ROOT)
 
 | Entidade | Campo | Caminho |
@@ -486,6 +479,5 @@ Histórico persistido, por usuário, das mensagens que o sistema já emite via `
 | Notificacao | `arquivo` | `notificacoes/` |
 | Distrato | `recibo_chaves` | `distratos/recibos/` |
 | Recibo | `arquivo` | `recibos/` |
-| DocumentoGerado | `arquivo` | `ged/{tipo}/{origem_pk}/v{numero_versao}/` (ver [docs/05_ged_documentos_versionados.md](05_ged_documentos_versionados.md)) |
 
-> Todos os `FileField` usam o storage `default` do `STORAGES` (Django 4.2+), plugável via `STORAGE_BACKEND` no `.env` (`filesystem` default; `s3` preparado, mas não ativado — ver [docs/05_ged_documentos_versionados.md](05_ged_documentos_versionados.md)).
+> Todos os `FileField` usam o storage `default` do `STORAGES` (Django 4.2+), plugável via `STORAGE_BACKEND` no `.env` (`filesystem` default; `s3` preparado, mas não ativado). Não há mais versionamento de PDFs gerados: cada geração sobrescreve o arquivo anterior no campo legado (`Contrato.documento_gerado`, `LaudoVistoria.documento_gerado`, `Recibo.arquivo`), tanto no banco quanto no storage físico.

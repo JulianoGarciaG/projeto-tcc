@@ -79,7 +79,7 @@ Os documentos do contrato variam conforme o `tipo_contrato`:
 
 - O detalhe do contrato (`contrato_detail`) exibe um card "Recibos" com todos os `Recibo` vinculados via `Recibo.contrato` (`related_name='recibos'`), cada linha linkando para `recibo_detail`.
 - O botão "Novo Recibo" do card usa a rota dedicada `contratos/<int:contrato_pk>/recibos/novo/` (view `recibo_create_from_contrato`), que pré-seleciona `imovel`/`contrato` no `ReciboForm` a partir do contrato de origem — mesmo padrão de pré-preenchimento já usado por `notificacao_create` (parâmetro de rota, não querystring). A view genérica `recibo_create` (sem contrato pré-selecionado) continua existindo para o botão "+ Novo" da listagem de recibos.
-- Este card é distinto da central GED (`DocumentoGerado` com `tipo='recibo'`, versões de PDF) — mostra os registros de negócio `Recibo`, não os PDFs gerados.
+- Este card é distinto da central GED (documentos gerados/anexados do tipo recibo) — mostra os registros de negócio `Recibo`, não os PDFs gerados.
 
 ---
 
@@ -106,8 +106,8 @@ Os documentos do contrato variam conforme o `tipo_contrato`:
 
 Além do bloqueio por `PROTECT`, os modelos `Imovel`, `Contrato`, `LaudoVistoria`
 e `Recibo` têm relacionamentos `CASCADE` (fotos, notificações, fiadores,
-lançamentos, renovação/distrato, itens de vistoria, testemunhas, documentos
-gerados) que são apagados junto quando o registro pai é excluído. A property
+lançamentos, renovação/distrato, itens de vistoria, testemunhas) que são
+apagados junto quando o registro pai é excluído. A property
 `dependentes_cascata` (em cada um desses models, `imoveis/models.py`) calcula
 essa contagem, e o modal de confirmação de exclusão das respectivas listagens
 exibe um aviso com a quantidade de cada tipo de dependente que também será
@@ -117,7 +117,13 @@ removido — sem bloquear a exclusão.
 
 ## 8. GED — Gestão Eletrônica de Documentos
 
-A central de documentos (`/documentos/`), o versionamento de PDFs (`DocumentoGerado`) e o storage plugável (`STORAGE_BACKEND`) têm documento dedicado: **[docs/05_ged_documentos_versionados.md](05_ged_documentos_versionados.md)**.
+- Todos os documentos do sistema são armazenados digitalmente, eliminando a dependência de pastas físicas.
+- A central GED (`/documentos/`) agrega os documentos agrupados por tipo (view `documentos` em `imoveis/views.py`), lendo diretamente os campos legados dos models de negócio — não há versionamento: cada tipo de documento tem no máximo **um** arquivo vigente por origem.
+  - **PDFs gerados pelo sistema:** `Contrato.documento_gerado`, `LaudoVistoria.documento_gerado`, `Recibo.arquivo` — listados a partir dos registros com o campo preenchido (`Contrato.objects.exclude(documento_gerado='')` etc.).
+  - **Anexos manuais:** `LaudoVistoria.arquivo` (assinado), `Lancamento.comprovante`, `Contrato.recibo_chaves`, `Contrato.comprovante_anual`.
+- Um documento só aparece na central GED se o campo de arquivo **não estiver vazio**.
+- **Sem histórico de versões:** cada geração de PDF (botão "Regerar PDF") sobrescreve o arquivo anterior — tanto o registro no banco quanto o arquivo físico no storage (`imoveis/pdf.py:save_pdf_to_field` apaga o arquivo antigo antes de salvar o novo). Não há como consultar PDFs gerados anteriormente; para "corrigir" um documento, basta gerar de novo.
+- **Storage plugável (`STORAGE_BACKEND`):** o armazenamento de arquivos usa a config `STORAGES` do Django 4.2+ (`core/settings.py`), controlada pela variável de ambiente `STORAGE_BACKEND`, seguindo o mesmo padrão já usado para `DB_ENGINE`: `filesystem` (default) → `FileSystemStorage`; `s3` → preparado, mas não ativado (setar sem as libs instaladas levanta `ImproperlyConfigured`). `boto3`/`django-storages` não foram adicionados ao projeto — apenas a arquitetura está pronta.
 
 ---
 
@@ -232,12 +238,6 @@ Todos os validadores customizados aceitam o valor com ou sem máscara e removem 
 
 ---
 
-## 14. GED Versionado e Storage Plugável (Rodada 4)
-
-Ver documento dedicado: **[docs/05_ged_documentos_versionados.md](05_ged_documentos_versionados.md)** (versionamento de `DocumentoGerado`, storage plugável `STORAGE_BACKEND`).
-
----
-
 ## 15. Histórico de Notificações por Usuário
 
 - Toda mensagem disparada via `django.contrib.messages` (`success`/`error`/`warning`/`info`) é persistida em `NotificacaoUsuario` para o usuário autenticado que gerou a request, sem alterar os 36+ pontos de chamada existentes em `imoveis/views.py`.
@@ -261,5 +261,5 @@ O PDF de Contrato (`templates/documentos/contrato_pdf.html`) foi reescrito como 
   - `dia_ordinal_extenso(dia)` — ordinal por extenso do dia de vencimento (ex.: 10 → "décimo").
   - `meses_entre(data_inicio, data_fim)` — cálculo puro de meses inteiros entre duas datas (sem `dateutil`), usado para `prazo_meses`.
   - **Datas por extenso não usam `num2words`** — o filtro nativo `date` do Django, com `LANGUAGE_CODE = 'pt-br'`, já produz o formato desejado via `{{ valor|date:"j \d\e F \d\e Y" }}` (ex.: "1 de Junho de 2026").
-- **Retrocompatibilidade do GED versionado:** PDFs de contrato já gerados antes desta mudança (`DocumentoGerado` existentes, `tipo='contrato'`) são imutáveis e **não são regerados nem migrados** — continuam permanentemente no layout antigo (resumo em cards). Só uma nova chamada a "Regerar PDF" produz uma versão nova no layout jurídico.
+- **Sem regeração automática:** o PDF de contrato já gerado antes desta mudança permanece no layout antigo até que alguém clique novamente em "Regerar PDF" — só então o arquivo é sobrescrito pelo layout jurídico novo.
 - **Paginação A4:** o CSS das cláusulas evita `page-break-inside: avoid` no corpo de texto das cláusulas (risco de página em branco no xhtml2pdf quando a cláusula é maior que o espaço restante) — apenas o número da cláusula fica inline (negrito) com o início do texto, nunca separado por quebra de página.

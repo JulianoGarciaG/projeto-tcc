@@ -238,7 +238,6 @@ class Contrato(IdentificavelMixin, models.Model):
             ('lançamento(s) financeiro(s)', self.lancamentos.count()),
             ('renovação', 1 if hasattr(self, 'renovacao') else 0),
             ('distrato', 1 if hasattr(self, 'distrato') else 0),
-            ('documento(s) gerado(s)', self.documentos_gerados.count()),
         ]
         return [(label, n) for label, n in pares if n > 0]
 
@@ -335,7 +334,6 @@ class LaudoVistoria(IdentificavelMixin, models.Model):
         pares = [
             ('item(ns) de vistoria', self.itens.count()),
             ('testemunha(s)', self.testemunhas.count()),
-            ('documento(s) gerado(s)', self.documentos_gerados.count()),
         ]
         return [(label, n) for label, n in pares if n > 0]
 
@@ -623,10 +621,7 @@ class Recibo(IdentificavelMixin, models.Model):
 
     @property
     def dependentes_cascata(self):
-        pares = [
-            ('documento(s) gerado(s)', self.documentos_gerados.count()),
-        ]
-        return [(label, n) for label, n in pares if n > 0]
+        return []
 
     @property
     def rotulo_curto(self):
@@ -642,93 +637,6 @@ class Recibo(IdentificavelMixin, models.Model):
     @property
     def rotulo_longo(self):
         return f'Recibo {self.rotulo_curto}'
-
-
-def documento_gerado_upload_to(instance, filename):
-    """Caminho determinístico por origem/versão.
-
-    Vira a key do objeto quando o storage for trocado para S3 (ver STORAGES em
-    core/settings.py) — por isso não depende de nada além de tipo, pk da
-    origem e número da versão.
-    """
-    return f'ged/{instance.tipo}/{instance.origem_pk}/v{instance.numero_versao}/{filename}'
-
-
-class DocumentoGerado(models.Model):
-    """Versão imutável de um PDF gerado pelo sistema (GED versionado).
-
-    Um registro por geração — nunca atualizado após criado (save() bloqueia
-    updates). O "documento atual" de uma origem é a versão de numero_versao
-    mais alto. Os campos legados Contrato.documento_gerado /
-    LaudoVistoria.documento_gerado / Recibo.arquivo são mantidos apenas como
-    espelhos da última versão, sincronizados por imoveis.pdf.gerar_e_anexar().
-
-    A origem é modelada com 3 FKs explícitas (uma por tipo) + campo `tipo`,
-    em vez de GenericForeignKey: o conjunto de origens é fixo (Contrato,
-    Laudo, Recibo), permite select_related e constraints reais no banco, e
-    segue o estilo de modelagem explícita do restante do projeto.
-    """
-    TIPO_CHOICES = [
-        ('contrato', 'Contrato'),
-        ('laudo', 'Laudo de Vistoria'),
-        ('recibo', 'Recibo'),
-    ]
-
-    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
-    contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, null=True, blank=True,
-                                 related_name='documentos_gerados')
-    laudo = models.ForeignKey(LaudoVistoria, on_delete=models.CASCADE, null=True, blank=True,
-                              related_name='documentos_gerados')
-    recibo = models.ForeignKey(Recibo, on_delete=models.CASCADE, null=True, blank=True,
-                               related_name='documentos_gerados')
-    numero_versao = models.PositiveIntegerField(verbose_name='Versão')
-    arquivo = models.FileField(upload_to=documento_gerado_upload_to, verbose_name='Arquivo (PDF)')
-    sha256 = models.CharField(max_length=64, verbose_name='SHA-256')
-    gerado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                                   null=True, blank=True, related_name='documentos_gerados',
-                                   verbose_name='Gerado por')
-    gerado_em = models.DateTimeField(auto_now_add=True, verbose_name='Gerado em')
-
-    class Meta:
-        verbose_name = 'Documento Gerado (GED)'
-        verbose_name_plural = 'Documentos Gerados (GED)'
-        ordering = ['-gerado_em', '-pk']
-        constraints = [
-            models.CheckConstraint(
-                condition=(
-                    models.Q(contrato__isnull=False, laudo__isnull=True, recibo__isnull=True)
-                    | models.Q(contrato__isnull=True, laudo__isnull=False, recibo__isnull=True)
-                    | models.Q(contrato__isnull=True, laudo__isnull=True, recibo__isnull=False)
-                ),
-                name='documentogerado_origem_unica',
-            ),
-            models.UniqueConstraint(fields=['contrato', 'numero_versao'],
-                                    condition=models.Q(contrato__isnull=False),
-                                    name='documentogerado_versao_unica_contrato'),
-            models.UniqueConstraint(fields=['laudo', 'numero_versao'],
-                                    condition=models.Q(laudo__isnull=False),
-                                    name='documentogerado_versao_unica_laudo'),
-            models.UniqueConstraint(fields=['recibo', 'numero_versao'],
-                                    condition=models.Q(recibo__isnull=False),
-                                    name='documentogerado_versao_unica_recibo'),
-        ]
-
-    @property
-    def origem(self):
-        """Registro de negócio que originou o documento."""
-        return self.contrato or self.laudo or self.recibo
-
-    @property
-    def origem_pk(self):
-        return self.contrato_id or self.laudo_id or self.recibo_id
-
-    def save(self, *args, **kwargs):
-        if not self._state.adding:
-            raise ValueError('DocumentoGerado é imutável — gere uma nova versão em vez de editar.')
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f'{self.get_tipo_display()} #{self.origem_pk} — v{self.numero_versao}'
 
 
 class NotificacaoUsuario(models.Model):

@@ -46,7 +46,7 @@ Ao concluir → rode a skill validate-implementation (roda check/migrations/test
 - `media/` — uploads (fotos, PDFs gerados/anexados).
 
 ### Modelos (`imoveis/models.py`)
-Entidades: `Proprietario`, `Inquilino`, `Fiador`, `Imovel`, `FotoImovel`, `Contrato`, `LaudoVistoria`, `ComodoTemplate`, `ItemVistoriaTemplate`, `ItemVistoria`, `TestemunhaLaudo`, `Recibo`, `Lancamento`, `Notificacao`, `RenovacaoContrato`, `Distrato`, `DocumentoGerado`.
+Entidades: `Proprietario`, `Inquilino`, `Fiador`, `Imovel`, `FotoImovel`, `Contrato`, `LaudoVistoria`, `ComodoTemplate`, `ItemVistoriaTemplate`, `ItemVistoria`, `TestemunhaLaudo`, `Recibo`, `Lancamento`, `Notificacao`, `RenovacaoContrato`, `Distrato`.
 
 Campos, relacionamentos e caminhos de upload completos em **[docs/02_modelagem_dados.md](docs/02_modelagem_dados.md)**. Abaixo, apenas os modelos com armadilhas que você precisa conhecer **antes** de mexer:
 
@@ -59,7 +59,6 @@ Campos, relacionamentos e caminhos de upload completos em **[docs/02_modelagem_d
 | `ItemVistoriaTemplate` | Catálogo do checklist semeado na migração 0004 (5 cômodos, 32 itens). |
 | `Recibo` | `imovel`/`contrato` obrigatórios (`PROTECT`); período `periodo_inicio`/`periodo_fim`. |
 | `Lancamento` | **Único** módulo financeiro (`Entrada`/`Saida` removidos — **não recriar**). |
-| `DocumentoGerado` | **Versão imutável** de PDF (GED versionado). FKs opcionais `contrato`/`laudo`/`recibo` (uma via `CheckConstraint`), `numero_versao` sequencial por origem, `sha256`, `gerado_por`. Campos legados `*.documento_gerado`/`Recibo.arquivo` são **espelho** da última versão. Detalhes em **[docs/05_ged_documentos_versionados.md](docs/05_ged_documentos_versionados.md)**. |
 
 ### Signal crítico (`imoveis/signals.py`)
 `Imovel.status` é recalculado por `post_save`/`post_delete` de `Contrato` (há contrato `ativo` → `ocupado`, senão `vago`). Registrado em `imoveis/apps.py`. Regras de negócio completas em **[docs/03_regras_de_negocio.md](docs/03_regras_de_negocio.md)**.
@@ -69,7 +68,7 @@ Campos, relacionamentos e caminhos de upload completos em **[docs/02_modelagem_d
 ## Convenções obrigatórias
 
 - **PDF nunca é gerado ao salvar** — create/edit fazem redirect + toast (PRG); só as views `*_gerar_pdf` geram/baixam PDF.
-- **GED é a fonte de verdade dos PDFs** — cada geração cria uma versão **imutável** em `DocumentoGerado` (`save()` bloqueia updates). Gerar sempre via `imoveis/pdf.py:gerar_e_anexar(instance, ..., usuario=request.user)`; nunca gravar direto no FileField legado. Para "corrigir", gerar outra versão — não editar/deletar.
+- **PDFs gerados não têm histórico de versões** — cada geração sobrescreve o arquivo anterior no campo legado (`Contrato.documento_gerado`/`LaudoVistoria.documento_gerado`/`Recibo.arquivo`), tanto no banco quanto no storage físico. Gerar sempre via `imoveis/pdf.py:gerar_e_anexar(instance, template_name, context, field_name)`; nunca gravar direto no FileField fora dessa função. Para "corrigir" um documento, basta gerar de novo — não há versão anterior para recuperar.
 - **Uploads via storage `default` do `STORAGES`** — plugável por `STORAGE_BACKEND` no `.env`. Não instalar `boto3`/`django-storages` nem ativar o backend `s3` sem seguir o passo a passo comentado em `core/settings.py`.
 - **Campos de data** usam `_date_widget()` (`imoveis/forms.py`, Flatpickr dd/mm/yyyy); **moeda** usa `_moeda_widget()` + `localized_fields` (aceita "1500,00"; **sem** separador de milhar — `USE_THOUSAND_SEPARATOR` fica desligado).
 - **Validadores** (`imoveis/validators.py`): `validate_cpf`, `validate_cnpj`, `validate_cpf_cnpj`, `validate_rg`, `validate_rg_cpf` (`Fiador.rg_cpf`), `validate_telefone` (`Proprietario`/`Inquilino.telefone`). **Reutilizar, não duplicar.**
@@ -99,7 +98,6 @@ Referência viva do sistema em `/docs/`:
 | [02_modelagem_dados.md](docs/02_modelagem_dados.md) | Entidades, campos, relacionamentos, caminhos de upload |
 | [03_regras_de_negocio.md](docs/03_regras_de_negocio.md) | Signals, automações, restrições, dashboard, acesso |
 | [04_design_ui_ux.md](docs/04_design_ui_ux.md) | Paleta/tokens, tipografia, layout, componentes, responsividade, dark mode, PDFs |
-| [05_ged_documentos_versionados.md](docs/05_ged_documentos_versionados.md) | `DocumentoGerado`, versionamento de PDFs, storage plugável (S3-ready) |
 
 Histórico de entregas e o "porquê" de cada rodada (planos por rodada, mapeados aos diretórios `planner-docs/`): **[docs/historico_entregas.md](docs/historico_entregas.md)**.
 
