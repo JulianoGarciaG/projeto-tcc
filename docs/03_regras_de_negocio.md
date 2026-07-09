@@ -151,6 +151,19 @@ O filtro de período (data início/fim) é validado e limpo por `DashboardFiltro
 - Após login bem-sucedido, o usuário é redirecionado para `/` (dashboard).
 - Após logout, o usuário é redirecionado para `/login/`.
 
+**Perfis de usuário** (Group do Django, atribuídos somente via `/admin/` — não há tela de gestão de perfis no sistema):
+
+| Perfil | Como é identificado | Acesso |
+|---|---|---|
+| Admin | `is_superuser=True` + `is_staff=True` | Irrestrito, incluindo `/admin/` |
+| Owner | Group "Owner" | Tudo, exceto `/admin/` |
+| Comum | Group "Comum", ou nenhum Group/superuser | Tudo, exceto Dashboard, Financeiro (CRUD de `Lancamento`) e `/admin/` |
+
+- As permissões customizadas `imoveis.pode_acessar_dashboard` e `imoveis.pode_acessar_financeiro` são ancoradas em um model "permission-only" sem tabela (`PermissaoTela`, `managed=False` em `imoveis/models.py`), desacoplado de qualquer model de negócio.
+- As views de Dashboard e Financeiro (CRUD de `Lancamento`) são protegidas por `permission_required(..., raise_exception=True)` — acesso direto por URL sem a permissão retorna 403 (`templates/403.html`), nunca stack trace.
+- A sidebar (`templates/base.html`) oculta os itens Dashboard e Financeiro para quem não tem a permissão correspondente — complementar à proteção de view, nunca a única camada.
+- Um usuário pertencente a Owner e Comum simultaneamente tem acesso de Owner (permissões efetivas são a união das permissões de todos os Groups do usuário; Comum não possui permissões próprias para revogar nada).
+
 ---
 
 ## 11. Alimentação em Tempo Real

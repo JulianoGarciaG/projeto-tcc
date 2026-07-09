@@ -15,7 +15,7 @@
 
 Sistema interno de acompanhamento, armazenamento de documentação e análise de dados voltado para uma **administradora de bens imóveis**.
 
-A solução é um único website, acessível por funcionários e gestores, integrado a um banco de dados relacional. O foco está na automação de fluxos de trabalho, redução de erros inerentes a processos manuais e priorização da governança de dados.
+A solução é um único website, acessível pela equipe interna da administradora conforme o perfil de cada usuário (ver [Público-Alvo](#4-público-alvo)), integrado a um banco de dados relacional. O foco está na automação de fluxos de trabalho, redução de erros inerentes a processos manuais e priorização da governança de dados.
 
 ---
 
@@ -27,13 +27,15 @@ Solucionar barreiras técnicas relacionadas ao fluxo e armazenamento de dados pr
 
 ## 4. Público-Alvo
 
-| Perfil | Acesso |
-|---|---|
-| Funcionários | Interface web completa (CRUD, GED, Financeiro) |
-| Gestores | Dashboard, BI, filtros e indicadores |
-| Vistoriadores | Acesso mobile para consultas e atualizações em campo |
-| Auditores | Acesso a documentos centralizados via GED |
-| Administradores (`is_staff`) | Painel admin Django |
+Administradora de bens imóveis — equipe interna que opera o sistema via web (inclusive em campo, por dispositivos móveis, para consultas e atualizações no local do imóvel).
+
+Perfis de acesso (Group do Django, atribuídos somente via `/admin/` — ver [docs/03_regras_de_negocio.md §10](03_regras_de_negocio.md)):
+
+| Perfil | Como é identificado | Acesso |
+|---|---|---|
+| Admin | `is_superuser=True` + `is_staff=True` | Irrestrito, incluindo o painel admin Django (`/admin/`) |
+| Owner | Group "Owner" | Todas as telas, exceto `/admin/` |
+| Comum | Group "Comum", ou nenhum Group/superuser | Todas as telas, exceto Dashboard, Financeiro e `/admin/` |
 
 ---
 
@@ -86,11 +88,11 @@ Pillow>=10.0.0
 
 ### 8.1 Gestão Eletrônica de Documentos (GED)
 - Capturar, armazenar e gerenciar ativos de informação em ambiente digital.
-- Eliminar a dependência de pastas físicas, centralizando arquivos como contratos, laudos e comprovantes para acesso imediato por gestores ou auditores.
+- Eliminar a dependência de pastas físicas, centralizando arquivos como contratos, laudos e comprovantes para acesso imediato pelos perfis Admin e Owner.
 
 ### 8.2 Operações CRUD e Interface Web
 - Interface web funcional, intuitiva e segura para a realização de operações CRUD.
-- Aplicação responsiva — gestores e vistoriadores realizam consultas e atualizações diretamente do local do imóvel via dispositivos móveis.
+- Aplicação responsiva — consultas e atualizações podem ser feitas diretamente do local do imóvel via dispositivos móveis.
 - Alimentação do banco de dados em tempo real.
 
 ### 8.3 Dashboard e Business Intelligence (BI)

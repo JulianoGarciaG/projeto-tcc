@@ -3,7 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.conf import settings
-from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.auth.models import AnonymousUser, Group, Permission, User
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template.loader import render_to_string
@@ -951,6 +951,8 @@ class DashboardFiltroTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user('tester', password='x')
+        self.user.user_permissions.add(
+            Permission.objects.get(codename='pode_acessar_dashboard'))
         self.client.force_login(self.user)
         _, self.imovel, self.inquilino, self.contrato = criar_base()
         self.lanc_junho = Lancamento.objects.create(
@@ -1383,3 +1385,127 @@ class NotificacaoUsuarioTests(TestCase):
         request = self.factory.get('/')
         request.user = AnonymousUser()
         self.assertEqual(notificacoes_usuario(request), {})
+
+
+class PerfisUsuarioTests(TestCase):
+    """Matriz de perfis (Admin/Owner/Comum) x telas protegidas
+    (Dashboard, Financeiro) + regras de precedência e migração de dados."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.perm_dashboard = Permission.objects.get(codename='pode_acessar_dashboard')
+        cls.perm_financeiro = Permission.objects.get(codename='pode_acessar_financeiro')
+        cls.owner_group, _ = Group.objects.get_or_create(name='Owner')
+        cls.owner_group.permissions.set([cls.perm_dashboard, cls.perm_financeiro])
+        cls.comum_group, _ = Group.objects.get_or_create(name='Comum')
+
+    def _login_admin(self):
+        user = User.objects.create_superuser('admin', 'admin@x.com', 'x')
+        self.client.force_login(user)
+        return user
+
+    def _login_owner(self):
+        user = User.objects.create_user('owner', password='x')
+        user.groups.add(self.owner_group)
+        self.client.force_login(user)
+        return user
+
+    def _login_comum(self):
+        user = User.objects.create_user('comum', password='x')
+        user.groups.add(self.comum_group)
+        self.client.force_login(user)
+        return user
+
+    # --- Matriz 3 perfis x 2 telas ---
+
+    def test_admin_acessa_dashboard(self):
+        self._login_admin()
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_admin_acessa_financeiro(self):
+        self._login_admin()
+        resp = self.client.get(reverse('lancamento_list'))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_owner_acessa_dashboard(self):
+        self._login_owner()
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_owner_acessa_financeiro(self):
+        self._login_owner()
+        resp = self.client.get(reverse('lancamento_list'))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_comum_nao_acessa_dashboard(self):
+        self._login_comum()
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.status_code, 403)
+
+    def test_comum_nao_acessa_financeiro(self):
+        self._login_comum()
+        resp = self.client.get(reverse('lancamento_list'))
+        self.assertEqual(resp.status_code, 403)
+
+    def test_anonimo_redireciona_para_login(self):
+        resp = self.client.get(reverse('dashboard'))
+        self.assertRedirects(resp, f"/login/?next={reverse('dashboard')}")
+
+    # --- Precedência Owner + Comum ---
+
+    def test_usuario_em_owner_e_comum_prevalece_owner(self):
+        user = User.objects.create_user('ambos', password='x')
+        user.groups.add(self.owner_group, self.comum_group)
+        self.client.force_login(user)
+        resp_dashboard = self.client.get(reverse('dashboard'))
+        resp_financeiro = self.client.get(reverse('lancamento_list'))
+        self.assertEqual(resp_dashboard.status_code, 200)
+        self.assertEqual(resp_financeiro.status_code, 200)
+
+    # --- Sidebar oculta os itens ---
+
+    def test_sidebar_oculta_financeiro_para_comum(self):
+        self._login_comum()
+        resp = self.client.get(reverse('imovel_list'))
+        self.assertNotContains(resp, reverse('lancamento_list'))
+
+    def test_sidebar_mostra_financeiro_para_owner(self):
+        self._login_owner()
+        resp = self.client.get(reverse('imovel_list'))
+        self.assertContains(resp, reverse('lancamento_list'))
+
+    # --- 403 usa o template certo, não stack trace ---
+
+    def test_403_usa_template_proprio(self):
+        self._login_comum()
+        resp = self.client.get(reverse('lancamento_list'))
+        self.assertTemplateUsed(resp, '403.html')
+
+    # --- Migração de dados: reclassificação de usuários existentes ---
+
+    def test_migration_reclassifica_usuarios_existentes(self):
+        """Chama a função de RunPython da migration do módulo 2
+        diretamente (importada do arquivo de migration via importlib),
+        passando o registry real de apps, e valida is_superuser/Group
+        resultantes. Não usa MigrationTestCase porque a migration já
+        rodou na criação do banco de teste (sem usuários ainda
+        existentes) — aqui testamos a função isoladamente contra
+        usuários criados no próprio teste."""
+        import importlib
+        from django.apps import apps as real_apps
+
+        mod_migration = importlib.import_module(
+            'imoveis.migrations.0015_cria_grupos_e_reclassifica_usuarios'
+        )
+
+        staff_sem_super = User.objects.create_user('staffuser', password='x', is_staff=True)
+        comum_qualquer = User.objects.create_user('qualquer', password='x')
+
+        mod_migration.cria_grupos_e_permissoes(real_apps, None)
+
+        staff_sem_super.refresh_from_db()
+        comum_qualquer.refresh_from_db()
+        self.assertTrue(staff_sem_super.is_superuser)
+        self.assertFalse(comum_qualquer.groups.filter(name='Owner').exists())
+        self.assertTrue(comum_qualquer.groups.filter(name='Comum').exists())

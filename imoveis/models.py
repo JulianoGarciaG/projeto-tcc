@@ -728,3 +728,26 @@ class NotificacaoUsuario(models.Model):
 
     def __str__(self):
         return f'{self.usuario} — {self.get_nivel_display()} — {self.mensagem[:50]}'
+
+
+class PermissaoTela(models.Model):
+    """Model 'permission-only': não possui tabela própria (managed=False).
+
+    Existe apenas para ancorar permissões customizadas de acesso a telas que
+    não pertencem naturalmente a nenhum model de negócio (ex.: Dashboard é
+    uma agregação sem model próprio; Financeiro não deve ter sua permissão
+    de acesso acoplada ao ciclo de vida do model Lancamento). Nunca
+    instanciar, nunca consultar .objects — usado somente via
+    permission_required('imoveis.pode_acessar_dashboard'/'...financeiro',
+    raise_exception=True) nas views e via perms.imoveis.<codename> nos
+    templates (perms já disponível globalmente via
+    django.contrib.auth.context_processors.auth).
+    """
+
+    class Meta:
+        managed = False
+        default_permissions = ()
+        permissions = [
+            ('pode_acessar_dashboard', 'Pode acessar o Dashboard'),
+            ('pode_acessar_financeiro', 'Pode acessar o módulo Financeiro'),
+        ]

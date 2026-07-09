@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.db.models import Sum, Q, ProtectedError
 from django.http import Http404, JsonResponse
@@ -83,11 +83,16 @@ def _gerar_pdf_recibo(recibo, usuario=None):
     return pdf_download_response(pdf_bytes, filename)
 
 
+def erro_403(request, exception=None):
+    return render(request, '403.html', status=403)
+
+
 # ============================================================
 # Dashboard
 # ============================================================
 
 @login_required
+@permission_required('imoveis.pode_acessar_dashboard', raise_exception=True)
 def dashboard(request):
     hoje = date.today()
 
@@ -674,6 +679,7 @@ def laudo_delete(request, pk):
 # ============================================================
 
 @login_required
+@permission_required('imoveis.pode_acessar_financeiro', raise_exception=True)
 def lancamento_list(request):
     q = request.GET.get('q', '')
     status = request.GET.get('status', '')
@@ -700,6 +706,7 @@ def lancamento_list(request):
 
 
 @login_required
+@permission_required('imoveis.pode_acessar_financeiro', raise_exception=True)
 def lancamento_create(request):
     form = LancamentoForm(request.POST or None, request.FILES or None)
     if form.is_valid():
@@ -710,6 +717,7 @@ def lancamento_create(request):
 
 
 @login_required
+@permission_required('imoveis.pode_acessar_financeiro', raise_exception=True)
 def lancamento_edit(request, pk):
     obj = get_object_or_404(Lancamento, pk=pk)
     if request.method == 'POST':
@@ -725,6 +733,7 @@ def lancamento_edit(request, pk):
 
 
 @login_required
+@permission_required('imoveis.pode_acessar_financeiro', raise_exception=True)
 def lancamento_delete(request, pk):
     obj = get_object_or_404(Lancamento, pk=pk)
     if request.method == 'POST':
