@@ -28,5 +28,4 @@ desktop.ini
 *.swp
 
 media/
-# Claude Code
-.claude/
+
