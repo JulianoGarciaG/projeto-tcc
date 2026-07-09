@@ -103,6 +103,17 @@ Cria `imoveis/identidade.py` (`IdentificavelMixin`) para resolver dois sintomas:
 
 Adiciona ao `contrato_detail` um card listando os `Recibo` vinculados via `Recibo.contrato`, com botão "Novo Recibo" que pré-seleciona `imovel`/`contrato` (rota dedicada `recibo_create_from_contrato`, mesmo padrão de pré-preenchimento já usado por `notificacao_create`). Documentado em `docs/03_regras_de_negocio.md` §5a.
 
+## Split e merge do dashboard financeiro
+
+Duas mudanças em sequência no dashboard único original (ocupação de imóveis + indicadores financeiros na mesma tela):
+
+1. **Split:** o dashboard foi separado em duas telas — **Dashboard Imobiliário** (assume a rota raiz `/`, view `dashboard_imobiliario`, KPIs/donuts de ocupação e vacância) e um **Dashboard Financeiro** com rota própria (`/financeiro/dashboard/`).
+2. **Merge (commit `3c0557d`, "feat(financeiro): merge dashboard into lancamentos page"):** a rota `/financeiro/dashboard/` foi removida; os KPIs, gráficos e o ranking de rentabilidade passaram a ser renderizados diretamente na página de listagem de Lançamentos (`/financeiro/`), via `_dashboard_financeiro_context(request)` (`imoveis/views.py`), chamada dentro de `lancamento_list`. Não existe mais uma tela de dashboard financeiro separada.
+
+Nesse mesmo período, o gráfico de evolução mensal (ganhos vs. despesas) passou a ser *period-aware*: sem filtro de data, mostra os últimos 6 meses fixos; com filtro de data início/fim, mostra todos os meses do intervalo informado.
+
+Documentado em `docs/01_visao_geral.md` §7/§8.3, `docs/03_regras_de_negocio.md` §9 e `docs/04_design_ui_ux.md` §13.
+
 ## Contrato jurídico completo (`planner-docs/contrato-juridico-completo/`)
 
 Reescrita total do PDF de Contrato: de um resumo em cards para um **instrumento particular de locação juridicamente completo** — preâmbulo + 21 cláusulas fixas (I a XXI) transcritas de um modelo jurídico fornecido pelo cliente, com variáveis do sistema injetadas no texto corrido. Principais mudanças:

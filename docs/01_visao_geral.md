@@ -77,10 +77,10 @@ Pillow>=10.0.0
 | **Inquilinos** | Cadastro e documentação dos locatários |
 | **Contratos** | Gestão de contratos, fiadores, renovações e distratos |
 | **Laudos de Vistoria** | Registro e arquivo de vistorias de entrada e saída |
-| **Financeiro** | Lançamentos de pagamentos (`Lancamento`), comprovantes e inadimplência |
+| **Financeiro** | Lançamentos de pagamentos (`Lancamento`), comprovantes, inadimplência **e indicadores financeiros (KPIs/gráficos) embutidos na própria listagem** |
 | **Recibos** | Emissão de recibos de pagamento com geração de PDF |
 | **GED** | Central de documentos digitais (contratos, laudos, comprovantes, recibos) |
-| **Dashboard / BI** | Indicadores, gráficos e filtros dinâmicos para gestão estratégica |
+| **Dashboard Imobiliário** | Indicadores e gráficos de ocupação/vacância dos imóveis, na rota raiz (`/`) |
 
 ---
 
@@ -96,6 +96,7 @@ Pillow>=10.0.0
 - Alimentação do banco de dados em tempo real.
 
 ### 8.3 Dashboard e Business Intelligence (BI)
-- Dashboard interativo com indicadores-chave para apoio à tomada de decisões.
-- Filtros dinâmicos: período, imóvel, situação, tipo de imóvel e vacância.
-- Métricas monitoradas: taxas de vacância, status de pagamentos e índices de inadimplência.
+- Indicadores-chave divididos em **duas telas** para apoio à tomada de decisões (detalhes em `docs/03_regras_de_negocio.md` §9):
+  - **Dashboard Imobiliário** (rota raiz `/`) — ocupação/vacância dos imóveis, com filtros de imóvel/tipo/status.
+  - **Indicadores financeiros** — embutidos na própria listagem de Lançamentos (`/financeiro/`), com filtros de imóvel/período de vencimento.
+- Métricas monitoradas: taxa de vacância, contratos ativos, ganhos/despesas/saldo do período, ticket médio de aluguel e índice de inadimplência.

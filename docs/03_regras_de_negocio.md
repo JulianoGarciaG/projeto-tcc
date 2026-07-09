@@ -121,26 +121,54 @@ A central de documentos (`/documentos/`), o versionamento de PDFs (`DocumentoGer
 
 ---
 
-## 9. Dashboard — Filtros e Métricas
+## 9. Dashboard Imobiliário e Indicadores Financeiros
 
-O dashboard suporta filtros combinados aplicados simultaneamente:
+Os indicadores do sistema estão divididos em **duas telas independentes** (o dashboard único original foi separado; o financeiro depois teve sua rota própria removida e mesclado na listagem de Lançamentos — ver `docs/historico_entregas.md`):
+
+### 9.1 Dashboard Imobiliário (`/`, view `dashboard_imobiliario`)
+
+Filtros combinados (imóvel, tipo de imóvel, status do imóvel), aplicados sobre `Imovel.objects`:
+
+| Filtro | Campo filtrado |
+|---|---|
+| Imóvel | `imovel_id` |
+| Tipo de imóvel | `tipo` |
+| Status do imóvel | `status` |
+
+**Métricas calculadas:**
+- Total de imóveis, ocupados, vagos e em manutenção (com base nos filtros acima)
+- Taxa de vacância: `(vagos / total) * 100`
+- Contratos ativos (global, sem filtro)
+- Donut de distribuição por situação do imóvel (ocupado/vago/manutenção) e donut de distribuição por tipo de imóvel
+
+**KPIs placeholder (badge "EXEMPLO"):** "Contratos que Precisam de Atenção" e "Tempo Médio de Vacância" são exibidos com dado vazio/nulo — dependem de features ainda não construídas (histórico de status do imóvel; indicador de atenção em contratos) e não devem ser tratados como métricas reais até serem implementados.
+
+### 9.2 Indicadores Financeiros (embutidos em `/financeiro/`, função `_dashboard_financeiro_context` chamada por `lancamento_list`)
+
+Não existe mais uma tela de dashboard financeiro separada — os KPIs, gráficos e ranking abaixo são renderizados na própria página de listagem de Lançamentos, acima da tabela e dos filtros de listagem.
+
+Filtros combinados, aplicados sobre `Lancamento.objects`:
 
 | Filtro | Campo filtrado |
 |---|---|
 | Imóvel | `imovel_id` |
 | Data início | `data_vencimento__gte` |
 | Data fim | `data_vencimento__lte` |
-| Status do lançamento | `status` |
 
 O filtro de período (data início/fim) é validado e limpo por `DashboardFiltroForm` (`imoveis/forms.py`), um `forms.Form` com os campos opcionais `data_inicio`/`data_fim`, ambos com widget Flatpickr (formato dd/mm/aaaa).
 
 **Métricas calculadas:**
-- Total de imóveis, ocupados e vagos (com base no filtro de imóvel)
-- Taxa de vacância: `(vagos / total) * 100`
-- Contratos ativos (global, sem filtro)
-- Inadimplentes: **calculado em runtime**, nunca gravado — `natureza='ganho'`, `status='pendente'` e `data_vencimento < hoje` (mesma regra da property `Lancamento.vencido`)
-- Gráfico de barras: soma de valores de ganhos efetivados e pendentes nos últimos 6 meses (despesas não entram no gráfico)
-- Rentabilidade por imóvel: para cada imóvel com lançamentos, soma de ganhos `efetivado` menos soma de despesas — tabela própria no dashboard, sem filtro de período/imóvel aplicado além dos filtros gerais
+- Ganhos do período (`natureza='ganho'`, `status='efetivado'`), despesas do período e saldo (ganhos − despesas)
+- Total pendente (`natureza='ganho'`, `status='pendente'`)
+- Ticket médio de aluguel: média de `valor` dos lançamentos `natureza='ganho'`, `tipo='aluguel'`
+- % de inadimplência: **calculado em runtime**, nunca gravado — proporção de ganhos com `status='pendente'` e `data_vencimento < hoje` sobre o total de ganhos (mesma regra da property `Lancamento.vencido`)
+- **Gráfico de evolução mensal (ganhos vs. despesas) é period-aware:**
+  - Sem filtro de data início/fim: últimos 6 meses fixos a partir do mês atual.
+  - Com filtro de data início e/ou fim: todos os meses do intervalo informado (mínimo 1 mês), usando a data informada (ou a outra ponta, se só uma for preenchida) como limite.
+  - O título do card ("· últimos 6 meses" ou "· período filtrado") reflete qual dos dois modos está ativo.
+- Ranking de rentabilidade por imóvel: para cada imóvel com lançamentos, soma de ganhos `efetivado` menos soma de despesas, ordenado do maior para o menor saldo
+- Donut de composição de despesas por categoria (`Lancamento.tipo`, apenas naturezas `despesa`)
+- Tabela dos 5 lançamentos pendentes mais antigos (`natureza='ganho'`, `status='pendente'`), com dias de atraso calculados em runtime
 
 **Lançamento (`imoveis/models.py`) — ganho/despesa por imóvel:**
 - `Lancamento.imovel` é obrigatório; `Lancamento.contrato` é opcional (preenchido só quando o lançamento se origina de um contrato/recibo).

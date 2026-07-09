@@ -318,18 +318,25 @@ Inter `700` `0.74rem`. As cores vêm dos pares de token semânticos
 
 ---
 
-## 13. Gráficos (Dashboard)
+## 13. Gráficos (Dashboard Imobiliário e Indicadores Financeiros)
+
+Os gráficos hoje estão divididos em duas telas — Dashboard Imobiliário (`/`, `templates/imoveis/dashboard_imobiliario.html`) e Indicadores Financeiros (embutidos em `/financeiro/`, `templates/financeiro/lancamento_list.html`). Regras de negócio por trás de cada métrica em `docs/03_regras_de_negocio.md` §9.
 
 - **Biblioteca:** Chart.js 4.4.4
-- **Cores lidas de tokens:** desde o redesign "Shelter", os gráficos não usam mais hex fixos — leem as CSS vars via `getComputedStyle` (`--ok`, `--danger`, `--warn`, `--surface`, `--border`, `--muted`), de modo a acompanharem os temas claro/escuro.
+- **Cores lidas de tokens:** os gráficos não usam hex fixos — leem as CSS vars via `getComputedStyle` (`--ok`, `--danger`, `--warn`, `--info`, `--brand`, `--surface`, `--border`, `--muted`), de modo a acompanharem os temas claro/escuro.
 - **Redesenho no toggle de tema:** os gráficos são **destruídos e recriados** ao receber o evento `shelter:theme-changed` disparado por `static/js/theme.js`, relendo os tokens do tema recém-aplicado.
-- **Gráfico de rosca (donut):** ocupação dos imóveis (ocupado / vago / manutenção)
-  - `cutout: 64%`, legenda embaixo
-  - Cores: `--ok`, `--danger`, `--warn`; borda entre fatias em `--surface`
-- **Gráfico de barras:** recebimentos vs. pendências (últimos 6 meses)
-  - Recebido: `--ok`; Pendente/Atrasado: `--danger`
-  - Eixo Y: formatado como `R$ valor`
-- **KPI cards / demais componentes do dashboard:** a barra de filtros e a tabela de últimos lançamentos passaram a usar o componente `.card`; a tabela tem empty-state com ícone `bi-inbox`. A **view do dashboard e os nomes de contexto permanecem inalterados** (mudança 100% de template/CSS/JS).
+
+### 13.1 Dashboard Imobiliário (`/`)
+- **Donut — distribuição por situação do imóvel:** ocupado / vago / manutenção (`--ok`, `--danger`, `--warn`; borda entre fatias em `--surface`, `cutout: 64%`, legenda embaixo)
+- **Donut — distribuição por tipo de imóvel:** uma cor por tipo cadastrado (`--brand`, `--warn`, `--ok`, `--muted`, `--danger`, `--info`)
+- KPI cards de ocupação/vacância + 2 KPIs placeholder com badge "EXEMPLO" (ver `docs/03_regras_de_negocio.md` §9.1)
+
+### 13.2 Indicadores Financeiros (`/financeiro/`)
+- **Gráfico de barras — evolução mensal (ganhos vs. despesas):** *period-aware* — últimos 6 meses fixos sem filtro de data, ou todos os meses do intervalo filtrado quando há data início/fim (título do card indica qual modo está ativo)
+  - Ganhos: `--ok`; Despesas: `--danger`
+  - Eixo Y: formatado como `R$ valor` (com sufixo `k` para milhares)
+- **Donut — composição de despesas por categoria:** uma cor por `Lancamento.tipo` presente (`--info`, `--warn`, `--brand`, `--danger`, `--muted`, `--ok`)
+- KPI cards (ganhos/despesas/saldo do período, total pendente, ticket médio de aluguel, % de inadimplência), ranking de rentabilidade por imóvel (barra de progresso) e tabela de lançamentos pendentes mais antigos — todos usando o componente `.card`, com empty-state (`bi-inbox`) quando não há dados.
 
 ---
 
