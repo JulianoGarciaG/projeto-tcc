@@ -147,9 +147,9 @@
 <!-- ============ Vista Tabela (oculta por padrão) ============ -->
 <div id="imovel-view-table" class="section-card" style="display:none;">
   <div class="table-responsive">
-    <table class="table mb-0">
+    <table class="table mb-0" data-sortable-table>
       <thead>
-        <tr><th>Endereço</th><th>Bairro/Cidade</th><th>Tipo</th><th>Proprietário</th><th>Status</th><th class="text-end">Ações</th></tr>
+        <tr><th data-sort="text">Endereço</th><th data-sort="text">Bairro/Cidade</th><th data-sort="text">Tipo</th><th data-sort="text">Proprietário</th><th>Status</th><th class="text-end">Ações</th></tr>
       </thead>
       <tbody>
         {% for im in imoveis %}

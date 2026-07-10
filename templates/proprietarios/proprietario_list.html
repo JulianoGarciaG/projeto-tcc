@@ -31,9 +31,9 @@
 
 <div class="section-card">
   <div class="table-responsive">
-    <table class="table mb-0">
+    <table class="table mb-0" data-sortable-table>
       <thead>
-        <tr><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>Email</th><th>Imóveis</th><th class="text-end">Ações</th></tr>
+        <tr><th data-sort="text">Nome</th><th data-sort="text">CPF/CNPJ</th><th data-sort="text">Telefone</th><th data-sort="text">Email</th><th>Imóveis</th><th class="text-end">Ações</th></tr>
       </thead>
       <tbody>
         {% for p in proprietarios %}

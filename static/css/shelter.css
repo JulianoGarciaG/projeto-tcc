@@ -886,6 +886,25 @@ input[type="file"].input-dashed {
 
 .table-responsive { border-radius: 0 0 10px 10px; }
 
+/* Ordenacao client-side (static/js/table-sort.js) */
+.table > thead > tr > th.table-sort-th {
+  cursor: pointer;
+  user-select: none;
+}
+.table > thead > tr > th.table-sort-th:hover {
+  color: var(--ink);
+}
+.table-sort-icon {
+  display: inline-block;
+  margin-left: .35rem;
+  font-size: .68rem;
+  color: var(--border-strong);
+}
+.table > thead > tr > th.table-sort-active,
+.table > thead > tr > th.table-sort-active .table-sort-icon {
+  color: var(--brand);
+}
+
 /* ============================================================
    14. EMPTY STATE (brief secao 4: bi-inbox + texto muted)
    ============================================================ */

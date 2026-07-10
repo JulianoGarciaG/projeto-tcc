@@ -284,7 +284,35 @@ listagem, alternadas por um *segmented control* Cards/Tabela na result bar
 tem as colunas: **Endereço** (link para o detalhe), **Bairro/Cidade**,
 **Tipo**, **Proprietário**, **Status** (badge) e **Ações** (Ver / Editar /
 Excluir). Ambas as vistas iteram o mesmo queryset `imoveis` e compartilham o
-mesmo modal de exclusão; nenhuma consulta nova é feita.
+mesmo modal de exclusão; nenhuma consulta nova é feita. A vista Tabela também
+suporta a ordenação client-side descrita em [10.2](#102-ordenação-client-side-de-colunas).
+
+### 10.2. Ordenação client-side de colunas
+
+Sete listagens (Imóveis — vista Tabela, Contratos, Inquilinos,
+Proprietários, Laudos, Recibos, Lançamentos) permitem ordenar pelo cabeçalho
+da coluna, 100% client-side via
+`static/js/table-sort.js` — sem requisição de rede, sem tocar em
+views/models/querysets. A ordenação atua sobre o resultado que já veio
+filtrado do backend (filtros continuam server-side via querystring/GET) e não
+é persistida: recarregar a página ou reaplicar um filtro volta à ordem
+original.
+
+- **Convenção:** `<table data-sortable-table>` habilita a tabela;
+  `<th data-sort="text|date|currency">` marca colunas elegíveis e seu tipo de
+  comparação. `<th>` sem `data-sort` não é clicável — usado nas colunas
+  calculadas/badges/ícones (ex.: `Status`, `Arquivo`/`PDF`/`Comprovante`,
+  `Imóveis` em Proprietários, `Ações`).
+- **Comportamento:** 1º clique ordena ascendente (A→Z / menor→maior); 2º
+  clique no mesmo cabeçalho inverte para descendente. Ícone `bi-sort-up` /
+  `bi-sort-down` (Bootstrap Icons) no cabeçalho ativo indica coluna e direção;
+  os demais ficam sem ícone visível. Valores ausentes (`—`) sempre vão para o
+  fim, nas duas direções. Acionável também por teclado (`Tab` + `Enter`/
+  `Espaço`).
+- **CSS:** `static/css/shelter.css` §13 (Tabelas) — `.table-sort-th`,
+  `.table-sort-icon`, `.table-sort-active`, usando os tokens `--brand`/
+  `--ink`/`--border-strong` já existentes (funciona nos dois temas sem
+  overrides adicionais).
 
 ---
 

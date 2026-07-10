@@ -31,9 +31,9 @@
 
 <div class="section-card">
   <div class="table-responsive">
-    <table class="table mb-0">
+    <table class="table mb-0" data-sortable-table>
       <thead>
-        <tr><th>Imóvel</th><th>Tipo</th><th>Data</th><th>Responsável</th><th>Arquivo</th><th class="text-end">Ações</th></tr>
+        <tr><th data-sort="text">Imóvel</th><th data-sort="text">Tipo</th><th data-sort="date">Data</th><th data-sort="text">Responsável</th><th>Arquivo</th><th class="text-end">Ações</th></tr>
       </thead>
       <tbody>
         {% for l in laudos %}

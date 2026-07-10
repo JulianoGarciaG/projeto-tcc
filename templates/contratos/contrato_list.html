@@ -45,9 +45,9 @@
 
 <div class="section-card">
   <div class="table-responsive">
-    <table class="table mb-0">
+    <table class="table mb-0" data-sortable-table>
       <thead>
-        <tr><th>Inquilino</th><th>Imóvel</th><th>Período</th><th>Valor Mensal</th><th>Status</th><th>Arquivo</th><th class="text-end">Ações</th></tr>
+        <tr><th data-sort="text">Inquilino</th><th data-sort="text">Imóvel</th><th>Período</th><th data-sort="currency">Valor Mensal</th><th>Status</th><th>Arquivo</th><th class="text-end">Ações</th></tr>
       </thead>
       <tbody>
         {% for c in contratos %}
