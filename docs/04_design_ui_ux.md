@@ -16,9 +16,9 @@
 | Sidebar (topo, sempre expandida) | `Shelter_LOGO_white.svg` | Sobre fundo `--graphite`; centralizada no header de 64px (`width: 90%`, `object-fit: contain`) |
 | Login (painel esquerdo) | `Shelter_LOGO_white.svg` | Sobre fundo escuro `#3A3A3A` |
 | PDFs (`templates/documentos/base_pdf.html`) | `Shelter_LOGO.jpg` | Versão rasterizada, compatível com xhtml2pdf |
-| Favicon | Símbolo isolado | Exportar apenas o elemento gráfico dourado (ainda não implementado) |
+| Favicon (`<link rel="icon">` em `base.html`/`login.html`) | `Shelter_ICON.svg` | Apenas o símbolo gráfico dourado (4 losangos), recortado do `Shelter_LOGO.svg` original — sem wordmark |
 
-> Os arquivos da logo estão em `static/assets/` (`Shelter_LOGO.svg`, `Shelter_LOGO_white.svg`, `Shelter_LOGO.jpg`, `Shelter_LOGO_white.jpg`).
+> Os arquivos da logo estão em `static/assets/` (`Shelter_LOGO.svg`, `Shelter_LOGO_white.svg`, `Shelter_LOGO.jpg`, `Shelter_LOGO_white.jpg`, `Shelter_ICON.svg`).
 > Nunca distorcer proporções. Nunca aplicar sobre fundos que conflitem com `#F2B441` ou `#3A3A3A`.
 
 ### Personalidade
