@@ -6,10 +6,13 @@ from django.db.models import Sum, Avg, Count, Q, ProtectedError
 from django.http import Http404, JsonResponse
 from datetime import date, datetime, timedelta
 
+from django.utils import timezone
+
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Notificacao, RenovacaoContrato, Distrato,
     Recibo, ItemVistoriaTemplate, ItemVistoria, FotoItemVistoria,
+    HistoricoStatusImovel,
 )
 from .forms import (
     ImovelForm, FotoImovelFormSet, ProprietarioForm, InquilinoForm,
@@ -136,6 +139,21 @@ def dashboard_imobiliario(request):
     tipo_filtro = request.GET.get('tipo', '')
     status_filtro = request.GET.get('status', '')
 
+    # Filtro de período (dd/mm/aaaa via Flatpickr). Sem informar, a janela
+    # padrão são os últimos 90 dias — o suficiente para o KPI ter significado.
+    filtro_form = DashboardFiltroForm(request.GET)
+    data_inicio = data_fim = None
+    if filtro_form.is_valid():
+        data_inicio = filtro_form.cleaned_data.get('data_inicio')
+        data_fim = filtro_form.cleaned_data.get('data_fim')
+
+    hoje = date.today()
+    janela_inicio = data_inicio or (hoje - timedelta(days=90))
+    janela_fim = data_fim or hoje
+    # Converte para datetime aware cobrindo o dia inteiro do fim.
+    janela_inicio_dt = timezone.make_aware(datetime.combine(janela_inicio, datetime.min.time()))
+    janela_fim_dt = timezone.make_aware(datetime.combine(janela_fim, datetime.max.time()))
+
     imoveis_qs = Imovel.objects.all()
     if imovel_id:
         imoveis_qs = imoveis_qs.filter(pk=imovel_id)
@@ -162,7 +180,6 @@ def dashboard_imobiliario(request):
     )
     tipo_data = [contagem_por_tipo.get(valor, 0) for valor, _ in Imovel.TIPO_CHOICES]
 
-    hoje = date.today()
     contratos_atencao = []
     for c in Contrato.objects.filter(status='ativo').select_related('imovel', 'inquilino'):
         if not c.precisa_atencao:
@@ -179,6 +196,46 @@ def dashboard_imobiliario(request):
             'motivo': motivo, 'prazo': prazo,
         })
 
+    # --- Tempo Médio de Vacância (agregado) ---
+    # Períodos de vacância concluídos (data_fim preenchida) que se iniciaram
+    # dentro da janela, respeitando os filtros de imóvel/tipo/status.
+    periodos_vagos = HistoricoStatusImovel.objects.filter(
+        imovel__in=imoveis_qs, status='vago', data_fim__isnull=False,
+        data_inicio__gte=janela_inicio_dt, data_inicio__lte=janela_fim_dt,
+    )
+    amostra_vacancia = 0
+    soma_dias = 0
+    for periodo in periodos_vagos:
+        amostra_vacancia += 1
+        soma_dias += (periodo.data_fim - periodo.data_inicio).days
+    if amostra_vacancia:
+        tempo_medio_vacancia = round(soma_dias / amostra_vacancia, 1)
+        vacancia_sem_dados = False
+    else:
+        tempo_medio_vacancia = None
+        vacancia_sem_dados = True
+
+    # --- Drill-down: linha do tempo (apenas quando 1 imóvel filtrado) ---
+    imovel_timeline = None
+    imovel_selecionado = None
+    if imovel_id and total_imoveis == 1:
+        imovel_selecionado = imoveis_qs.first()
+        periodos = (imovel_selecionado.historico_status
+                    .filter(data_inicio__lte=janela_fim_dt)
+                    .filter(Q(data_fim__isnull=True) | Q(data_fim__gte=janela_inicio_dt))
+                    .order_by('data_inicio'))
+        imovel_timeline = [
+            {
+                'status': p.status,
+                'label': p.get_status_display(),
+                'data_inicio': p.data_inicio,
+                'data_fim': p.data_fim,
+                'dias': p.duracao_dias,
+                'em_aberto': p.data_fim is None,
+            }
+            for p in periodos
+        ]
+
     context = {
         'total_imoveis': total_imoveis,
         'vagos': vagos,
@@ -191,13 +248,19 @@ def dashboard_imobiliario(request):
         'tipo_labels': tipo_labels,
         'tipo_data': tipo_data,
         'contratos_atencao': contratos_atencao,
-        # Placeholder — depende de feature ainda não construída
-        'tempo_medio_vacancia': None,
+        # Tempo médio de vacância (dado real a partir do lançamento da feature)
+        'tempo_medio_vacancia': tempo_medio_vacancia,
+        'vacancia_sem_dados': vacancia_sem_dados,
+        'amostra_vacancia': amostra_vacancia,
+        # Drill-down / linha do tempo
+        'imovel_timeline': imovel_timeline,
+        'imovel_selecionado': imovel_selecionado,
         # Filtros
         'imoveis_lista': Imovel.objects.all(),
         'filtro_imovel_id': imovel_id,
         'filtro_tipo': tipo_filtro,
         'filtro_status': status_filtro,
+        'filtro_form': filtro_form,
         'tipo_choices': Imovel.TIPO_CHOICES,
         'status_choices': Imovel.STATUS_CHOICES,
     }

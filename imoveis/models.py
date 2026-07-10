@@ -3,6 +3,7 @@ from datetime import date
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from .identidade import IdentificavelMixin, mes_ano_abreviado
 from .validators import (
@@ -120,6 +121,34 @@ class FotoImovel(models.Model):
 
     def __str__(self):
         return f'Foto de {self.imovel} — {self.legenda or self.pk}'
+
+
+class HistoricoStatusImovel(models.Model):
+    """Um período contínuo em um status do imóvel (vago/ocupado/manutenção).
+
+    Alimenta o KPI de Tempo Médio de Vacância e a linha do tempo por imóvel.
+    `data_fim=None` marca o período em aberto (status atual). O histórico é
+    populado por signal a partir do lançamento da feature — sem retroatividade.
+    """
+    imovel = models.ForeignKey(Imovel, on_delete=models.CASCADE, related_name='historico_status')
+    status = models.CharField(max_length=20, choices=Imovel.STATUS_CHOICES)
+    data_inicio = models.DateTimeField(default=timezone.now, verbose_name='Início do período')
+    data_fim = models.DateTimeField(null=True, blank=True, verbose_name='Fim do período')
+
+    class Meta:
+        verbose_name = 'Histórico de Status do Imóvel'
+        verbose_name_plural = 'Históricos de Status do Imóvel'
+        ordering = ['imovel', 'data_inicio']
+
+    def __str__(self):
+        fim = self.data_fim.strftime('%d/%m/%Y') if self.data_fim else 'atual'
+        return f'{self.imovel} — {self.get_status_display()} ({self.data_inicio:%d/%m/%Y} → {fim})'
+
+    @property
+    def duracao_dias(self):
+        """Dias entre início e fim (ou agora, se período em aberto)."""
+        fim = self.data_fim or timezone.now()
+        return (fim - self.data_inicio).days
 
 
 class Inquilino(models.Model):

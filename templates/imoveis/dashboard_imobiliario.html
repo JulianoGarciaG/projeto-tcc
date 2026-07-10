@@ -10,7 +10,7 @@
 <div class="card mb-4">
   <div class="card-body">
   <form method="get" class="row g-3 align-items-end">
-    <div class="col-12 col-md-5">
+    <div class="col-12 col-md-4">
       <label class="form-label">Imóvel</label>
       <select name="imovel_id" class="form-select">
         <option value="">Todos os imóveis</option>
@@ -21,7 +21,7 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-2">
       <label class="form-label">Tipo de imóvel</label>
       <select name="tipo" class="form-select">
         <option value="">Todos</option>
@@ -39,8 +39,16 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-6 col-md-2 d-flex gap-2">
-      <button type="submit" class="btn btn-graphite flex-fill">
+    <div class="col-6 col-md-2">
+      <label class="form-label">Período — de</label>
+      {{ filtro_form.data_inicio }}
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">Período — até</label>
+      {{ filtro_form.data_fim }}
+    </div>
+    <div class="col-12 d-flex gap-2">
+      <button type="submit" class="btn btn-graphite">
         <i class="bi bi-funnel me-1"></i> Filtrar
       </button>
       <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary" title="Limpar filtros">
@@ -90,12 +98,14 @@
   </div>
   <div class="col-6 col-md-4 col-lg">
     <div class="kpi-card">
-      <div class="d-flex align-items-start justify-content-between w-100">
-        <div class="kpi-label mb-0"><span class="kpi-dot kpi-dot-warn"></span>Tempo Médio de Vacância</div>
-        <span class="badge text-bg-warning">EXEMPLO</span>
-      </div>
-      <div class="kpi-value">{% if tempo_medio_vacancia %}{{ tempo_medio_vacancia }} dias{% else %}—{% endif %}</div>
-      <div class="kpi-aux"><i class="bi bi-clock-history"></i> dado de exemplo · indicador pendente</div>
+      <div class="kpi-label"><span class="kpi-dot kpi-dot-warn"></span>Tempo Médio de Vacância</div>
+      {% if vacancia_sem_dados %}
+      <div class="kpi-value">—</div>
+      <div class="kpi-aux"><i class="bi bi-clock-history"></i> sem períodos de vacância concluídos no intervalo</div>
+      {% else %}
+      <div class="kpi-value">{{ tempo_medio_vacancia }} dias</div>
+      <div class="kpi-aux"><i class="bi bi-clock-history"></i> média de {{ amostra_vacancia }} período(s) no intervalo</div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -127,6 +137,37 @@
     </div>
   </div>
 </div>
+
+{% if imovel_timeline is not None %}
+<!-- Drill-down: linha do tempo de status do imóvel filtrado -->
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="bi bi-clock-history"></i> Linha do tempo de status — {{ imovel_selecionado.endereco|truncatechars:60 }}
+  </div>
+  <div class="card-body">
+    {% if imovel_timeline %}
+    <ul class="status-timeline">
+      {% for seg in imovel_timeline %}
+      <li class="status-timeline-item status-{{ seg.status }}">
+        <span class="status-timeline-marker"></span>
+        <div class="status-timeline-body">
+          <span class="status-timeline-badge status-{{ seg.status }}">{{ seg.label }}</span>
+          <span class="status-timeline-dates">
+            {{ seg.data_inicio|date:"d/m/Y" }}
+            &rarr;
+            {% if seg.em_aberto %}<em>atual</em>{% else %}{{ seg.data_fim|date:"d/m/Y" }}{% endif %}
+            <span class="text-muted">· {{ seg.dias }} dia(s)</span>
+          </span>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state"><i class="bi bi-inbox"></i>Sem histórico de status neste período.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
 
 <!-- Contratos que precisam de atenção -->
 <div class="card">

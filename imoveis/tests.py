@@ -9,6 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template.loader import render_to_string
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from .context_processors import LIMITE_NOTIFICACOES_TOPBAR, notificacoes_usuario
 from .extenso import (
@@ -20,7 +21,7 @@ from .forms import (
 )
 from .identidade import nome_arquivo
 from .models import (
-    Contrato, Fiador, FotoItemVistoria, Imovel, Inquilino,
+    Contrato, Fiador, FotoItemVistoria, HistoricoStatusImovel, Imovel, Inquilino,
     ItemVistoria, Lancamento, LaudoVistoria, Notificacao, NotificacaoUsuario,
     Proprietario, Recibo, TestemunhaLaudo,
 )
@@ -1624,3 +1625,119 @@ class PerfisUsuarioTests(TestCase):
         self.assertTrue(staff_sem_super.is_superuser)
         self.assertFalse(comum_qualquer.groups.filter(name='Owner').exists())
         self.assertTrue(comum_qualquer.groups.filter(name='Comum').exists())
+
+
+class HistoricoStatusImovelTests(TestCase):
+    """Captura de histórico de status e KPI de tempo médio de vacância."""
+
+    def _imovel_vago(self):
+        prop = Proprietario.objects.create(nome='Dona P', cpf_cnpj=CPF_VALIDO_2)
+        return Imovel.objects.create(
+            proprietario=prop, tipo='casa', endereco='Rua V',
+            numero='1', cidade='Maringá',
+        )
+
+    def test_imovel_novo_gera_periodo_aberto(self):
+        imovel = self._imovel_vago()
+        periodos = imovel.historico_status.all()
+        self.assertEqual(periodos.count(), 1)
+        p = periodos.first()
+        self.assertEqual(p.status, 'vago')
+        self.assertIsNone(p.data_fim)
+
+    def test_transicao_via_contrato_fecha_e_abre_periodo(self):
+        imovel = self._imovel_vago()
+        inquilino = Inquilino.objects.create(nome='Loc', cpf=CPF_VALIDO)
+        Contrato.objects.create(
+            imovel=imovel, inquilino=inquilino, tipo_contrato='PF',
+            data_inicio=date(2026, 1, 1), data_fim=date(2027, 1, 1),
+            valor_mensal=Decimal('1500.00'), dia_vencimento=10,
+        )
+        imovel.refresh_from_db()
+        self.assertEqual(imovel.status, 'ocupado')
+        periodos = list(imovel.historico_status.order_by('data_inicio'))
+        self.assertEqual(len(periodos), 2)
+        self.assertEqual(periodos[0].status, 'vago')
+        self.assertIsNotNone(periodos[0].data_fim)   # período de vacância fechado
+        self.assertEqual(periodos[1].status, 'ocupado')
+        self.assertIsNone(periodos[1].data_fim)
+
+    def test_transicao_manual_manutencao(self):
+        imovel = self._imovel_vago()
+        imovel.status = 'manutencao'
+        imovel.save()
+        periodos = list(imovel.historico_status.order_by('data_inicio'))
+        self.assertEqual(len(periodos), 2)
+        self.assertEqual(periodos[-1].status, 'manutencao')
+        self.assertIsNone(periodos[-1].data_fim)
+
+    def test_save_sem_trocar_status_e_idempotente(self):
+        imovel = self._imovel_vago()
+        imovel.endereco = 'Rua V, editada'
+        imovel.save()
+        self.assertEqual(imovel.historico_status.count(), 1)
+
+    def test_kpi_media_vacancia(self):
+        imovel = self._imovel_vago()
+        # Substitui o período seed por dois períodos vagos fechados de 10 e 20 dias.
+        imovel.historico_status.all().delete()
+        base = timezone.now() - timedelta(days=40)
+        HistoricoStatusImovel.objects.create(
+            imovel=imovel, status='vago',
+            data_inicio=base, data_fim=base + timedelta(days=10),
+        )
+        HistoricoStatusImovel.objects.create(
+            imovel=imovel, status='vago',
+            data_inicio=base + timedelta(days=15), data_fim=base + timedelta(days=35),
+        )
+        user = User.objects.create_user('dash', password='x')
+        self.client.force_login(user)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['amostra_vacancia'], 2)
+        self.assertEqual(resp.context['tempo_medio_vacancia'], 15.0)
+        self.assertFalse(resp.context['vacancia_sem_dados'])
+
+    def test_kpi_estado_vazio(self):
+        # Só o período aberto do seed — nenhum período vago concluído.
+        self._imovel_vago()
+        user = User.objects.create_user('dash2', password='x')
+        self.client.force_login(user)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertIsNone(resp.context['tempo_medio_vacancia'])
+        self.assertTrue(resp.context['vacancia_sem_dados'])
+
+    def test_filtro_periodo_recorta_amostra(self):
+        imovel = self._imovel_vago()
+        imovel.historico_status.all().delete()
+        # Um período vago antigo (fora da janela) e um recente (dentro).
+        antigo_ini = timezone.now() - timedelta(days=300)
+        HistoricoStatusImovel.objects.create(
+            imovel=imovel, status='vago',
+            data_inicio=antigo_ini, data_fim=antigo_ini + timedelta(days=5),
+        )
+        recente_ini = timezone.now() - timedelta(days=10)
+        HistoricoStatusImovel.objects.create(
+            imovel=imovel, status='vago',
+            data_inicio=recente_ini, data_fim=recente_ini + timedelta(days=3),
+        )
+        user = User.objects.create_user('dash3', password='x')
+        self.client.force_login(user)
+        # Janela padrão (90 dias) captura só o recente.
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.context['amostra_vacancia'], 1)
+
+    def test_drilldown_timeline_um_imovel(self):
+        imovel = self._imovel_vago()
+        user = User.objects.create_user('dash4', password='x')
+        self.client.force_login(user)
+        resp = self.client.get(reverse('dashboard'), {'imovel_id': imovel.pk})
+        self.assertIsNotNone(resp.context['imovel_timeline'])
+        self.assertEqual(resp.context['imovel_selecionado'], imovel)
+
+    def test_drilldown_ausente_sem_filtro_de_imovel(self):
+        self._imovel_vago()
+        user = User.objects.create_user('dash5', password='x')
+        self.client.force_login(user)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertIsNone(resp.context['imovel_timeline'])

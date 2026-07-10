@@ -3,7 +3,7 @@ from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato,
     Recibo, ComodoTemplate, ItemVistoriaTemplate, ItemVistoria, TestemunhaLaudo,
-    NotificacaoUsuario,
+    NotificacaoUsuario, HistoricoStatusImovel,
 )
 
 
@@ -103,6 +103,20 @@ class LancamentoAdmin(admin.ModelAdmin):
     list_display = ['imovel', 'natureza', 'tipo', 'status', 'valor', 'data_vencimento', 'data_pagamento']
     list_filter = ['natureza', 'status', 'tipo']
 
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(HistoricoStatusImovel)
+class HistoricoStatusImovelAdmin(admin.ModelAdmin):
+    list_display = ('imovel', 'status', 'data_inicio', 'data_fim', 'duracao_dias')
+    list_filter = ('status',)
+    search_fields = ('imovel__endereco',)
+    readonly_fields = ('imovel', 'status', 'data_inicio', 'data_fim')
+
+    def has_add_permission(self, request):
+        return False
 
     def has_change_permission(self, request, obj=None):
         return False
