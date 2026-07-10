@@ -2,7 +2,8 @@ from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
-from django.db.models import Sum, Avg, Count, Q, ProtectedError
+from django.db.models import Sum, Avg, Count, Q, ProtectedError, F
+from django.db.models.functions import Coalesce
 from django.http import Http404, JsonResponse
 from datetime import date, datetime, timedelta
 
@@ -278,16 +279,18 @@ def _dashboard_financeiro_context(request):
         data_inicio = filtro_form.cleaned_data.get('data_inicio')
         data_fim = filtro_form.cleaned_data.get('data_fim')
 
-    lancamentos_qs = Lancamento.objects.select_related('imovel', 'contrato__inquilino')
+    lancamentos_qs = Lancamento.objects.select_related('imovel', 'contrato__inquilino').annotate(
+        data_caixa=Coalesce(F('data_pagamento'), F('data_vencimento')),
+    )
     imoveis_qs = Imovel.objects.all()
 
     if imovel_ids:
         lancamentos_qs = lancamentos_qs.filter(imovel_id__in=imovel_ids)
         imoveis_qs = imoveis_qs.filter(pk__in=imovel_ids)
     if data_inicio:
-        lancamentos_qs = lancamentos_qs.filter(data_vencimento__gte=data_inicio)
+        lancamentos_qs = lancamentos_qs.filter(data_caixa__gte=data_inicio)
     if data_fim:
-        lancamentos_qs = lancamentos_qs.filter(data_vencimento__lte=data_fim)
+        lancamentos_qs = lancamentos_qs.filter(data_caixa__lte=data_fim)
 
     # KPIs do período
     ganhos_periodo = lancamentos_qs.filter(
@@ -340,12 +343,12 @@ def _dashboard_financeiro_context(request):
     for mes_ref in meses_periodo:
         meses_labels.append(mes_ref.strftime('%b/%Y'))
         ganhos_mes = ganhos_qs.filter(
-            data_vencimento__year=mes_ref.year,
-            data_vencimento__month=mes_ref.month,
+            data_caixa__year=mes_ref.year,
+            data_caixa__month=mes_ref.month,
         ).aggregate(total=Sum('valor'))['total'] or 0
         despesas_mes = despesas_qs.filter(
-            data_vencimento__year=mes_ref.year,
-            data_vencimento__month=mes_ref.month,
+            data_caixa__year=mes_ref.year,
+            data_caixa__month=mes_ref.month,
         ).aggregate(total=Sum('valor'))['total'] or 0
         meses_ganhos.append(float(ganhos_mes))
         meses_despesas.append(float(despesas_mes))

@@ -173,23 +173,26 @@ Filtros combinados, aplicados sobre `Lancamento.objects`:
 | Filtro | Campo filtrado |
 |---|---|
 | Imóvel | `imovel_id` |
-| Data início | `data_vencimento__gte` |
-| Data fim | `data_vencimento__lte` |
+| Data início | `data_caixa__gte` |
+| Data fim | `data_caixa__lte` |
 
-O filtro de período (data início/fim) é validado e limpo por `DashboardFiltroForm` (`imoveis/forms.py`), um `forms.Form` com os campos opcionais `data_inicio`/`data_fim`, ambos com widget Flatpickr (formato dd/mm/aaaa).
+**Regime de caixa (não mais competência):** `data_caixa` é uma anotação `Coalesce(data_pagamento, data_vencimento)` — reflete quando o dinheiro efetivamente entrou/saiu, com fallback para `data_vencimento` enquanto o lançamento não foi efetivado (`data_pagamento` nulo). Na prática: lançamento `efetivado` → indexado por `data_pagamento`; lançamento `pendente` (e despesa, que nunca preenche `data_pagamento` hoje) → indexado por `data_vencimento`. Essa mesma `data_caixa` alimenta o filtro de período, os KPIs do período e o gráfico de evolução mensal — os três usam o queryset `lancamentos_qs` já anotado/filtrado. O filtro de período (data início/fim) é validado e limpo por `DashboardFiltroForm` (`imoveis/forms.py`), um `forms.Form` com os campos opcionais `data_inicio`/`data_fim`, ambos com widget Flatpickr (formato dd/mm/aaaa).
+
+**Fora da regra híbrida (permanecem em `data_vencimento`):** a property `Lancamento.vencido` e o % de inadimplência (que se baseia na mesma regra) — ambos existem para decidir se um pendente está atrasado, não para indexar por período, então não mudam com a migração para regime de caixa.
 
 **Métricas calculadas:**
 - Ganhos do período (`natureza='ganho'`, `status='efetivado'`), despesas do período e saldo (ganhos − despesas)
 - Total pendente (`natureza='ganho'`, `status='pendente'`)
 - Ticket médio de aluguel: média de `valor` dos lançamentos `natureza='ganho'`, `tipo='aluguel'`
-- % de inadimplência: **calculado em runtime**, nunca gravado — proporção de ganhos com `status='pendente'` e `data_vencimento < hoje` sobre o total de ganhos (mesma regra da property `Lancamento.vencido`)
+- % de inadimplência: **calculado em runtime**, nunca gravado — proporção de ganhos com `status='pendente'` e `data_vencimento < hoje` sobre o total de ganhos (mesma regra da property `Lancamento.vencido`; não usa `data_caixa`)
 - **Gráfico de evolução mensal (ganhos vs. despesas) é period-aware:**
   - Sem filtro de data início/fim: últimos 6 meses fixos a partir do mês atual.
   - Com filtro de data início e/ou fim: todos os meses do intervalo informado (mínimo 1 mês), usando a data informada (ou a outra ponta, se só uma for preenchida) como limite.
   - O título do card ("· últimos 6 meses" ou "· período filtrado") reflete qual dos dois modos está ativo.
+  - Os meses são calculados por `data_caixa__year`/`data_caixa__month`, não `data_vencimento`.
 - Ranking de rentabilidade por imóvel: para cada imóvel com lançamentos, soma de ganhos `efetivado` menos soma de despesas, ordenado do maior para o menor saldo
 - Donut de composição de despesas por categoria (`Lancamento.tipo`, apenas naturezas `despesa`)
-- Tabela dos 5 lançamentos pendentes mais antigos (`natureza='ganho'`, `status='pendente'`), com dias de atraso calculados em runtime
+- Tabela dos 5 lançamentos pendentes mais antigos (`natureza='ganho'`, `status='pendente'`), ordenada e com dias de atraso calculados por `data_vencimento` (para pendentes, `data_caixa` coincide com `data_vencimento`, já que `data_pagamento` ainda é nulo)
 
 **Lançamento (`imoveis/models.py`) — ganho/despesa por imóvel:**
 - `Lancamento.imovel` é obrigatório; `Lancamento.contrato` é opcional (preenchido só quando o lançamento se origina de um contrato/recibo).
