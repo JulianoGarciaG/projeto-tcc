@@ -410,7 +410,8 @@ class DistratoForm(forms.ModelForm):
 
 class ReciboForm(forms.ModelForm):
     imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel))
-    contrato = ContratoChoiceField(queryset=Contrato.objects.all(), widget=forms.Select(attrs=_sel))
+    # queryset inicial vazio: o __init__ sempre reatribui conforme o imóvel.
+    contrato = ContratoChoiceField(queryset=Contrato.objects.none(), widget=forms.Select(attrs=_sel))
 
     class Meta:
         model = Recibo
@@ -432,7 +433,8 @@ class ReciboForm(forms.ModelForm):
             'assinante_cpf': forms.TextInput(attrs={**_ctrl, 'placeholder': '000.000.000-00'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, bloquear_imovel=False, **kwargs):
+        initial = kwargs.get('initial') or {}
         super().__init__(*args, **kwargs)
         for campo in self.Meta.localized_fields:
             widget = _moeda_widget()
@@ -440,6 +442,31 @@ class ReciboForm(forms.ModelForm):
             self.fields[campo].widget = widget
         for campo in ('periodo_inicio', 'periodo_fim', 'vencido_em', 'data_assinatura'):
             self.fields[campo].widget = _date_widget()
+        # Contrato depende do imóvel (L1): o servidor restringe as opções ao
+        # imóvel escolhido; o JS do template popula o select dinamicamente.
+        # Campo travado (bloquear_imovel) nunca vem no POST — o imóvel precisa
+        # ser lido do initial, não de self.data, senão a queryset fica vazia.
+        imovel_id = None
+        if bloquear_imovel and initial.get('imovel'):
+            imovel = initial['imovel']
+            imovel_id = imovel.pk if hasattr(imovel, 'pk') else imovel
+        elif self.data:
+            imovel_id = self.data.get(self.add_prefix('imovel')) or None
+        elif self.instance.pk:
+            imovel_id = self.instance.imovel_id
+        elif initial.get('imovel'):
+            imovel = initial['imovel']
+            imovel_id = imovel.pk if hasattr(imovel, 'pk') else imovel
+        if imovel_id:
+            self.fields['contrato'].queryset = Contrato.objects.filter(imovel_id=imovel_id)
+        else:
+            self.fields['contrato'].queryset = Contrato.objects.none()
+        # Recibo criado a partir de um contrato específico: imóvel/contrato
+        # ficam travados (disabled preserva o initial na validação, ignorando
+        # qualquer valor adulterado no POST).
+        if bloquear_imovel:
+            self.fields['imovel'].disabled = True
+            self.fields['contrato'].disabled = True
 
     def clean(self):
         cleaned = super().clean()

@@ -834,7 +834,8 @@ def contratos_por_imovel_json(request, imovel_pk):
     """L1 — contratos de um imóvel, para popular o select dependente do laudo."""
     contratos = Contrato.objects.filter(imovel_id=imovel_pk).select_related('inquilino').order_by('-data_inicio')
     # rotulo_curto acessa self.inquilino.nome — o select_related acima o cobre.
-    dados = [{'id': c.pk, 'label': c.rotulo_curto} for c in contratos]
+    dados = [{'id': c.pk, 'label': c.rotulo_curto, 'valor_cobranca': str(c.valor_cobranca)}
+             for c in contratos]
     return JsonResponse({'contratos': dados})
 
 
@@ -1011,9 +1012,8 @@ def recibo_create(request):
 def recibo_create_from_contrato(request, contrato_pk):
     contrato = get_object_or_404(Contrato, pk=contrato_pk)
     form = ReciboForm(request.POST or None,
-                      initial={'imovel': contrato.imovel, 'contrato': contrato})
-    form.fields['imovel'].initial = contrato.imovel
-    form.fields['contrato'].initial = contrato
+                      initial={'imovel': contrato.imovel, 'contrato': contrato},
+                      bloquear_imovel=True)
     if form.is_valid():
         recibo = form.save()
         messages.success(request, 'Recibo registrado com sucesso. Use "Regerar PDF" para gerar o documento.')

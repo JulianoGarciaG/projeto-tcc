@@ -45,6 +45,17 @@
   {% endif %}
 </table>
 
+{% if recibo.proximo_reajuste %}
+<!-- 2.1 Aviso de reajuste (parcela 12/12) -->
+<table style="width: 100%; border-collapse: collapse; background-color: #FBEFE0; border: 1px solid #D98C2B; margin-top: 14px;" class="avoid-break">
+  <tr>
+    <td style="padding: 10px 14px; font-size: 10px; color: #7A4A00;">
+      <strong>ATENÇÃO:</strong> ESTA É A ÚLTIMA PARCELA (12/12) DO CONTRATO — O PRÓXIMO RECIBO JÁ REFLETIRÁ O REAJUSTE ANUAL DO ALUGUEL.
+    </td>
+  </tr>
+</table>
+{% endif %}
+
 {% if recibo.valor_aluguel or recibo.valor_impostos or recibo.valor_seguros or recibo.valor_condominio %}
 <!-- 3. Composição do valor -->
 <div class="sec">COMPOSIÇÃO DO VALOR</div>

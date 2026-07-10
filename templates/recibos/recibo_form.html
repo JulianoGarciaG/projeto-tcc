@@ -16,7 +16,10 @@
         <div class="section-card-body">
           <div class="row g-3">
             <div class="col-md-6"><label class="form-label">Imóvel <span class="text-danger">*</span></label>{{ form.imovel }}</div>
-            <div class="col-md-6"><label class="form-label">Contrato <span class="text-danger">*</span></label>{{ form.contrato }}</div>
+            <div class="col-md-6">
+              <label class="form-label">Contrato <span class="text-danger">*</span></label>{{ form.contrato }}
+              <div class="form-text">Filtrado pelo imóvel selecionado.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -74,4 +77,61 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  // L1 — o campo Contrato depende do Imóvel: inicia desabilitado e é
+  // populado via fetch com os contratos do imóvel selecionado.
+  const imovelSelect = document.getElementById('{{ form.imovel.id_for_label }}');
+  const contratoSelect = document.getElementById('{{ form.contrato.id_for_label }}');
+  const valorAluguelInput = document.getElementById('{{ form.valor_aluguel.id_for_label }}');
+  const urlBase = "{% url 'contratos_por_imovel_json' 0 %}";
+  const selecionadoInicial = '{{ form.contrato.value|default_if_none:"" }}';
+
+  // contratoSelect pode vir travado (disabled) quando o recibo é criado a
+  // partir de um contrato específico — a trava é só visual/anti-erro, então
+  // o fetch e a sugestão de valor continuam rodando normalmente.
+  const contratoTravado = contratoSelect.disabled;
+
+  function atualizarContratos() {
+    const imovelId = imovelSelect.value;
+    contratoSelect.innerHTML = '<option value="">---------</option>';
+    if (!imovelId) {
+      contratoSelect.disabled = true;
+      return;
+    }
+    fetch(urlBase.replace('/0/', '/' + imovelId + '/'))
+      .then(function (resp) { return resp.json(); })
+      .then(function (data) {
+        data.contratos.forEach(function (c) {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.label;
+          opt.dataset.valorCobranca = c.valor_cobranca;
+          if (String(c.id) === selecionadoInicial) opt.selected = true;
+          contratoSelect.appendChild(opt);
+        });
+        contratoSelect.disabled = contratoTravado ? true : false;
+        sugerirValorAluguel();
+      });
+  }
+
+  // Sugere o valor de aluguel vigente do contrato escolhido, sem sobrescrever
+  // um valor já preenchido pelo usuário (ex: edição de recibo existente).
+  function sugerirValorAluguel() {
+    if (!valorAluguelInput || valorAluguelInput.value) return;
+    const opt = contratoSelect.options[contratoSelect.selectedIndex];
+    const valor = opt && opt.dataset.valorCobranca;
+    if (!valor || valor === 'None') return;
+    valorAluguelInput.value = valor.replace('.', ',');
+    valorAluguelInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  imovelSelect.addEventListener('change', atualizarContratos);
+  contratoSelect.addEventListener('change', sugerirValorAluguel);
+  atualizarContratos();
+})();
+</script>
 {% endblock %}

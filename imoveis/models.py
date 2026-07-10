@@ -654,6 +654,10 @@ class Recibo(IdentificavelMixin, models.Model):
     def rotulo_longo(self):
         return f'Recibo {self.rotulo_curto}'
 
+    @property
+    def proximo_reajuste(self):
+        return self.parcela_atual == 12 and self.parcela_total == 12
+
 
 class NotificacaoUsuario(models.Model):
     """Histórico persistido das mensagens do django.contrib.messages, por
