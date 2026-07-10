@@ -8,18 +8,26 @@
 <div class="section-card mb-4">
   <div class="section-card-body">
     <form method="get" class="row g-2 align-items-end">
-      <div class="col-12 col-md-6">
+      <div class="col-12 col-md-4">
         <label class="form-label">Buscar</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-search"></i></span>
           <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Nome do inquilino ou endereço...">
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label">Status</label>
         <select name="status" class="form-select">
           <option value="">Todos</option>
           {% for val, label in status_choices %}<option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Atenção</label>
+        <select name="atencao" class="form-select">
+          <option value="">Todos</option>
+          <option value="sim" {% if atencao == 'sim' %}selected{% endif %}>Precisa de atenção</option>
+          <option value="nao" {% if atencao == 'nao' %}selected{% endif %}>Sem atenção</option>
         </select>
       </div>
       <div class="col-md-3 d-flex gap-2">
@@ -31,7 +39,7 @@
 </div>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <span class="text-muted small">{{ contratos.count }} contrato(s)</span>
+  <span class="text-muted small">{{ contratos|length }} contrato(s)</span>
   <a href="{% url 'contrato_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Novo Contrato</a>
 </div>
 
@@ -54,7 +62,7 @@
           <td>
             <span class="status-badge badge-{{ c.status }}">{{ c.get_status_display }}</span>
             {% if c.precisa_atencao %}
-            <i class="bi bi-exclamation-triangle-fill text-warning ms-1" title="Contrato precisa de atenção"></i>
+            <i class="bi bi-exclamation-triangle-fill text-warning ms-1 fs-5" title="Contrato precisa de atenção"></i>
             {% endif %}
           </td>
           <td>

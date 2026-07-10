@@ -1237,6 +1237,28 @@ class ContratoReajusteTests(TestCase):
         self.assertIn('1.500,00', html)
         self.assertNotIn('1.800,00', html)
 
+    def test_list_filtro_atencao_sim(self):
+        hoje = date.today()
+        self.contrato.data_fim = hoje + timedelta(days=5)
+        self.contrato.save()
+        resp = self.client.get(reverse('contrato_list'), {'atencao': 'sim'})
+        self.assertIn(self.contrato, resp.context['contratos'])
+
+    def test_list_filtro_atencao_nao_exclui_contrato_em_atencao(self):
+        hoje = date.today()
+        self.contrato.data_fim = hoje + timedelta(days=5)
+        self.contrato.save()
+        resp = self.client.get(reverse('contrato_list'), {'atencao': 'nao'})
+        self.assertNotIn(self.contrato, resp.context['contratos'])
+
+    def test_list_filtro_atencao_sim_exclui_contrato_sem_atencao(self):
+        resp = self.client.get(reverse('contrato_list'), {'atencao': 'sim'})
+        self.assertNotIn(self.contrato, resp.context['contratos'])
+
+    def test_list_sem_filtro_atencao_mostra_todos(self):
+        resp = self.client.get(reverse('contrato_list'))
+        self.assertIn(self.contrato, resp.context['contratos'])
+
 
 class IdentidadeCodigoTests(TestCase):
     """codigo derivado do PK: PREFIXO-0001 (zero-padded a 4 dígitos)."""

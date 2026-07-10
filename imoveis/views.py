@@ -530,13 +530,19 @@ def inquilino_delete(request, pk):
 def contrato_list(request):
     q = request.GET.get('q', '')
     status = request.GET.get('status', '')
+    atencao = request.GET.get('atencao', '')
     qs = Contrato.objects.select_related('imovel', 'inquilino')
     if q:
         qs = qs.filter(Q(inquilino__nome__icontains=q) | Q(imovel__endereco__icontains=q))
     if status:
         qs = qs.filter(status=status)
+    contratos = list(qs)
+    if atencao == 'sim':
+        contratos = [c for c in contratos if c.precisa_atencao]
+    elif atencao == 'nao':
+        contratos = [c for c in contratos if not c.precisa_atencao]
     return render(request, 'contratos/contrato_list.html', {
-        'contratos': qs, 'q': q, 'status': status,
+        'contratos': contratos, 'q': q, 'status': status, 'atencao': atencao,
         'status_choices': Contrato.STATUS_CHOICES,
     })
 
