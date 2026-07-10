@@ -2,8 +2,11 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Landing
+    path('', views.landing, name='landing'),
+
     # Dashboard
-    path('', views.dashboard_imobiliario, name='dashboard'),
+    path('dashboard/', views.dashboard_imobiliario, name='dashboard'),
 
     # Imóveis
     path('imoveis/', views.imovel_list, name='imovel_list'),

@@ -1456,7 +1456,11 @@ class NotificacaoUsuarioTests(TestCase):
 
 class PerfisUsuarioTests(TestCase):
     """Matriz de perfis (Admin/Owner/Comum) x telas protegidas
-    (Dashboard, Financeiro) + regras de precedência e migração de dados."""
+    (Financeiro) + regras de precedência e migração de dados.
+
+    Dashboard Imobiliário deixou de exigir permissão (aberto a todos os
+    perfis logados) — ver landing.html / dashboard_imobiliario em
+    imoveis/views.py."""
 
     @classmethod
     def setUpTestData(cls):
@@ -1505,10 +1509,10 @@ class PerfisUsuarioTests(TestCase):
         resp = self.client.get(reverse('lancamento_list'))
         self.assertEqual(resp.status_code, 200)
 
-    def test_comum_nao_acessa_dashboard(self):
+    def test_comum_acessa_dashboard(self):
         self._login_comum()
         resp = self.client.get(reverse('dashboard'))
-        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.status_code, 200)
 
     def test_comum_nao_acessa_financeiro(self):
         self._login_comum()
@@ -1541,6 +1545,28 @@ class PerfisUsuarioTests(TestCase):
         self._login_owner()
         resp = self.client.get(reverse('imovel_list'))
         self.assertContains(resp, reverse('lancamento_list'))
+
+    def test_sidebar_mostra_dashboard_para_comum(self):
+        self._login_comum()
+        resp = self.client.get(reverse('imovel_list'))
+        self.assertContains(resp, reverse('dashboard'))
+
+    # --- Landing (rota /) ---
+
+    def test_comum_acessa_landing(self):
+        self._login_comum()
+        resp = self.client.get(reverse('landing'))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_topbar_rotulo_comum(self):
+        self._login_comum()
+        resp = self.client.get(reverse('landing'))
+        self.assertContains(resp, 'Comum')
+
+    def test_topbar_rotulo_owner(self):
+        self._login_owner()
+        resp = self.client.get(reverse('landing'))
+        self.assertContains(resp, 'Owner')
 
     # --- 403 usa o template certo, não stack trace ---
 

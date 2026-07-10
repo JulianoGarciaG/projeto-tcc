@@ -43,3 +43,8 @@ def dia_extenso(value):
         return extenso.dia_ordinal_extenso(value)
     except Exception:
         return value
+
+
+@register.filter
+def has_group(user, group_name):
+    return user.groups.filter(name=group_name).exists()

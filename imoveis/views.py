@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.db.models import Sum, Avg, Count, Q, ProtectedError
 from django.http import Http404, JsonResponse
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
@@ -88,11 +88,26 @@ def erro_403(request, exception=None):
 
 
 # ============================================================
+# Landing
+# ============================================================
+
+@login_required
+def landing(request):
+    hora = datetime.now().hour
+    if hora < 12:
+        saudacao = 'Bom dia'
+    elif hora < 18:
+        saudacao = 'Boa tarde'
+    else:
+        saudacao = 'Boa noite'
+    return render(request, 'imoveis/landing.html', {'saudacao': saudacao})
+
+
+# ============================================================
 # Dashboard
 # ============================================================
 
 @login_required
-@permission_required('imoveis.pode_acessar_dashboard', raise_exception=True)
 def dashboard_imobiliario(request):
     imovel_id = request.GET.get('imovel_id', '')
     tipo_filtro = request.GET.get('tipo', '')
