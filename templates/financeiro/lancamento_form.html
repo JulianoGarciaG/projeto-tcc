@@ -17,7 +17,7 @@
             <div class="col-md-6"><label class="form-label">Contrato</label>{{ form.contrato }}</div>
             <div class="col-md-4"><label class="form-label">Natureza <span class="text-danger">*</span></label>{{ form.natureza }}</div>
             <div class="col-md-4"><label class="form-label">Tipo <span class="text-danger">*</span></label>{{ form.tipo }}</div>
-            <div class="col-md-4"><label class="form-label">Status (só ganho)</label>{{ form.status }}</div>
+            <div class="col-md-4" id="campo-status"><label class="form-label">Status (só ganho)</label>{{ form.status }}</div>
             <div class="col-md-4"><label class="form-label">Valor (R$) <span class="text-danger">*</span></label>{{ form.valor }}</div>
             <div class="col-md-4"><label class="form-label">Data de Vencimento <span class="text-danger">*</span></label>{{ form.data_vencimento }}</div>
             <div class="col-md-4"><label class="form-label">Data de Pagamento</label>{{ form.data_pagamento }}</div>
@@ -34,4 +34,26 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const naturezaSelect = document.getElementById('{{ form.natureza.id_for_label }}');
+  const statusSelect = document.getElementById('{{ form.status.id_for_label }}');
+  const campoStatus = document.getElementById('campo-status');
+
+  function toggleStatus() {
+    if (naturezaSelect.value === 'ganho') {
+      campoStatus.style.display = '';
+    } else {
+      campoStatus.style.display = 'none';
+      statusSelect.value = '';
+    }
+  }
+
+  toggleStatus();
+  naturezaSelect.addEventListener('change', toggleStatus);
+})();
+</script>
 {% endblock %}
