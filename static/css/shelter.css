@@ -974,3 +974,22 @@ input[type="file"].input-dashed {
    ============================================================ */
 /* Wrapper de grafico do dashboard (altura fixa p/ Chart.js responsive) */
 .chart-wrapper { position: relative; height: 260px; }
+
+/* Landing (tela de boas-vindas em /) */
+.landing-hero {
+  border-bottom: 3px solid var(--brand);
+  padding-bottom: 12px;
+  display: inline-block;
+}
+.landing-card-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 12px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
