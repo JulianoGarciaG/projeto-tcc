@@ -131,23 +131,27 @@ removido — sem bloquear a exclusão.
 
 Os indicadores do sistema estão divididos em **duas telas independentes** (o dashboard único original foi separado; o financeiro depois teve sua rota própria removida e mesclado na listagem de Lançamentos — ver `docs/historico_entregas.md`):
 
-### 9.1 Dashboard Imobiliário (`/`, view `dashboard_imobiliario`)
+### 9.1 Dashboard Imobiliário (`/dashboard/`, view `dashboard_imobiliario`)
 
-Filtros combinados (imóvel, tipo de imóvel, status do imóvel), aplicados sobre `Imovel.objects`:
+Filtros de Tipo e Status (`tipo`/`status`), aplicados sobre `Imovel.objects` e refletidos em todos os KPIs e donuts:
 
 | Filtro | Campo filtrado |
 |---|---|
-| Imóvel | `imovel_id` |
 | Tipo de imóvel | `tipo` |
 | Status do imóvel | `status` |
 
+Não há filtro de imóvel nem de período na barra superior — a janela usada pelo KPI de tempo médio de vacância e pela linha do tempo é fixa: últimos 90 dias a partir de hoje.
+
 **Métricas calculadas:**
-- Total de imóveis, ocupados, vagos e em manutenção (com base nos filtros acima)
+- Total de imóveis, ocupados, vagos e em manutenção (com base nos filtros de tipo/status)
 - Taxa de vacância: `(vagos / total) * 100`
 - Contratos ativos (global, sem filtro)
 - Donut de distribuição por situação do imóvel (ocupado/vago/manutenção) e donut de distribuição por tipo de imóvel
+- **Contratos que Precisam de Atenção:** contratos ativos com `precisa_atencao=True` cujo fim de vigência está a 0–14 dias (motivo "Fim de vigência") ou no aniversário de reajuste (motivo "Aniversário de reajuste"); listados na tabela ao final da página.
+- **Tempo Médio de Vacância:** média em dias dos períodos de vacância concluídos (`HistoricoStatusImovel` com `status='vago'` e `data_fim` preenchida) iniciados nos últimos 90 dias, respeitando os filtros de tipo/status. Sem períodos concluídos no intervalo, o KPI exibe "—".
+- **Linha do tempo de status:** card sempre visível, com **seletor de imóvel próprio** (`timeline_imovel_id`, independente dos filtros de Tipo/Status — não afeta KPIs/donuts). Sem seleção explícita, mostra o primeiro imóvel cadastrado (ordenado por endereço). Lista o histórico de status (`HistoricoStatusImovel`) do imóvel escolhido dentro da janela de 90 dias, com badges coloridos por status e duração em dias.
 
-**KPIs placeholder (badge "EXEMPLO"):** "Contratos que Precisam de Atenção" e "Tempo Médio de Vacância" são exibidos com dado vazio/nulo — dependem de features ainda não construídas (histórico de status do imóvel; indicador de atenção em contratos) e não devem ser tratados como métricas reais até serem implementados.
+Essas três métricas usam dados reais desde o lançamento da feature de histórico de status — não são mais placeholder.
 
 ### 9.2 Indicadores Financeiros (embutidos em `/financeiro/`, função `_dashboard_financeiro_context` chamada por `lancamento_list`)
 

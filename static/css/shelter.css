@@ -957,6 +957,168 @@ input[type="file"].input-dashed {
   color: var(--ink);
 }
 
+.dash-timeline-select {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: var(--sunken);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: .3rem .65rem;
+  margin: 0;
+}
+.dash-timeline-select > i { color: var(--muted); font-size: .85rem; }
+.dash-timeline-select-input {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: .8rem;
+  font-weight: 600;
+  padding: 0;
+  min-width: 0;
+  max-width: 260px;
+}
+.dash-timeline-select-input:focus { outline: none; box-shadow: none; }
+
+/* ============================================================
+   14b. DASHBOARD IMOBILIARIO - Filtro compacto e KPIs alt
+   (reskin do dashboard raiz: filtros em pills + cards com icone)
+   ============================================================ */
+.dash-filterbar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: .7rem 1rem;
+}
+.dash-filterbar-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  margin-right: .25rem;
+}
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: var(--sunken);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: .3rem .65rem;
+  font-size: .82rem;
+  color: var(--ink);
+}
+.filter-pill > i { color: var(--muted); font-size: .85rem; }
+.filter-pill-select {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: .82rem;
+  font-weight: 600;
+  padding: 0;
+  min-width: 0;
+}
+.filter-pill-select:focus { outline: none; box-shadow: none; }
+
+/* KPI card alternativo: icone quadrado + valor/label alinhados a esquerda */
+.kpi-card-alt {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  gap: .85rem;
+}
+.kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+.kpi-icon-brand  { background: var(--brand-soft); color: var(--brand); }
+.kpi-icon-ok     { background: var(--ok-bg);      color: var(--ok); }
+.kpi-icon-danger { background: var(--danger-bg);  color: var(--danger); }
+.kpi-icon-info   { background: var(--info-bg);    color: var(--info); }
+.kpi-icon-warn   { background: var(--warn-bg);    color: var(--warn); }
+.kpi-card-alt .kpi-body { min-width: 0; }
+.kpi-card-alt .kpi-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.kpi-card-alt .kpi-label {
+  font-size: .74rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: normal;
+  justify-content: flex-start;
+  margin-bottom: 0;
+}
+
+/* Donut com legenda lateral e valor central */
+.chart-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.chart-wrapper-donut {
+  position: relative;
+  height: 220px;
+  width: 220px;
+  flex-shrink: 0;
+}
+.chart-donut-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+.chart-donut-center-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.chart-donut-center-label {
+  font-size: .72rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.chart-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-width: 160px;
+}
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .4rem 0;
+  font-size: .85rem;
+  color: var(--ink);
+}
+.chart-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.chart-legend-label { flex: 1; }
+.chart-legend-value { font-weight: 700; color: var(--ink); }
+
 /* ============================================================
    15. PLACEHOLDER HACHURADO (cards de imovel sem foto - modulo 06)
    ============================================================ */

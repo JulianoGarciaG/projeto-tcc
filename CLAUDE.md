@@ -83,8 +83,8 @@ Campos, relacionamentos e caminhos de upload completos em **[docs/02_modelagem_d
 
 - **Banco** (`.env`): `DB_ENGINE=django.db.backends.sqlite3` (dev) ou `django.db.backends.mysql` + `DB_NAME`/`DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT` (prod).
 - **Storage** (`.env`): `STORAGE_BACKEND=filesystem` (default) / `s3` (preparado, não ativado).
-- **Auth**: padrão Django; todas as views com `@login_required`. Rotas `/login/`, `/logout/`; login redireciona para `/` (dashboard).
-- **Dashboards (BI)**: rota `/` é o Dashboard Imobiliário (ocupação/vacância dos imóveis); indicadores financeiros (`Lancamento`) ficam embutidos na página de Lançamentos (`/financeiro/`). Ambos em Chart.js lendo CSS vars, com redesenho no toggle de tema.
+- **Auth**: padrão Django; todas as views com `@login_required`. Rotas `/login/`, `/logout/`; login redireciona para `/` (landing pós-login, com atalhos de cadastro rápido).
+- **Dashboards (BI)**: rota `/dashboard/` é o Dashboard Imobiliário (ocupação/vacância dos imóveis); indicadores financeiros (`Lancamento`) ficam embutidos na página de Lançamentos (`/financeiro/`). Ambos em Chart.js lendo CSS vars, com redesenho no toggle de tema.
 
 ---
 

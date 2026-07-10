@@ -7,105 +7,94 @@
 {% block content %}
 
 <!-- Filtros do Dashboard -->
-<div class="card mb-4">
-  <div class="card-body">
-  <form method="get" class="row g-3 align-items-end">
-    <div class="col-12 col-md-4">
-      <label class="form-label">Imóvel</label>
-      <select name="imovel_id" class="form-select">
-        <option value="">Todos os imóveis</option>
-        {% for im in imoveis_lista %}
-        <option value="{{ im.pk }}" {% if filtro_imovel_id == im.pk|stringformat:"s" %}selected{% endif %}>
-          {{ im.endereco|truncatechars:40 }}
-        </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-6 col-md-2">
-      <label class="form-label">Tipo de imóvel</label>
-      <select name="tipo" class="form-select">
-        <option value="">Todos</option>
+<div class="dash-filterbar mb-4">
+  <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+    <span class="dash-filterbar-label"><i class="bi bi-sliders"></i> Filtrar por</span>
+    <div class="filter-pill">
+      <i class="bi bi-tag"></i>
+      <select name="tipo" class="filter-pill-select" onchange="this.form.submit()">
+        <option value="">Tipo: Todos</option>
         {% for val, label in tipo_choices %}
         <option value="{{ val }}" {% if filtro_tipo == val %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
-    <div class="col-6 col-md-2">
-      <label class="form-label">Status</label>
-      <select name="status" class="form-select">
-        <option value="">Todos</option>
+    <div class="filter-pill">
+      <i class="bi bi-toggle2-on"></i>
+      <select name="status" class="filter-pill-select" onchange="this.form.submit()">
+        <option value="">Status: Todos</option>
         {% for val, label in status_choices %}
         <option value="{{ val }}" {% if filtro_status == val %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
-    <div class="col-6 col-md-2">
-      <label class="form-label">Período — de</label>
-      {{ filtro_form.data_inicio }}
-    </div>
-    <div class="col-6 col-md-2">
-      <label class="form-label">Período — até</label>
-      {{ filtro_form.data_fim }}
-    </div>
-    <div class="col-12 d-flex gap-2">
-      <button type="submit" class="btn btn-graphite">
-        <i class="bi bi-funnel me-1"></i> Filtrar
-      </button>
-      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary" title="Limpar filtros">
-        <i class="bi bi-x-lg"></i>
-      </a>
-    </div>
+    {% if filtro_tipo or filtro_status %}
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm" title="Limpar filtros">
+      <i class="bi bi-x-lg"></i>
+    </a>
+    {% endif %}
   </form>
-  </div>
 </div>
 
 <!-- KPI Cards -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-4 col-lg">
-    <div class="kpi-card">
-      <div class="kpi-label"><span class="kpi-dot kpi-dot-brand"></span>Total de Imóveis</div>
-      <div class="kpi-value">{{ total_imoveis }}</div>
-      <div class="kpi-aux"><i class="bi bi-house-door"></i> imóveis cadastrados</div>
+    <div class="kpi-card kpi-card-alt">
+      <div class="kpi-icon kpi-icon-brand"><i class="bi bi-house-door"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ total_imoveis }}</div>
+        <div class="kpi-label">Total de imóveis cadastrados</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-4 col-lg">
-    <div class="kpi-card">
-      <div class="kpi-label"><span class="kpi-dot kpi-dot-ok"></span>Ocupados / Vagos</div>
-      <div class="kpi-value">{{ ocupados }} / {{ vagos }}</div>
-      <div class="kpi-aux"><i class="bi bi-house-gear"></i> {{ manutencao }} em manutenção</div>
+    <div class="kpi-card kpi-card-alt">
+      <div class="kpi-icon kpi-icon-ok"><i class="bi bi-key"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ ocupados }} / {{ vagos }}</div>
+        <div class="kpi-label">Ocupados / vagos · {{ manutencao }} em manutenção</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-4 col-lg">
-    <div class="kpi-card">
-      <div class="kpi-label"><span class="kpi-dot kpi-dot-danger"></span>Taxa de Vacância</div>
-      <div class="kpi-value">{{ taxa_vacancia }}%</div>
-      <div class="kpi-aux"><i class="bi bi-percent"></i> {{ vagos }} de {{ total_imoveis }} imóveis vagos</div>
+    <div class="kpi-card kpi-card-alt">
+      <div class="kpi-icon kpi-icon-danger"><i class="bi bi-graph-down-arrow"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ taxa_vacancia }}%</div>
+        <div class="kpi-label">Taxa de vacância · {{ vagos }} de {{ total_imoveis }} imóveis</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-4 col-lg">
-    <div class="kpi-card">
-      <div class="kpi-label"><span class="kpi-dot kpi-dot-info"></span>Contratos Ativos</div>
-      <div class="kpi-value">{{ contratos_ativos }}</div>
-      <div class="kpi-aux"><i class="bi bi-file-earmark-text"></i> em vigência</div>
+    <div class="kpi-card kpi-card-alt">
+      <div class="kpi-icon kpi-icon-info"><i class="bi bi-file-earmark-text"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ contratos_ativos }}</div>
+        <div class="kpi-label">Contratos ativos em vigência</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-4 col-lg">
-    <div class="kpi-card">
-      <div class="kpi-label"><span class="kpi-dot kpi-dot-warn"></span>Contratos que Precisam de Atenção</div>
-      <div class="kpi-value">{{ contratos_atencao|length }}</div>
-      <div class="kpi-aux"><i class="bi bi-exclamation-triangle"></i> fim de vigência ou reajuste</div>
+    <div class="kpi-card kpi-card-alt">
+      <div class="kpi-icon kpi-icon-warn"><i class="bi bi-exclamation-triangle"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ contratos_atencao|length }}</div>
+        <div class="kpi-label">Contratos que precisam de atenção</div>
+      </div>
     </div>
   </div>
   <div class="col-6 col-md-4 col-lg">
-    <div class="kpi-card">
-      <div class="kpi-label"><span class="kpi-dot kpi-dot-warn"></span>Tempo Médio de Vacância</div>
-      {% if vacancia_sem_dados %}
-      <div class="kpi-value">—</div>
-      <div class="kpi-aux"><i class="bi bi-clock-history"></i> sem períodos de vacância concluídos no intervalo</div>
-      {% else %}
-      <div class="kpi-value">{{ tempo_medio_vacancia }} dias</div>
-      <div class="kpi-aux"><i class="bi bi-clock-history"></i> média de {{ amostra_vacancia }} período(s) no intervalo</div>
-      {% endif %}
+    <div class="kpi-card kpi-card-alt">
+      <div class="kpi-icon kpi-icon-warn"><i class="bi bi-clock-history"></i></div>
+      <div class="kpi-body">
+        {% if vacancia_sem_dados %}
+        <div class="kpi-value">—</div>
+        <div class="kpi-label">Tempo médio de vacância · sem dados no intervalo</div>
+        {% else %}
+        <div class="kpi-value">{{ tempo_medio_vacancia }} dias</div>
+        <div class="kpi-label">Tempo médio de vacância</div>
+        {% endif %}
+      </div>
     </div>
   </div>
 </div>
@@ -118,8 +107,12 @@
         Distribuição por situação do imóvel
       </div>
       <div class="card-body">
-        <div class="chart-wrapper" style="height: 320px;">
-          <canvas id="chartSituacao"></canvas>
+        <div class="chart-donut-wrap">
+          <div class="chart-wrapper chart-wrapper-donut">
+            <canvas id="chartSituacao"></canvas>
+            <div class="chart-donut-center" id="chartSituacaoCenter"></div>
+          </div>
+          <ul class="chart-legend" id="chartSituacaoLegend"></ul>
         </div>
       </div>
     </div>
@@ -130,19 +123,34 @@
         Distribuição por tipo de imóvel
       </div>
       <div class="card-body">
-        <div class="chart-wrapper" style="height: 320px;">
-          <canvas id="chartTipo"></canvas>
+        <div class="chart-donut-wrap">
+          <div class="chart-wrapper chart-wrapper-donut">
+            <canvas id="chartTipo"></canvas>
+            <div class="chart-donut-center" id="chartTipoCenter"></div>
+          </div>
+          <ul class="chart-legend" id="chartTipoLegend"></ul>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-{% if imovel_timeline is not None %}
-<!-- Drill-down: linha do tempo de status do imóvel filtrado -->
+<!-- Linha do tempo de status: seletor de imóvel próprio, sempre visível -->
 <div class="card mb-4">
-  <div class="card-header">
-    <i class="bi bi-clock-history"></i> Linha do tempo de status — {{ imovel_selecionado.endereco|truncatechars:60 }}
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span><i class="bi bi-clock-history"></i> Linha do tempo de status</span>
+    <form method="get" class="dash-timeline-select">
+      {% if filtro_tipo %}<input type="hidden" name="tipo" value="{{ filtro_tipo }}">{% endif %}
+      {% if filtro_status %}<input type="hidden" name="status" value="{{ filtro_status }}">{% endif %}
+      <i class="bi bi-house-door"></i>
+      <select name="timeline_imovel_id" class="dash-timeline-select-input" onchange="this.form.submit()">
+        {% for im in imoveis_lista %}
+        <option value="{{ im.pk }}" {% if timeline_imovel_id == im.pk|stringformat:"s" %}selected{% endif %}>
+          {{ im.endereco|truncatechars:40 }}
+        </option>
+        {% endfor %}
+      </select>
+    </form>
   </div>
   <div class="card-body">
     {% if imovel_timeline %}
@@ -167,7 +175,6 @@
     {% endif %}
   </div>
 </div>
-{% endif %}
 
 <!-- Contratos que precisam de atenção -->
 <div class="card">
@@ -222,19 +229,30 @@
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
 
-  function legendConfig(muted) {
-    return {
-      position: 'bottom',
-      labels: {
-        color: muted,
-        font: { size: 12, family: 'Inter' },
-        padding: 16,
-        boxWidth: 10,
-        boxHeight: 10,
-        usePointStyle: true,
-        pointStyleWidth: 10,
-      }
-    };
+  function renderLegend(elId, labels, data, colors) {
+    const el = document.getElementById(elId);
+    const total = data.reduce((a, b) => a + b, 0);
+    el.innerHTML = labels.map((label, i) => {
+      const muted = data[i] === 0 ? ' text-muted' : '';
+      return `<li class="chart-legend-item${muted}">
+        <span class="chart-legend-dot" style="background:${colors[i]}"></span>
+        <span class="chart-legend-label">${label}</span>
+        <span class="chart-legend-value">${data[i]}</span>
+      </li>`;
+    }).join('');
+    return total;
+  }
+
+  function renderCenter(elId, labels, data, total) {
+    const el = document.getElementById(elId);
+    if (!total) {
+      el.innerHTML = '<div class="chart-donut-center-value">0%</div><div class="chart-donut-center-label">Sem dados</div>';
+      return;
+    }
+    let maxIdx = 0;
+    for (let i = 1; i < data.length; i++) if (data[i] > data[maxIdx]) maxIdx = i;
+    const pct = Math.round((data[maxIdx] / total) * 100);
+    el.innerHTML = `<div class="chart-donut-center-value">${pct}%</div><div class="chart-donut-center-label">${labels[maxIdx]}</div>`;
   }
 
   function renderCharts() {
@@ -249,13 +267,16 @@
     const muted   = cssVar('--muted');
     const surface = cssVar('--surface');
 
+    const situacaoColors = [ok, danger, warn];
+    const tipoColors = [brand, warn, ok, muted, danger, info];
+
     chartSituacao = new Chart(document.getElementById('chartSituacao'), {
       type: 'doughnut',
       data: {
         labels: situacaoLabels,
         datasets: [{
           data: situacaoData,
-          backgroundColor: [ok, danger, warn],
+          backgroundColor: situacaoColors,
           borderWidth: 2,
           borderColor: surface,
         }]
@@ -263,10 +284,12 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '64%',
-        plugins: { legend: legendConfig(muted) },
+        cutout: '68%',
+        plugins: { legend: { display: false } },
       }
     });
+    renderLegend('chartSituacaoLegend', situacaoLabels, situacaoData, situacaoColors);
+    renderCenter('chartSituacaoCenter', situacaoLabels, situacaoData, situacaoData.reduce((a, b) => a + b, 0));
 
     chartTipo = new Chart(document.getElementById('chartTipo'), {
       type: 'doughnut',
@@ -274,7 +297,7 @@
         labels: tipoLabels,
         datasets: [{
           data: tipoData,
-          backgroundColor: [brand, warn, ok, muted, danger, info],
+          backgroundColor: tipoColors,
           borderWidth: 2,
           borderColor: surface,
         }]
@@ -282,10 +305,12 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '64%',
-        plugins: { legend: legendConfig(muted) },
+        cutout: '68%',
+        plugins: { legend: { display: false } },
       }
     });
+    renderLegend('chartTipoLegend', tipoLabels, tipoData, tipoColors);
+    renderCenter('chartTipoCenter', tipoLabels, tipoData, tipoData.reduce((a, b) => a + b, 0));
   }
 
   renderCharts();

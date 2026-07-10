@@ -320,16 +320,20 @@ Inter `700` `0.74rem`. As cores vêm dos pares de token semânticos
 
 ## 13. Gráficos (Dashboard Imobiliário e Indicadores Financeiros)
 
-Os gráficos hoje estão divididos em duas telas — Dashboard Imobiliário (`/`, `templates/imoveis/dashboard_imobiliario.html`) e Indicadores Financeiros (embutidos em `/financeiro/`, `templates/financeiro/lancamento_list.html`). Regras de negócio por trás de cada métrica em `docs/03_regras_de_negocio.md` §9.
+Os gráficos hoje estão divididos em duas telas — Dashboard Imobiliário (`/dashboard/`, `templates/imoveis/dashboard_imobiliario.html`) e Indicadores Financeiros (embutidos em `/financeiro/`, `templates/financeiro/lancamento_list.html`). Regras de negócio por trás de cada métrica em `docs/03_regras_de_negocio.md` §9.
 
 - **Biblioteca:** Chart.js 4.4.4
 - **Cores lidas de tokens:** os gráficos não usam hex fixos — leem as CSS vars via `getComputedStyle` (`--ok`, `--danger`, `--warn`, `--info`, `--brand`, `--surface`, `--border`, `--muted`), de modo a acompanharem os temas claro/escuro.
 - **Redesenho no toggle de tema:** os gráficos são **destruídos e recriados** ao receber o evento `shelter:theme-changed` disparado por `static/js/theme.js`, relendo os tokens do tema recém-aplicado.
 
-### 13.1 Dashboard Imobiliário (`/`)
-- **Donut — distribuição por situação do imóvel:** ocupado / vago / manutenção (`--ok`, `--danger`, `--warn`; borda entre fatias em `--surface`, `cutout: 64%`, legenda embaixo)
+### 13.1 Dashboard Imobiliário (`/dashboard/`)
+- **Filtros em pills** (`.dash-filterbar` + `.filter-pill`): "Filtrar por" seguido de dois selects compactos — Tipo e Status —, cada um submetendo o form (`onchange="this.form.submit()"`) assim que muda; sem filtro de imóvel nem de período na barra (removidos no redesign visual).
+- **KPI cards** (`.kpi-card-alt` + `.kpi-icon`): ícone quadrado colorido à esquerda (`.kpi-icon-{brand|ok|danger|info|warn}`, fundo `*-bg`/`-soft`, cor do token) + valor/label à direita. 6 cards, todos com dado real: total de imóveis, ocupados/vagos, taxa de vacância, contratos ativos, contratos que precisam de atenção, tempo médio de vacância (ver `docs/03_regras_de_negocio.md` §9.1 — nenhum é mais placeholder).
+- **Donut — distribuição por situação do imóvel:** ocupado / vago / manutenção (`--ok`, `--danger`, `--warn`; borda entre fatias em `--surface`, `cutout: 68%`)
 - **Donut — distribuição por tipo de imóvel:** uma cor por tipo cadastrado (`--brand`, `--warn`, `--ok`, `--muted`, `--danger`, `--info`)
-- KPI cards de ocupação/vacância + 2 KPIs placeholder com badge "EXEMPLO" (ver `docs/03_regras_de_negocio.md` §9.1)
+- **Legenda customizada** (`.chart-legend`, ao lado do donut, não embaixo): lista com bolinha colorida + label + valor numérico, renderizada em JS (`renderLegend`) a partir dos mesmos dados do dataset — a legenda nativa do Chart.js fica desligada (`legend: { display: false }`).
+- **Valor central do donut** (`.chart-donut-center`, sobreposto via `position: absolute`): percentual da maior fatia + seu label, calculado em JS (`renderCenter`).
+- **Linha do tempo de status** (`.dash-timeline-select`): card sempre visível (não é mais drill-down condicional). Header com o título à esquerda e, à direita, um `<select name="timeline_imovel_id">` próprio (`onchange="this.form.submit()"`) que troca só a timeline, preservando os filtros de Tipo/Status via inputs hidden no mesmo mini-form — não afeta KPIs/donuts. Sem seleção, mostra o primeiro imóvel cadastrado.
 
 ### 13.2 Indicadores Financeiros (`/financeiro/`)
 - **Gráfico de barras — evolução mensal (ganhos vs. despesas):** *period-aware* — últimos 6 meses fixos sem filtro de data, ou todos os meses do intervalo filtrado quando há data início/fim (título do card indica qual modo está ativo)

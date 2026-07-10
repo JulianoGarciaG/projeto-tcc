@@ -135,28 +135,22 @@ def landing(request):
 
 @login_required
 def dashboard_imobiliario(request):
-    imovel_id = request.GET.get('imovel_id', '')
     tipo_filtro = request.GET.get('tipo', '')
     status_filtro = request.GET.get('status', '')
+    # Seletor de imóvel da linha do tempo — independente dos filtros de
+    # Tipo/Status acima, não afeta KPIs/donuts (brief do redesign visual).
+    timeline_imovel_id = request.GET.get('timeline_imovel_id', '')
 
-    # Filtro de período (dd/mm/aaaa via Flatpickr). Sem informar, a janela
-    # padrão são os últimos 90 dias — o suficiente para o KPI ter significado.
-    filtro_form = DashboardFiltroForm(request.GET)
-    data_inicio = data_fim = None
-    if filtro_form.is_valid():
-        data_inicio = filtro_form.cleaned_data.get('data_inicio')
-        data_fim = filtro_form.cleaned_data.get('data_fim')
-
+    # Janela fixa dos últimos 90 dias para o KPI de tempo médio de vacância
+    # e para a linha do tempo (não há mais filtro de período na UI).
     hoje = date.today()
-    janela_inicio = data_inicio or (hoje - timedelta(days=90))
-    janela_fim = data_fim or hoje
+    janela_inicio = hoje - timedelta(days=90)
+    janela_fim = hoje
     # Converte para datetime aware cobrindo o dia inteiro do fim.
     janela_inicio_dt = timezone.make_aware(datetime.combine(janela_inicio, datetime.min.time()))
     janela_fim_dt = timezone.make_aware(datetime.combine(janela_fim, datetime.max.time()))
 
     imoveis_qs = Imovel.objects.all()
-    if imovel_id:
-        imoveis_qs = imoveis_qs.filter(pk=imovel_id)
     if tipo_filtro:
         imoveis_qs = imoveis_qs.filter(tipo=tipo_filtro)
     if status_filtro:
@@ -198,7 +192,7 @@ def dashboard_imobiliario(request):
 
     # --- Tempo Médio de Vacância (agregado) ---
     # Períodos de vacância concluídos (data_fim preenchida) que se iniciaram
-    # dentro da janela, respeitando os filtros de imóvel/tipo/status.
+    # dentro da janela, respeitando os filtros de tipo/status.
     periodos_vagos = HistoricoStatusImovel.objects.filter(
         imovel__in=imoveis_qs, status='vago', data_fim__isnull=False,
         data_inicio__gte=janela_inicio_dt, data_inicio__lte=janela_fim_dt,
@@ -215,11 +209,17 @@ def dashboard_imobiliario(request):
         tempo_medio_vacancia = None
         vacancia_sem_dados = True
 
-    # --- Drill-down: linha do tempo (apenas quando 1 imóvel filtrado) ---
+    # --- Linha do tempo de status: seletor de imóvel independente dos
+    # filtros de Tipo/Status, sempre visível. Sem seleção, usa o primeiro
+    # imóvel cadastrado (ordenado por endereço) como padrão.
+    imoveis_lista = Imovel.objects.all().order_by('endereco')
+    if timeline_imovel_id:
+        imovel_selecionado = imoveis_lista.filter(pk=timeline_imovel_id).first()
+    else:
+        imovel_selecionado = imoveis_lista.first()
+
     imovel_timeline = None
-    imovel_selecionado = None
-    if imovel_id and total_imoveis == 1:
-        imovel_selecionado = imoveis_qs.first()
+    if imovel_selecionado:
         periodos = (imovel_selecionado.historico_status
                     .filter(data_inicio__lte=janela_fim_dt)
                     .filter(Q(data_fim__isnull=True) | Q(data_fim__gte=janela_inicio_dt))
@@ -252,15 +252,14 @@ def dashboard_imobiliario(request):
         'tempo_medio_vacancia': tempo_medio_vacancia,
         'vacancia_sem_dados': vacancia_sem_dados,
         'amostra_vacancia': amostra_vacancia,
-        # Drill-down / linha do tempo
+        # Linha do tempo de status (seletor de imóvel independente)
         'imovel_timeline': imovel_timeline,
         'imovel_selecionado': imovel_selecionado,
+        'timeline_imovel_id': str(imovel_selecionado.pk) if imovel_selecionado else '',
         # Filtros
-        'imoveis_lista': Imovel.objects.all(),
-        'filtro_imovel_id': imovel_id,
+        'imoveis_lista': imoveis_lista,
         'filtro_tipo': tipo_filtro,
         'filtro_status': status_filtro,
-        'filtro_form': filtro_form,
         'tipo_choices': Imovel.TIPO_CHOICES,
         'status_choices': Imovel.STATUS_CHOICES,
     }

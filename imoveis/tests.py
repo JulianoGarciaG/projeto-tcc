@@ -1727,17 +1727,18 @@ class HistoricoStatusImovelTests(TestCase):
         resp = self.client.get(reverse('dashboard'))
         self.assertEqual(resp.context['amostra_vacancia'], 1)
 
-    def test_drilldown_timeline_um_imovel(self):
+    def test_drilldown_timeline_imovel_selecionado(self):
         imovel = self._imovel_vago()
         user = User.objects.create_user('dash4', password='x')
         self.client.force_login(user)
-        resp = self.client.get(reverse('dashboard'), {'imovel_id': imovel.pk})
+        resp = self.client.get(reverse('dashboard'), {'timeline_imovel_id': imovel.pk})
         self.assertIsNotNone(resp.context['imovel_timeline'])
         self.assertEqual(resp.context['imovel_selecionado'], imovel)
 
-    def test_drilldown_ausente_sem_filtro_de_imovel(self):
-        self._imovel_vago()
+    def test_drilldown_usa_primeiro_imovel_por_padrao(self):
+        imovel = self._imovel_vago()
         user = User.objects.create_user('dash5', password='x')
         self.client.force_login(user)
         resp = self.client.get(reverse('dashboard'))
-        self.assertIsNone(resp.context['imovel_timeline'])
+        self.assertIsNotNone(resp.context['imovel_timeline'])
+        self.assertEqual(resp.context['imovel_selecionado'], imovel)
