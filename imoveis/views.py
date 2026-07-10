@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Notificacao, RenovacaoContrato, Distrato,
-    Recibo, ItemVistoriaTemplate, FotoItemVistoria,
+    Recibo, ItemVistoriaTemplate, ItemVistoria, FotoItemVistoria,
 )
 from .forms import (
     ImovelForm, FotoImovelFormSet, ProprietarioForm, InquilinoForm,
@@ -45,6 +45,29 @@ def _itens_agrupados(laudo):
             grupos.append({'comodo': item.comodo, 'itens': []})
         grupos[-1]['itens'].append(item)
     return grupos
+
+
+def _reindexar_ordem_itens(laudo):
+    """Renumera `ordem` sequencialmente agrupando por cômodo (na ordem em que
+    cada cômodo aparece pela primeira vez em `laudo.itens.all()`), garantindo
+    que itens do mesmo cômodo fiquem contíguos quando reordenados por
+    `ordem`. Necessário porque itens/cômodos adicionados dinamicamente no
+    formset não têm como calcular a `ordem` exata que os mantém contíguos —
+    sem isso, `_itens_agrupados` pode quebrar um cômodo em dois blocos."""
+    grupos = {}
+    for item in laudo.itens.all():
+        grupos.setdefault(item.comodo, []).append(item)
+
+    atualizar = []
+    ordem = 0
+    for itens in grupos.values():
+        for item in itens:
+            if item.ordem != ordem:
+                item.ordem = ordem
+                atualizar.append(item)
+            ordem += 1
+    if atualizar:
+        ItemVistoria.objects.bulk_update(atualizar, ['ordem'])
 
 
 def _salvar_fotos_itens(item_formset):
@@ -775,6 +798,7 @@ def laudo_create(request):
             item_formset.instance = laudo
             item_formset.save()
             _salvar_fotos_itens(item_formset)
+            _reindexar_ordem_itens(laudo)
             testemunha_formset.instance = laudo
             testemunha_formset.save()
             messages.success(request, 'Laudo registrado com sucesso. Use "Regerar PDF" para gerar o documento.')
@@ -800,6 +824,7 @@ def laudo_edit(request, pk):
             laudo = form.save()
             item_formset.save()
             _salvar_fotos_itens(item_formset)
+            _reindexar_ordem_itens(laudo)
             testemunha_formset.save()
             messages.success(request, 'Laudo atualizado.')
             return redirect('laudo_detail', pk=laudo.pk)

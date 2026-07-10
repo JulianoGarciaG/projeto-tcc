@@ -57,26 +57,38 @@
 
       <!-- Itens vistoriados por cômodo -->
       <div class="section-card mb-4">
-        <div class="section-card-header"><i class="bi bi-house-check"></i> Cômodos e Itens Vistoriados</div>
+        <div class="section-card-header">
+          <i class="bi bi-house-check"></i> Cômodos e Itens Vistoriados
+          <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" id="add-comodo"><i class="bi bi-plus-lg me-1"></i> Adicionar cômodo</button>
+        </div>
         <div class="section-card-body">
-          <div class="alert alert-info small mb-3">Selecione o estado apenas dos itens vistoriados — itens sem estado não entram no laudo.</div>
+          <div class="alert alert-info small mb-3">Selecione o estado apenas dos itens vistoriados — itens sem estado não entram no laudo. Use "+ item" para adicionar algo fora do padrão, ou "Remover cômodo" para ocultar um cômodo inteiro deste laudo.</div>
           {{ item_formset.management_form }}
           <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0 checklist-table">
-              <tbody>
+            <table class="table table-sm align-middle mb-0 checklist-table" id="checklist-table">
+              <tbody id="checklist-body">
                 {% for f in item_formset %}
                 {% ifchanged f.comodo.value %}
-                <tr class="comodo-head"><th colspan="5">{{ f.comodo.value }}</th></tr>
+                <tr class="comodo-head" data-comodo="{{ f.comodo.value }}">
+                  <th colspan="4">{{ f.comodo.value }}</th>
+                  <th class="text-end"><button type="button" class="btn btn-outline-secondary btn-sm add-item"><i class="bi bi-plus-lg"></i> Item</button></th>
+                  <th><button type="button" class="btn btn-outline-danger btn-sm remove-comodo" title="Remover cômodo"><i class="bi bi-trash"></i></button></th>
+                </tr>
                 <tr class="col-head"><th style="width:35%;">Item</th><th style="width:20%;">Estado</th><th>Observação</th><th style="width:15%;">Fotos</th><th style="width:5%;"></th></tr>
                 {% endifchanged %}
-                <tr>
-                  <td>{{ f.item.value }}{{ f.comodo }}{{ f.item }}{{ f.ordem }}{{ f.id }}</td>
+                <tr class="item-row" data-comodo="{{ f.comodo.value }}">
+                  <td>{{ f.item }}{{ f.comodo }}{{ f.ordem }}{{ f.id }}</td>
                   <td><div class="seg-estado-wrap">{{ f.estado }}</div></td>
                   <td>{{ f.observacao }}</td>
                   <td>{{ f.fotos }}</td>
                   <td>
-                    {% if f.instance.pk %}
-                    <div class="form-check">{{ f.DELETE }}<label class="form-check-label small text-danger" for="{{ f.DELETE.id_for_label }}">Del</label></div>
+                    {% if not f.instance.pk %}
+                    <div class="form-check">
+                      {{ f.DELETE }}
+                      <label class="form-check-label small text-danger" for="{{ f.DELETE.id_for_label }}">Del</label>
+                    </div>
+                    {% else %}
+                    <div class="d-none">{{ f.DELETE }}</div>
                     {% endif %}
                   </td>
                 </tr>
@@ -84,6 +96,26 @@
               </tbody>
             </table>
           </div>
+          <!-- Templates clonados via JS (empty_form do formset de itens) -->
+          <template id="item-empty-row">
+            <tr class="item-row" data-comodo="">
+              <td>{{ item_formset.empty_form.item }}{{ item_formset.empty_form.comodo }}{{ item_formset.empty_form.ordem }}</td>
+              <td><div class="seg-estado-wrap">{{ item_formset.empty_form.estado }}</div></td>
+              <td>{{ item_formset.empty_form.observacao }}</td>
+              <td>{{ item_formset.empty_form.fotos }}</td>
+              <td>
+                <button type="button" class="btn btn-outline-danger btn-sm remove-item"><i class="bi bi-trash"></i></button>
+              </td>
+            </tr>
+          </template>
+          <template id="comodo-empty-head">
+            <tr class="comodo-head" data-comodo="">
+              <th colspan="4"><input type="text" class="form-control form-control-sm comodo-nome-input" placeholder="Nome do cômodo"></th>
+              <th class="text-end"><button type="button" class="btn btn-outline-secondary btn-sm add-item"><i class="bi bi-plus-lg"></i> Item</button></th>
+              <th><button type="button" class="btn btn-outline-danger btn-sm remove-comodo" title="Remover cômodo"><i class="bi bi-trash"></i></button></th>
+            </tr>
+            <tr class="col-head"><th style="width:35%;">Item</th><th style="width:20%;">Estado</th><th>Observação</th><th style="width:15%;">Fotos</th><th style="width:5%;"></th></tr>
+          </template>
         </div>
       </div>
 
@@ -178,12 +210,12 @@
   atualizarContratos();
 })();
 
-(function () {
+function enhanceSegEstado(root) {
   // Segmented control visual sobre o <select> real de estado (progressive
   // enhancement): o select só é ocultado depois que o segmented é montado.
   // O segmento escreve no select via .value + evento 'change' para manter a
   // validação do Django e qualquer listener intactos.
-  document.querySelectorAll('.seg-estado-wrap').forEach(function (wrap) {
+  (root || document).querySelectorAll('.seg-estado-wrap:not(.enhanced)').forEach(function (wrap) {
     const select = wrap.querySelector('select');
     if (!select) return;
 
@@ -218,7 +250,8 @@
     wrap.appendChild(seg);
     wrap.classList.add('enhanced');
   });
-})();
+}
+enhanceSegEstado();
 
 (function () {
   // Adição dinâmica de linhas de testemunha (formset inline do Django).
@@ -242,6 +275,114 @@
     const btn = e.target.closest('.remover-testemunha');
     if (!btn) return;
     btn.closest('.testemunha-row').remove();
+  });
+})();
+
+(function () {
+  // Personalização do checklist dentro deste laudo: adicionar item a um
+  // cômodo existente, adicionar cômodo novo (com nome livre) e remover/
+  // ocultar cômodo inteiro. Nada disso toca o catálogo global — só
+  // manipula linhas do formset de itens (mesmo padrão de clone de
+  // <template> usado nas testemunhas).
+  const body = document.getElementById('checklist-body');
+  const itemTmpl = document.getElementById('item-empty-row');
+  const comodoTmpl = document.getElementById('comodo-empty-head');
+  const addComodoBtn = document.getElementById('add-comodo');
+  const totalInput = document.getElementById('id_itens-TOTAL_FORMS');
+  if (!body || !itemTmpl || !comodoTmpl || !addComodoBtn || !totalInput) return;
+
+  function novoIndice() {
+    const index = parseInt(totalInput.value, 10);
+    totalInput.value = index + 1;
+    return index;
+  }
+
+  function criarLinhaItem(comodoNome) {
+    const index = novoIndice();
+    const html = itemTmpl.innerHTML.replace(/__prefix__/g, index);
+    const temp = document.createElement('tbody');
+    temp.innerHTML = html.trim();
+    const linha = temp.firstElementChild;
+    linha.dataset.comodo = comodoNome;
+    const comodoInput = linha.querySelector('input[name$="-comodo"]');
+    if (comodoInput) comodoInput.value = comodoNome;
+    enhanceSegEstado(linha);
+    return linha;
+  }
+
+  // "+ Item": adiciona uma linha em branco ao final do bloco daquele cômodo.
+  body.addEventListener('click', function (e) {
+    const addBtn = e.target.closest('.add-item');
+    if (!addBtn) return;
+    const head = addBtn.closest('.comodo-head');
+    const comodoNome = head.dataset.comodo || head.querySelector('.comodo-nome-input')?.value || '';
+    const linha = criarLinhaItem(comodoNome);
+    // Insere após a última linha de item deste cômodo (antes do próximo comodo-head).
+    let ref = head.nextElementSibling; // col-head
+    let ultima = ref;
+    let cursor = ref.nextElementSibling;
+    while (cursor && !cursor.classList.contains('comodo-head')) {
+      ultima = cursor;
+      cursor = cursor.nextElementSibling;
+    }
+    ultima.after(linha);
+  });
+
+  // "Remover item": linhas existentes marcam DELETE; linhas novas (sem pk)
+  // são simplesmente removidas do DOM — o Django ignora forms vazios.
+  body.addEventListener('click', function (e) {
+    const btn = e.target.closest('.remove-item');
+    if (!btn) return;
+    btn.closest('.item-row').remove();
+  });
+
+  // "Remover cômodo": marca DELETE em todas as linhas existentes do bloco,
+  // remove do DOM as linhas novas (sem pk) e oculta o bloco inteiro.
+  body.addEventListener('click', function (e) {
+    const btn = e.target.closest('.remove-comodo');
+    if (!btn) return;
+    const head = btn.closest('.comodo-head');
+    const colHead = head.nextElementSibling;
+    const linhas = [];
+    let cursor = colHead.nextElementSibling;
+    while (cursor && !cursor.classList.contains('comodo-head')) {
+      const proximo = cursor.nextElementSibling;
+      if (cursor.classList.contains('item-row')) linhas.push(cursor);
+      cursor = proximo;
+    }
+    linhas.forEach(function (linha) {
+      const deleteCheckbox = linha.querySelector('input[name$="-DELETE"]');
+      if (deleteCheckbox) deleteCheckbox.checked = true;
+      linha.style.display = 'none';
+    });
+    head.style.display = 'none';
+    colHead.style.display = 'none';
+  });
+
+  // "Adicionar cômodo": insere um novo bloco (cabeçalho editável + 1 linha
+  // de item) no final da tabela.
+  addComodoBtn.addEventListener('click', function () {
+    const temp = document.createElement('tbody');
+    temp.innerHTML = comodoTmpl.innerHTML.trim();
+    const head = temp.querySelector('.comodo-head');
+    const colHead = temp.querySelector('.col-head');
+    body.appendChild(head);
+    body.appendChild(colHead);
+    const nomeInput = head.querySelector('.comodo-nome-input');
+    const linha = criarLinhaItem('');
+    colHead.after(linha);
+    // Mantém o hidden `comodo` das linhas do bloco em sincronia com o nome digitado.
+    nomeInput.addEventListener('input', function () {
+      const comodoNome = nomeInput.value;
+      head.dataset.comodo = comodoNome;
+      let cursor = colHead.nextElementSibling;
+      while (cursor && !cursor.classList.contains('comodo-head')) {
+        const hidden = cursor.querySelector('input[name$="-comodo"]');
+        if (hidden) hidden.value = comodoNome;
+        cursor = cursor.nextElementSibling;
+      }
+    });
+    nomeInput.focus();
   });
 })();
 </script>

@@ -269,7 +269,7 @@ class ItemVistoriaForm(forms.ModelForm):
         fields = ['comodo', 'item', 'estado', 'observacao', 'ordem']
         widgets = {
             'comodo': forms.HiddenInput(),
-            'item': forms.HiddenInput(),
+            'item': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Nome do item'}),
             'ordem': forms.HiddenInput(),
             'estado': forms.Select(attrs=_sel),
             'observacao': forms.TextInput(attrs={**_ctrl, 'placeholder': 'Observação (opcional)'}),
