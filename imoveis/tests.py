@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -1157,6 +1157,85 @@ class FiadorCamposNovosTests(TestCase):
         fiador = contrato.fiadores.get()
         self.assertEqual(fiador.cpf, CPF_VALIDO_2)
         self.assertEqual(fiador.conjuge_nome, 'Francisco Marques')
+
+
+class ContratoReajusteTests(TestCase):
+    """Indicador de atenção (fim de vigência / aniversário) e reajuste do valor de cobrança."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester', password='x')
+        self.client.force_login(self.user)
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+
+    def test_precisa_atencao_false_fora_da_janela(self):
+        # criar_base(): data_inicio=2026-01-01, data_fim=2027-01-01 — nem
+        # aniversário nem fim de vigência na data corrente dos testes.
+        self.assertFalse(self.contrato.precisa_atencao)
+
+    def test_precisa_atencao_true_perto_do_fim_de_vigencia(self):
+        hoje = date.today()
+        self.contrato.data_inicio = hoje - timedelta(days=365)
+        self.contrato.data_fim = hoje + timedelta(days=10)
+        self.contrato.save()
+        self.assertTrue(self.contrato.precisa_atencao)
+
+    def test_precisa_atencao_false_fim_de_vigencia_distante(self):
+        hoje = date.today()
+        self.contrato.data_fim = hoje + timedelta(days=30)
+        self.contrato.save()
+        self.assertFalse(self.contrato.precisa_atencao)
+
+    def test_precisa_atencao_true_no_aniversario(self):
+        hoje = date.today()
+        self.contrato.data_inicio = date(hoje.year - 1, hoje.month, hoje.day)
+        self.contrato.data_fim = date(hoje.year + 5, hoje.month, hoje.day)
+        self.contrato.save()
+        self.assertTrue(self.contrato.precisa_atencao)
+
+    def test_precisa_atencao_false_quando_inativo(self):
+        hoje = date.today()
+        self.contrato.data_fim = hoje + timedelta(days=5)
+        self.contrato.status = 'encerrado'
+        self.contrato.save()
+        self.assertFalse(self.contrato.precisa_atencao)
+
+    def test_valor_cobranca_usa_valor_mensal_sem_reajuste(self):
+        self.assertIsNone(self.contrato.valor_vigente)
+        self.assertEqual(self.contrato.valor_cobranca, self.contrato.valor_mensal)
+
+    def test_valor_cobranca_usa_valor_vigente_apos_reajuste(self):
+        self.contrato.valor_vigente = Decimal('1800.00')
+        self.assertEqual(self.contrato.valor_cobranca, Decimal('1800.00'))
+
+    def test_view_bloqueia_reajuste_fora_da_janela(self):
+        resp = self.client.get(reverse('contrato_reajuste', args=[self.contrato.pk]))
+        self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
+        self.contrato.refresh_from_db()
+        self.assertIsNone(self.contrato.valor_vigente)
+
+    def test_view_permite_reajuste_dentro_da_janela(self):
+        hoje = date.today()
+        self.contrato.data_fim = hoje + timedelta(days=5)
+        self.contrato.save()
+        resp = self.client.post(reverse('contrato_reajuste', args=[self.contrato.pk]), {
+            'valor_vigente': '1800,00',
+        })
+        self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
+        self.contrato.refresh_from_db()
+        self.assertEqual(self.contrato.valor_vigente, Decimal('1800.00'))
+        # valor contratual original nunca muda
+        self.assertEqual(self.contrato.valor_mensal, Decimal('1500.00'))
+
+    def test_pdf_continua_usando_valor_mensal_apos_reajuste(self):
+        self.contrato.valor_vigente = Decimal('1800.00')
+        self.contrato.save()
+        html = render_to_string('documentos/contrato_pdf.html', {
+            'contrato': self.contrato,
+            'locador': settings.SHELTER_LOCADOR,
+            'prazo_meses': meses_entre(self.contrato.data_inicio, self.contrato.data_fim),
+        })
+        self.assertIn('1.500,00', html)
+        self.assertNotIn('1.800,00', html)
 
 
 class IdentidadeCodigoTests(TestCase):

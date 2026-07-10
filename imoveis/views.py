@@ -14,7 +14,7 @@ from .models import (
 from .forms import (
     ImovelForm, FotoImovelFormSet, ProprietarioForm, InquilinoForm,
     ContratoForm, FiadorFormSet, LaudoVistoriaForm, LancamentoForm,
-    NotificacaoForm, RenovacaoContratoForm, DistratoForm,
+    NotificacaoForm, RenovacaoContratoForm, DistratoForm, ReajusteContratoForm,
     ReciboForm, ItemVistoriaFormSet, TestemunhaFormSet, item_vistoria_formset_factory,
     DashboardFiltroForm,
 )
@@ -124,6 +124,23 @@ def dashboard_imobiliario(request):
     )
     tipo_data = [contagem_por_tipo.get(valor, 0) for valor, _ in Imovel.TIPO_CHOICES]
 
+    hoje = date.today()
+    contratos_atencao = []
+    for c in Contrato.objects.filter(status='ativo').select_related('imovel', 'inquilino'):
+        if not c.precisa_atencao:
+            continue
+        dias_para_fim = (c.data_fim - hoje).days
+        if 0 <= dias_para_fim <= 14:
+            motivo = 'Fim de vigência'
+            prazo = f'{dias_para_fim} dia(s)'
+        else:
+            motivo = 'Aniversário de reajuste'
+            prazo = c.data_inicio.strftime('%d/%m')
+        contratos_atencao.append({
+            'imovel': c.imovel, 'inquilino': c.inquilino,
+            'motivo': motivo, 'prazo': prazo,
+        })
+
     context = {
         'total_imoveis': total_imoveis,
         'vagos': vagos,
@@ -135,8 +152,8 @@ def dashboard_imobiliario(request):
         'pizza_data': pizza_data,
         'tipo_labels': tipo_labels,
         'tipo_data': tipo_data,
-        # Placeholders — dependem de features ainda não construídas
-        'contratos_atencao': [],
+        'contratos_atencao': contratos_atencao,
+        # Placeholder — depende de feature ainda não construída
         'tempo_medio_vacancia': None,
         # Filtros
         'imoveis_lista': Imovel.objects.all(),
@@ -611,6 +628,26 @@ def contrato_delete(request, pk):
             return redirect('contrato_detail', pk=pk)
         messages.success(request, 'Contrato removido.')
     return redirect('contrato_list')
+
+
+# ============================================================
+# Reajuste de Contrato
+# ============================================================
+
+@login_required
+def contrato_reajuste(request, pk):
+    contrato = get_object_or_404(Contrato, pk=pk)
+    if not contrato.precisa_atencao:
+        messages.warning(request, 'Este contrato não está elegível para reajuste no momento.')
+        return redirect('contrato_detail', pk=pk)
+    form = ReajusteContratoForm(request.POST or None, instance=contrato)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Valor de cobrança reajustado com sucesso.')
+        return redirect('contrato_detail', pk=pk)
+    return render(request, 'contratos/reajuste_form.html', {
+        'form': form, 'contrato': contrato, 'titulo': 'Reajuste de Aluguel'
+    })
 
 
 # ============================================================

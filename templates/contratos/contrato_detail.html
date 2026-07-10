@@ -13,6 +13,9 @@
   <a href="{{ contrato.documento_gerado.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i> Contrato Gerado (PDF)</a>
   {% endif %}
   {% if contrato.status == 'ativo' %}
+  {% if contrato.precisa_atencao %}
+  <a href="{% url 'contrato_reajuste' contrato.pk %}" class="btn btn-outline-warning btn-sm"><i class="bi bi-graph-up-arrow me-1"></i> Reajustar</a>
+  {% endif %}
   {% if not renovacao %}
   <a href="{% url 'renovacao_create' contrato.pk %}" class="btn btn-outline-info btn-sm"><i class="bi bi-arrow-repeat me-1"></i> Renovar</a>
   {% endif %}
@@ -29,6 +32,9 @@
       <div class="section-card-header">
         <i class="bi bi-info-circle me-1"></i> Informações
         <span class="ms-auto status-badge badge-{{ contrato.status }}">{{ contrato.get_status_display }}</span>
+        {% if contrato.precisa_atencao %}
+        <span class="status-badge badge-warn ms-1"><i class="bi bi-exclamation-triangle me-1"></i>Atenção</span>
+        {% endif %}
       </div>
       <div class="section-card-body">
         <dl class="row mb-0 small">
@@ -41,7 +47,10 @@
           <dt class="col-5 text-muted">Imóvel</dt><dd class="col-7">{{ contrato.imovel.endereco }}</dd>
           <dt class="col-5 text-muted">Início</dt><dd class="col-7">{{ contrato.data_inicio|date:"d/m/Y" }}</dd>
           <dt class="col-5 text-muted">Término</dt><dd class="col-7">{{ contrato.data_fim|date:"d/m/Y" }}</dd>
-          <dt class="col-5 text-muted">Valor Mensal</dt><dd class="col-7"><strong>R$ {{ contrato.valor_mensal|brl }}</strong></dd>
+          <dt class="col-5 text-muted">Valor Mensal (contrato)</dt><dd class="col-7">R$ {{ contrato.valor_mensal|brl }}</dd>
+          {% if contrato.valor_vigente %}
+          <dt class="col-5 text-muted">Valor de Cobrança (vigente)</dt><dd class="col-7"><strong>R$ {{ contrato.valor_vigente|brl }}</strong></dd>
+          {% endif %}
           <dt class="col-5 text-muted">Vencimento</dt><dd class="col-7">Dia {{ contrato.dia_vencimento }}</dd>
           {% if contrato.local_assinatura %}
           <dt class="col-5 text-muted">Local Assinatura</dt><dd class="col-7">{{ contrato.local_assinatura }}</dd>

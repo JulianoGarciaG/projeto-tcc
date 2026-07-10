@@ -51,7 +51,12 @@
           <td class="small text-muted">{{ c.imovel.endereco|truncatechars:30 }}</td>
           <td class="small">{{ c.data_inicio|date:"d/m/Y" }} → {{ c.data_fim|date:"d/m/Y" }}</td>
           <td><strong>R$ {{ c.valor_mensal|brl }}</strong></td>
-          <td><span class="status-badge badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
+          <td>
+            <span class="status-badge badge-{{ c.status }}">{{ c.get_status_display }}</span>
+            {% if c.precisa_atencao %}
+            <i class="bi bi-exclamation-triangle-fill text-warning ms-1" title="Contrato precisa de atenção"></i>
+            {% endif %}
+          </td>
           <td>
             {% if c.arquivo %}
             <a href="{{ c.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i></a>

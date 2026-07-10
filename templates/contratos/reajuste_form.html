@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load imoveis_tags %}
+{% block title %}{{ titulo }} — GestImóveis{% endblock %}
+{% block page_title %}<i class="bi bi-graph-up-arrow me-2"></i>{{ titulo }}{% endblock %}
+{% block nav_contratos %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="mb-3">
+      <a href="{% url 'contrato_detail' contrato.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Voltar ao Contrato
+      </a>
+    </div>
+
+    <div class="section-card mb-3">
+      <div class="section-card-header bg-info bg-opacity-10">
+        <i class="bi bi-info-circle me-1 text-info"></i>
+        <span class="small">{{ contrato.rotulo_curto }}</span>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-card-header"><i class="bi bi-graph-up-arrow me-1 text-info"></i> {{ titulo }}</div>
+      <div class="section-card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Valor de Cobrança (R$) <span class="text-danger">*</span></label>
+              {{ form.valor_vigente }}
+              <div class="form-text">Valor contratual original (não alterado): R$ {{ contrato.valor_mensal|brl }}</div>
+            </div>
+          </div>
+          {% if form.errors %}
+          <div class="alert alert-danger small mt-3">
+            {% for field in form %}{% for error in field.errors %}<div>{{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}
+          </div>
+          {% endif %}
+          <div class="d-flex gap-2 justify-content-end mt-4">
+            <a href="{% url 'contrato_detail' contrato.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-info text-white"><i class="bi bi-check-lg me-1"></i> Confirmar Reajuste</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -182,6 +182,8 @@ class Contrato(IdentificavelMixin, models.Model):
     data_inicio = models.DateField(verbose_name='Data de Início')
     data_fim = models.DateField(verbose_name='Data de Término')
     valor_mensal = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Valor Mensal')
+    valor_vigente = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                        verbose_name='Valor de Cobrança Vigente')
     dia_vencimento = models.PositiveSmallIntegerField(
         default=10, verbose_name='Dia de Vencimento',
         validators=[MinValueValidator(1), MaxValueValidator(31)])
@@ -230,6 +232,20 @@ class Contrato(IdentificavelMixin, models.Model):
         periodo = f'{self.data_inicio:%d/%m/%Y} a {self.data_fim:%d/%m/%Y}'
         return (f'Contrato {self.codigo} — {self.inquilino.nome} — {end} — '
                 f'{periodo} — {self.get_status_display()}')
+
+    @property
+    def valor_cobranca(self):
+        return self.valor_vigente if self.valor_vigente is not None else self.valor_mensal
+
+    @property
+    def precisa_atencao(self):
+        if self.status != 'ativo':
+            return False
+        hoje = date.today()
+        if 0 <= (self.data_fim - hoje).days <= 14:
+            return True
+        return ((self.data_inicio.month, self.data_inicio.day) == (hoje.month, hoje.day)
+                and self.data_inicio.year != hoje.year)
 
     @property
     def dependentes_cascata(self):

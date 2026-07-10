@@ -376,6 +376,20 @@ class RenovacaoContratoForm(forms.ModelForm):
         self.fields['data_renovacao'].widget = _date_widget()
 
 
+class ReajusteContratoForm(forms.ModelForm):
+    class Meta:
+        model = Contrato
+        fields = ['valor_vigente']
+        localized_fields = ['valor_vigente']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        widget = _moeda_widget()
+        widget.is_localized = True
+        self.fields['valor_vigente'].widget = widget
+        self.fields['valor_vigente'].required = True
+
+
 class DistratoForm(forms.ModelForm):
     laudo_saida = LaudoChoiceField(queryset=LaudoVistoria.objects.all(), required=False,
                                    widget=forms.Select(attrs=_sel))
