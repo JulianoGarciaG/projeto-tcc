@@ -271,7 +271,7 @@ def _dashboard_financeiro_context(request):
     reutilizando os filtros de data/imóvel da tela de Financeiro."""
     hoje = date.today()
 
-    imovel_id = request.GET.get('imovel_id', '')
+    imovel_ids = [v for v in request.GET.getlist('imovel_id') if v]
     filtro_form = DashboardFiltroForm(request.GET)
     data_inicio = data_fim = None
     if filtro_form.is_valid():
@@ -281,9 +281,9 @@ def _dashboard_financeiro_context(request):
     lancamentos_qs = Lancamento.objects.select_related('imovel', 'contrato__inquilino')
     imoveis_qs = Imovel.objects.all()
 
-    if imovel_id:
-        lancamentos_qs = lancamentos_qs.filter(imovel_id=imovel_id)
-        imoveis_qs = imoveis_qs.filter(pk=imovel_id)
+    if imovel_ids:
+        lancamentos_qs = lancamentos_qs.filter(imovel_id__in=imovel_ids)
+        imoveis_qs = imoveis_qs.filter(pk__in=imovel_ids)
     if data_inicio:
         lancamentos_qs = lancamentos_qs.filter(data_vencimento__gte=data_inicio)
     if data_fim:
@@ -408,7 +408,7 @@ def _dashboard_financeiro_context(request):
         'pendentes_antigos': pendentes_antigos,
         # Filtros do dashboard
         'dash_imoveis_lista': Imovel.objects.all(),
-        'dash_filtro_imovel_id': imovel_id,
+        'dash_filtro_imovel_ids': imovel_ids,
         'dash_filtro_form': filtro_form,
     }
 
@@ -975,7 +975,7 @@ def lancamento_list(request):
     status = request.GET.get('status', '')
     tipo = request.GET.get('tipo', '')
     natureza = request.GET.get('natureza', '')
-    imovel_id = request.GET.get('imovel_id', '')
+    imovel_ids = [v for v in request.GET.getlist('imovel_id') if v]
     qs = Lancamento.objects.select_related('imovel', 'contrato__inquilino')
     if q:
         qs = qs.filter(Q(contrato__inquilino__nome__icontains=q) | Q(imovel__endereco__icontains=q))
@@ -985,12 +985,12 @@ def lancamento_list(request):
         qs = qs.filter(tipo=tipo)
     if natureza:
         qs = qs.filter(natureza=natureza)
-    if imovel_id:
-        qs = qs.filter(imovel_id=imovel_id)
+    if imovel_ids:
+        qs = qs.filter(imovel_id__in=imovel_ids)
 
     context = {
         'lancamentos': qs,
-        'q': q, 'status': status, 'tipo': tipo, 'natureza': natureza, 'imovel_id': imovel_id,
+        'q': q, 'status': status, 'tipo': tipo, 'natureza': natureza, 'imovel_ids': imovel_ids,
         'status_choices': Lancamento.STATUS_CHOICES,
         'tipo_choices': Lancamento.TIPO_CHOICES,
         'natureza_choices': Lancamento.NATUREZA_CHOICES,
