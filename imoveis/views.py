@@ -452,6 +452,25 @@ def imovel_detail(request, pk):
         and imovel.planta_projeto.name.lower().endswith(
             ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'))
     )
+
+    # Histórico de status completo do imóvel (sem recorte de período, sem
+    # seletor — diferente da timeline de 90 dias do dashboard).
+    historico = imovel.historico_status.order_by('data_inicio')
+    imovel_timeline = [
+        {
+            'status': h.status,
+            'label': h.get_status_display(),
+            'data_inicio': h.data_inicio,
+            'data_fim': h.data_fim,
+            'dias': h.duracao_dias,
+            'em_aberto': h.data_fim is None,
+        }
+        for h in historico
+    ]
+    dias_por_status = {'vago': 0, 'ocupado': 0, 'manutencao': 0}
+    for h in historico:
+        dias_por_status[h.status] = dias_por_status.get(h.status, 0) + h.duracao_dias
+
     return render(request, 'imoveis/imovel_detail.html', {
         'imovel': imovel,
         'contratos': contratos,
@@ -460,6 +479,10 @@ def imovel_detail(request, pk):
         'notificacoes': notificacoes,
         'contrato_ativo': contrato_ativo,
         'planta_e_imagem': planta_e_imagem,
+        'imovel_timeline': imovel_timeline,
+        'dias_vago': dias_por_status['vago'],
+        'dias_ocupado': dias_por_status['ocupado'],
+        'dias_manutencao': dias_por_status['manutencao'],
     })
 
 

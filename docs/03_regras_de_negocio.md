@@ -153,6 +153,17 @@ Não há filtro de imóvel nem de período na barra superior — a janela usada 
 
 Essas três métricas usam dados reais desde o lançamento da feature de histórico de status — não são mais placeholder.
 
+### 9.1.1 Histórico de Status no detalhe do imóvel (`imovel_detail`)
+
+Abaixo da lista de Laudos de Vistoria, a tela de detalhe do imóvel (`imoveis/views.py:imovel_detail`) exibe o histórico completo de status daquele imóvel — mesmo model (`HistoricoStatusImovel`) e mesma UI de badges/duração da linha do tempo do dashboard, mas com duas diferenças deliberadas:
+
+- **Sem janela de 90 dias**: lista todo o histórico do imóvel (`historico_status.order_by('data_inicio')`), sem filtro por `data_inicio`/`data_fim`.
+- **Sem seletor de imóvel**: o imóvel já é fixado pelo `pk` da URL; não há `timeline_imovel_id`.
+
+**KPIs agregados** (dias acumulados por status, ao longo de toda a história do imóvel): soma de `HistoricoStatusImovel.duracao_dias` de cada período, agrupada por `status` (`vago`/`ocupado`/`manutencao`). Como `duracao_dias` usa `timezone.now()` como fim quando `data_fim` é nulo, o período em aberto (status atual) **conta** no total até o momento da consulta — mesmo critério que o dashboard já usa implicitamente ao exibir "atual" com duração calculada até hoje.
+
+Essa timeline e seus KPIs são independentes da timeline de 90 dias do dashboard: não compartilham contexto, não se afetam mutuamente.
+
 ### 9.2 Indicadores Financeiros (embutidos em `/financeiro/`, função `_dashboard_financeiro_context` chamada por `lancamento_list`)
 
 Não existe mais uma tela de dashboard financeiro separada — os KPIs, gráficos e ranking abaixo são renderizados na própria página de listagem de Lançamentos, acima da tabela e dos filtros de listagem.

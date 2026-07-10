@@ -342,6 +342,10 @@ Os gráficos hoje estão divididos em duas telas — Dashboard Imobiliário (`/d
 - **Donut — composição de despesas por categoria:** uma cor por `Lancamento.tipo` presente (`--info`, `--warn`, `--brand`, `--danger`, `--muted`, `--ok`)
 - KPI cards (ganhos/despesas/saldo do período, total pendente, ticket médio de aluguel, % de inadimplência), ranking de rentabilidade por imóvel (barra de progresso) e tabela de lançamentos pendentes mais antigos — todos usando o componente `.card`, com empty-state (`bi-inbox`) quando não há dados.
 
+### 13.3 Histórico de Status no detalhe do imóvel (`imovel_detail`)
+
+Bloco `.section-card` posicionado logo abaixo de "Laudos de Vistoria" na tela de detalhe do imóvel (`templates/imoveis/imovel_detail.html`), reaproveitando 1:1 os componentes visuais da timeline do Dashboard Imobiliário (§13.1) — mesma marcação `.status-timeline`/`.status-timeline-item`/`.status-timeline-marker`/`.status-timeline-badge`/`.status-timeline-dates`, mesmas cores por status (`--ok` ocupado, `--danger` vago, `--warn` manutenção). Duas diferenças em relação ao card do dashboard: sem seletor de imóvel (fixo pelo contexto da página) e sem janela de 90 dias (histórico completo). Acima da lista, três mini-KPIs centralizados (dias ocupado/vago/manutenção acumulados) em `--ok`/`--danger`/`--warn`. Regra de cálculo dos KPIs em `docs/03_regras_de_negocio.md` §9.1.1. Empty-state (`bi-inbox`) quando o imóvel não tem histórico.
+
 ---
 
 ## 14. Modais de Confirmação

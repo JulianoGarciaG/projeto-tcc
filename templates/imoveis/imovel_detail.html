@@ -236,6 +236,49 @@
       </div>
     </div>
 
+    <!-- Histórico de status -->
+    <div class="section-card mb-3">
+      <div class="section-card-header">
+        <i class="bi bi-clock-history me-1"></i> Histórico de Status
+      </div>
+      <div class="section-card-body">
+        <div class="row g-2 mb-3 text-center">
+          <div class="col-4">
+            <div class="small text-muted">Dias ocupado</div>
+            <div class="fw-semibold" style="color:var(--ok)">{{ dias_ocupado }}</div>
+          </div>
+          <div class="col-4">
+            <div class="small text-muted">Dias vago</div>
+            <div class="fw-semibold" style="color:var(--danger)">{{ dias_vago }}</div>
+          </div>
+          <div class="col-4">
+            <div class="small text-muted">Dias em manutenção</div>
+            <div class="fw-semibold" style="color:var(--warn)">{{ dias_manutencao }}</div>
+          </div>
+        </div>
+        {% if imovel_timeline %}
+        <ul class="status-timeline">
+          {% for seg in imovel_timeline %}
+          <li class="status-timeline-item status-{{ seg.status }}">
+            <span class="status-timeline-marker"></span>
+            <div class="status-timeline-body">
+              <span class="status-timeline-badge status-{{ seg.status }}">{{ seg.label }}</span>
+              <span class="status-timeline-dates">
+                {{ seg.data_inicio|date:"d/m/Y" }}
+                &rarr;
+                {% if seg.em_aberto %}<em>atual</em>{% else %}{{ seg.data_fim|date:"d/m/Y" }}{% endif %}
+                <span class="text-muted">· {{ seg.dias }} dia(s)</span>
+              </span>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state"><i class="bi bi-inbox"></i>Sem histórico de status.</div>
+        {% endif %}
+      </div>
+    </div>
+
   </div>
 </div>
 {% endblock %}
