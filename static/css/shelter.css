@@ -612,6 +612,49 @@ input[type="file"].input-dashed {
   background-color: var(--border);
 }
 
+/* Autocomplete por substring sobre <select> de Imóvel/Contrato
+   (static/js/select-autocomplete.js). O <select> original some
+   visualmente mas continua no DOM como fonte de verdade. */
+.autocomplete-wrap {
+  position: relative;
+}
+.autocomplete-wrap > select.autocomplete-source {
+  display: none;
+}
+.autocomplete-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 1050;
+  max-height: 280px;
+  overflow-y: auto;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+  padding: .25rem;
+}
+[data-theme="dark"] .autocomplete-list {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+}
+.autocomplete-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  padding: .45rem .6rem;
+  font-size: .875rem;
+  color: var(--ink);
+}
+.autocomplete-item:hover,
+.autocomplete-item:focus {
+  background-color: var(--sunken);
+  outline: none;
+}
+
 /* ============================================================
    9. CARDS
    O .card nativo do Bootstrap (usado em imovel_list) e o novo

@@ -926,8 +926,8 @@ def laudo_anexar_arquivo(request, pk):
 @login_required
 def contratos_por_imovel_json(request, imovel_pk):
     """L1 — contratos de um imóvel, para popular o select dependente do laudo."""
-    contratos = Contrato.objects.filter(imovel_id=imovel_pk).select_related('inquilino').order_by('-data_inicio')
-    # rotulo_curto acessa self.inquilino.nome — o select_related acima o cobre.
+    contratos = Contrato.objects.filter(imovel_id=imovel_pk).select_related('inquilino', 'imovel').order_by('-data_inicio')
+    # rotulo_curto acessa self.inquilino.nome e self.imovel.endereco/numero — o select_related acima cobre ambos.
     dados = [{'id': c.pk, 'label': c.rotulo_curto, 'valor_cobranca': str(c.valor_cobranca)}
              for c in contratos]
     return JsonResponse({'contratos': dados})

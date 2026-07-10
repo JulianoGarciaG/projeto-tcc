@@ -8,6 +8,9 @@ from .models import (
 
 _ctrl = {'class': 'form-control'}
 _sel = {'class': 'form-select'}
+# Selects de Imóvel/Contrato: além do form-select, marcam-se para o
+# enhancement de autocomplete por substring (static/js/select-autocomplete.js).
+_sel_autocomplete = {**_sel, 'data-autocomplete': 'true'}
 
 
 def _date_widget():
@@ -170,7 +173,7 @@ class InquilinoForm(forms.ModelForm):
 
 
 class ContratoForm(forms.ModelForm):
-    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel))
+    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel_autocomplete))
 
     class Meta:
         model = Contrato
@@ -227,9 +230,9 @@ FiadorFormSet = inlineformset_factory(
 
 
 class LaudoVistoriaForm(forms.ModelForm):
-    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel))
+    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel_autocomplete))
     # queryset inicial vazio: o __init__ sempre reatribui conforme o imóvel.
-    contrato = ContratoChoiceField(queryset=Contrato.objects.none(), widget=forms.Select(attrs=_sel))
+    contrato = ContratoChoiceField(queryset=Contrato.objects.none(), widget=forms.Select(attrs=_sel_autocomplete))
 
     class Meta:
         model = LaudoVistoria
@@ -309,8 +312,8 @@ TestemunhaFormSet = inlineformset_factory(
 
 
 class LancamentoForm(forms.ModelForm):
-    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel))
-    contrato = ContratoChoiceField(queryset=Contrato.objects.all(), required=False, widget=forms.Select(attrs=_sel))
+    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel_autocomplete))
+    contrato = ContratoChoiceField(queryset=Contrato.objects.all(), required=False, widget=forms.Select(attrs=_sel_autocomplete))
 
     class Meta:
         model = Lancamento
@@ -409,9 +412,9 @@ class DistratoForm(forms.ModelForm):
 
 
 class ReciboForm(forms.ModelForm):
-    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel))
+    imovel = ImovelChoiceField(queryset=Imovel.objects.all(), widget=forms.Select(attrs=_sel_autocomplete))
     # queryset inicial vazio: o __init__ sempre reatribui conforme o imóvel.
-    contrato = ContratoChoiceField(queryset=Contrato.objects.none(), widget=forms.Select(attrs=_sel))
+    contrato = ContratoChoiceField(queryset=Contrato.objects.none(), widget=forms.Select(attrs=_sel_autocomplete))
 
     class Meta:
         model = Recibo
