@@ -179,8 +179,10 @@ def dashboard_imobiliario(request):
     for c in Contrato.objects.filter(status='ativo').select_related('imovel', 'inquilino'):
         if not c.precisa_atencao:
             continue
+        # Mesmo critério de janela de Contrato.precisa_atencao (30 dias antes a 7
+        # dias depois): rotula pela âncora que efetivamente disparou o aviso.
         dias_para_fim = (c.data_fim - hoje).days
-        if 0 <= dias_para_fim <= 14:
+        if -7 <= dias_para_fim <= 30:
             motivo = 'Fim de vigência'
             prazo = f'{dias_para_fim} dia(s)'
         else:
@@ -769,12 +771,14 @@ def contrato_delete(request, pk):
 @login_required
 def contrato_reajuste(request, pk):
     contrato = get_object_or_404(Contrato, pk=pk)
-    if not contrato.precisa_atencao:
+    if not contrato.pode_reajustar:
         messages.warning(request, 'Este contrato não está elegível para reajuste no momento.')
         return redirect('contrato_detail', pk=pk)
     form = ReajusteContratoForm(request.POST or None, instance=contrato)
     if form.is_valid():
-        form.save()
+        contrato = form.save(commit=False)
+        contrato.data_ultimo_reajuste = date.today()
+        contrato.save()
         messages.success(request, 'Valor de cobrança reajustado com sucesso.')
         return redirect('contrato_detail', pk=pk)
     return render(request, 'contratos/reajuste_form.html', {

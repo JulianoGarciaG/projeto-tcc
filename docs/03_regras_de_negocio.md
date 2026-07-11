@@ -147,7 +147,7 @@ Não há filtro de imóvel nem de período na barra superior — a janela usada 
 - Taxa de vacância: `(vagos / total) * 100`
 - Contratos ativos (global, sem filtro)
 - Donut de distribuição por situação do imóvel (ocupado/vago/manutenção) e donut de distribuição por tipo de imóvel
-- **Contratos que Precisam de Atenção:** contratos ativos com `precisa_atencao=True` cujo fim de vigência está a 0–14 dias (motivo "Fim de vigência") ou no aniversário de reajuste (motivo "Aniversário de reajuste"); listados na tabela ao final da página.
+- **Contratos que Precisam de Atenção:** contratos ativos com `precisa_atencao=True`; listados na tabela ao final da página. A elegibilidade depende **somente** do status `ativo` — nenhuma condição de período bloqueia o aviso, então um contrato ativo com fim de vigência **já vencido** aparece normalmente (a estadia pode seguir por renovação sem novo contrato). A janela de disparo vai de **30 dias antes a 7 dias depois** (inclusive) de uma data de referência, para duas âncoras: **fim de vigência** (`data_fim`, motivo "Fim de vigência") e **aniversário anual** de `data_inicio` (motivo "Aniversário de reajuste"). Contratos com renovação registrada continuam usando `data_inicio`/`data_fim` do contrato **original** como referência — a renovação não desloca aniversário nem fim de vigência. Ver [§14 — Indicador de Atenção e Reajuste de Valor](#14-indicador-de-atenção-e-reajuste-de-valor) para a regra completa, incluindo a supressão do aviso de aniversário após o reajuste.
 - **Tempo Médio de Vacância:** média em dias dos períodos de vacância concluídos (`HistoricoStatusImovel` com `status='vago'` e `data_fim` preenchida) iniciados nos últimos 90 dias, respeitando os filtros de tipo/status. Sem períodos concluídos no intervalo, o KPI exibe "—".
 - **Linha do tempo de status:** card sempre visível, com **seletor de imóvel próprio** (`timeline_imovel_id`, independente dos filtros de Tipo/Status — não afeta KPIs/donuts). Sem seleção explícita, mostra o primeiro imóvel cadastrado (ordenado por endereço). Lista o histórico de status (`HistoricoStatusImovel`) do imóvel escolhido dentro da janela de 90 dias, com badges coloridos por status e duração em dias.
 
@@ -253,6 +253,26 @@ Todos os validadores customizados aceitam o valor com ou sem máscara e removem 
 
 - A interface é responsiva e permite que vistoriadores realizem consultas e atualizações diretamente do local do imóvel via dispositivos móveis.
 - A sidebar é ocultada no mobile e acessada via toggle hamburger.
+
+---
+
+## 14. Indicador de Atenção e Reajuste de Valor
+
+Dois predicados de `Contrato` (`imoveis/models.py`) governam este fluxo, compartilhando a mesma **janela de disparo** mas com finalidades distintas:
+
+- **`precisa_atencao`** — o **aviso**: alimenta o badge "Precisa de atenção" (detalhe e listagem de contratos), o filtro `?atencao=sim|nao` da listagem e a tabela "Contratos que Precisam de Atenção" do dashboard.
+- **`pode_reajustar`** — a **elegibilidade do ajuste**: alimenta o botão "Reajustar" no detalhe e o gate da view `contrato_reajuste` (que bloqueia o POST de `valor_vigente` quando `not pode_reajustar`).
+
+**Janela de disparo (comum aos dois):** 30 dias **antes** a 7 dias **depois** (inclusive nos dois extremos) de uma data de referência, ou seja `-7 <= (referência - hoje).days <= 30`. Duas âncoras: (1) **fim de vigência** = `data_fim`; (2) **aniversário anual** de `data_inicio` (ocorrência mais próxima de hoje; `29/02` em ano não-bissexto recua para `28/02`). Basta uma âncora cair na janela.
+
+**Elegibilidade base (ambos):**
+- **Somente status** — o contrato precisa estar `ativo`. Nenhuma condição de período bloqueia: contrato ativo cujo **fim de vigência já venceu** (fora do período do documento original) recebe aviso e permite ajuste normalmente. Isso cobre estadias mantidas por renovação, que juridicamente dispensam novo contrato para até 30 meses.
+- **Renovação não desloca a referência** — as properties leem apenas `data_inicio`/`data_fim` do contrato **original**; uma `RenovacaoContrato` registrada não altera aniversário nem fim de vigência para efeito desta regra.
+- Contrato com status diferente de `ativo` (encerrado, distratado etc.) nunca é elegível, independentemente da data.
+
+**Divergência após o reajuste (aniversário anual):** realizar o reajuste carimba `data_ultimo_reajuste = hoje` (na view `contrato_reajuste`). Quando esse carimbo cai **dentro da janela do aniversário atual**, o aviso da âncora de aniversário é **suprimido** (`precisa_atencao` → `False`), mas `pode_reajustar` permanece `True` enquanto a janela estiver aberta — o botão "Reajustar" continua disponível para novos ajustes no mesmo ciclo. A supressão vale **só para o aniversário**: a âncora de **fim de vigência** não é afetada pelo reajuste e segue avisando até sair da janela. No ciclo seguinte (próximo aniversário), como `data_ultimo_reajuste` do ano anterior cai fora da nova janela, o aviso **reaparece** normalmente.
+
+O valor contratual original (`valor_mensal`) nunca muda no reajuste — só `valor_vigente` é gravado, e `valor_cobranca` passa a devolvê-lo; o PDF jurídico continua exibindo `valor_mensal`.
 
 ---
 

@@ -13,7 +13,7 @@
   <a href="{{ contrato.documento_gerado.url }}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i> Contrato Gerado (PDF)</a>
   {% endif %}
   {% if contrato.status == 'ativo' %}
-  {% if contrato.precisa_atencao %}
+  {% if contrato.pode_reajustar %}
   <a href="{% url 'contrato_reajuste' contrato.pk %}" class="btn btn-outline-warning btn-sm"><i class="bi bi-graph-up-arrow me-1"></i> Reajustar</a>
   {% endif %}
   {% if not renovacao %}

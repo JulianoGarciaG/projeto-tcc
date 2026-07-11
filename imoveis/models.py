@@ -213,6 +213,8 @@ class Contrato(IdentificavelMixin, models.Model):
     valor_mensal = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Valor Mensal')
     valor_vigente = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                                         verbose_name='Valor de Cobrança Vigente')
+    data_ultimo_reajuste = models.DateField(null=True, blank=True,
+                                            verbose_name='Data do Último Reajuste')
     dia_vencimento = models.PositiveSmallIntegerField(
         default=10, verbose_name='Dia de Vencimento',
         validators=[MinValueValidator(1), MaxValueValidator(31)])
@@ -266,15 +268,55 @@ class Contrato(IdentificavelMixin, models.Model):
     def valor_cobranca(self):
         return self.valor_vigente if self.valor_vigente is not None else self.valor_mensal
 
+    @staticmethod
+    def _na_janela(ref, hoje):
+        # Janela de 30 dias antes a 7 dias depois de `ref`, inclusive nos extremos.
+        return -7 <= (ref - hoje).days <= 30
+
+    def _aniversario_na_janela(self, hoje):
+        # Ocorrência do aniversário anual de data_inicio cujo intervalo contém hoje,
+        # ou None. 29/02 em ano não-bissexto recua para 28/02.
+        mes, dia = self.data_inicio.month, self.data_inicio.day
+        for ano in (hoje.year - 1, hoje.year, hoje.year + 1):
+            try:
+                aniversario = date(ano, mes, dia)
+            except ValueError:
+                aniversario = date(ano, mes, 28)
+            if self._na_janela(aniversario, hoje):
+                return aniversario
+        return None
+
     @property
-    def precisa_atencao(self):
+    def pode_reajustar(self):
+        # Elegibilidade para o ajuste de valor: contrato ativo E dentro da janela de
+        # ao menos uma âncora (fim de vigência OU aniversário anual). NÃO depende de já
+        # ter havido reajuste — a opção permanece disponível dentro da janela mesmo
+        # depois do aviso sumir. Renovação não desloca as datas de referência (lê apenas
+        # data_inicio/data_fim do contrato original).
         if self.status != 'ativo':
             return False
         hoje = date.today()
-        if 0 <= (self.data_fim - hoje).days <= 14:
+        if self._na_janela(self.data_fim, hoje):
             return True
-        return ((self.data_inicio.month, self.data_inicio.day) == (hoje.month, hoje.day)
-                and self.data_inicio.year != hoje.year)
+        return self._aniversario_na_janela(hoje) is not None
+
+    @property
+    def precisa_atencao(self):
+        # Aviso (badge/filtro/dashboard). Mesma janela de pode_reajustar, MAS a âncora de
+        # aniversário anual é suprimida se o reajuste deste ciclo já foi realizado
+        # (data_ultimo_reajuste dentro da janela do aniversário atual). Fim de vigência
+        # não é afetado pelo reajuste — segue avisando até sair da janela.
+        if self.status != 'ativo':
+            return False
+        hoje = date.today()
+        if self._na_janela(self.data_fim, hoje):
+            return True
+        aniversario = self._aniversario_na_janela(hoje)
+        if aniversario is None:
+            return False
+        reajuste = self.data_ultimo_reajuste
+        ja_reajustado_no_ciclo = reajuste is not None and self._na_janela(aniversario, reajuste)
+        return not ja_reajustado_no_ciclo
 
     @property
     def dependentes_cascata(self):

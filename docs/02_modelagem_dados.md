@@ -165,7 +165,9 @@ Contrato de locação entre inquilino e imóvel. Campos de documentos são anexa
 | `status` | CharField (20) | — | Default `ativo`; Choices abaixo |
 | `data_inicio` | DateField | ✓ | — |
 | `data_fim` | DateField | ✓ | — |
-| `valor_mensal` | DecimalField (10,2) | ✓ | Valor de aluguel vigente do imóvel |
+| `valor_mensal` | DecimalField (10,2) | ✓ | Valor contratual original; nunca alterado pelo reajuste; sempre exibido no PDF jurídico |
+| `valor_vigente` | DecimalField (10,2) | — | Valor de cobrança após reajuste; `valor_cobranca` devolve este quando preenchido, senão `valor_mensal` |
+| `data_ultimo_reajuste` | DateField | — | Data do último reajuste (carimbada pela view `contrato_reajuste`); usada para suprimir o aviso de aniversário do ciclo atual — ver [regras §14](03_regras_de_negocio.md#14-indicador-de-atenção-e-reajuste-de-valor) |
 | `dia_vencimento` | PositiveSmallIntegerField | — | Default: 10; `MinValueValidator(1)`/`MaxValueValidator(31)` |
 | `comprovante_renda` | FileField | — | `comprovantes_renda/` — somente PF; anexado via `contrato_anexar_documento` |
 | `contrato_social` | FileField | — | `contratos_sociais/` — somente PJ; anexado via `contrato_anexar_documento` |

@@ -23,7 +23,7 @@ from .identidade import nome_arquivo
 from .models import (
     Contrato, Fiador, FotoItemVistoria, HistoricoStatusImovel, Imovel, Inquilino,
     ItemVistoria, Lancamento, LaudoVistoria, Notificacao, NotificacaoUsuario,
-    Proprietario, Recibo, TestemunhaLaudo,
+    Proprietario, Recibo, RenovacaoContrato, TestemunhaLaudo,
 )
 
 
@@ -1182,7 +1182,33 @@ class ContratoReajusteTests(TestCase):
 
     def test_precisa_atencao_false_fim_de_vigencia_distante(self):
         hoje = date.today()
+        # 60 dias antes do fim de vigência está fora da janela (que abre em -30).
+        self.contrato.data_inicio = hoje - timedelta(days=305)
+        self.contrato.data_fim = hoje + timedelta(days=60)
+        self.contrato.save()
+        self.assertFalse(self.contrato.precisa_atencao)
+
+    def test_precisa_atencao_true_no_limite_30_dias_antes(self):
+        # Extremo inclusivo: exatamente 30 dias antes do fim de vigência já dispara.
+        hoje = date.today()
+        self.contrato.data_inicio = hoje - timedelta(days=335)
         self.contrato.data_fim = hoje + timedelta(days=30)
+        self.contrato.save()
+        self.assertTrue(self.contrato.precisa_atencao)
+
+    def test_precisa_atencao_true_ate_7_dias_depois_do_vencimento(self):
+        # Contrato ativo com data_fim já vencida há 7 dias ainda exibe aviso.
+        hoje = date.today()
+        self.contrato.data_inicio = hoje - timedelta(days=372)
+        self.contrato.data_fim = hoje - timedelta(days=7)
+        self.contrato.save()
+        self.assertTrue(self.contrato.precisa_atencao)
+
+    def test_precisa_atencao_false_apos_8_dias_do_vencimento(self):
+        # 8 dias depois do vencimento já passou da janela (fecha em +7).
+        hoje = date.today()
+        self.contrato.data_inicio = hoje - timedelta(days=190)
+        self.contrato.data_fim = hoje - timedelta(days=8)
         self.contrato.save()
         self.assertFalse(self.contrato.precisa_atencao)
 
@@ -1192,6 +1218,38 @@ class ContratoReajusteTests(TestCase):
         self.contrato.data_fim = date(hoje.year + 5, hoje.month, hoje.day)
         self.contrato.save()
         self.assertTrue(self.contrato.precisa_atencao)
+
+    def test_precisa_atencao_true_no_aniversario_dentro_da_janela(self):
+        # Aniversário 10 dias à frente (âncora de ciclo de índice), fim de vigência longe.
+        hoje = date.today()
+        aniversario = hoje + timedelta(days=10)
+        self.contrato.data_inicio = date(hoje.year - 1, aniversario.month, aniversario.day)
+        self.contrato.data_fim = date(hoje.year + 5, aniversario.month, aniversario.day)
+        self.contrato.save()
+        self.assertTrue(self.contrato.precisa_atencao)
+
+    def test_precisa_atencao_false_aniversario_e_fim_de_vigencia_longe(self):
+        # Ambas as âncoras fora da janela → sem aviso.
+        hoje = date.today()
+        distante = hoje + timedelta(days=120)
+        self.contrato.data_inicio = date(hoje.year - 2, distante.month, distante.day)
+        self.contrato.data_fim = hoje + timedelta(days=120)
+        self.contrato.save()
+        self.assertFalse(self.contrato.precisa_atencao)
+
+    def test_renovacao_nao_desloca_referencia(self):
+        # Renovação recente NÃO puxa a data de referência: as âncoras continuam sendo
+        # data_inicio/data_fim do contrato original, ambas longe da janela → sem aviso.
+        hoje = date.today()
+        distante = hoje + timedelta(days=120)
+        self.contrato.data_inicio = date(hoje.year - 2, distante.month, distante.day)
+        self.contrato.data_fim = hoje + timedelta(days=120)
+        self.contrato.save()
+        RenovacaoContrato.objects.create(
+            contrato=self.contrato, tipo='12_30', data_renovacao=hoje,
+        )
+        self.contrato.refresh_from_db()
+        self.assertFalse(self.contrato.precisa_atencao)
 
     def test_precisa_atencao_false_quando_inativo(self):
         hoje = date.today()
@@ -1226,6 +1284,77 @@ class ContratoReajusteTests(TestCase):
         self.assertEqual(self.contrato.valor_vigente, Decimal('1800.00'))
         # valor contratual original nunca muda
         self.assertEqual(self.contrato.valor_mensal, Decimal('1500.00'))
+
+    def test_view_permite_reajuste_contrato_vencido(self):
+        # Contrato ativo com data_fim vencida (dentro da janela de +7) permite ajuste.
+        hoje = date.today()
+        self.contrato.data_inicio = hoje - timedelta(days=370)
+        self.contrato.data_fim = hoje - timedelta(days=5)
+        self.contrato.save()
+        resp = self.client.post(reverse('contrato_reajuste', args=[self.contrato.pk]), {
+            'valor_vigente': '1800,00',
+        })
+        self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
+        self.contrato.refresh_from_db()
+        self.assertEqual(self.contrato.valor_vigente, Decimal('1800.00'))
+
+    def _colocar_no_aniversario(self, dias_ate_aniversario=10):
+        # Posiciona o contrato dentro da janela do aniversário anual, com o fim de
+        # vigência bem longe (para isolar a âncora de aniversário).
+        hoje = date.today()
+        aniversario = hoje + timedelta(days=dias_ate_aniversario)
+        self.contrato.data_inicio = date(hoje.year - 1, aniversario.month, aniversario.day)
+        self.contrato.data_fim = date(hoje.year + 5, aniversario.month, aniversario.day)
+        self.contrato.save()
+
+    def test_aviso_aniversario_some_apos_reajuste(self):
+        # Reajuste dentro do ciclo do aniversário → badge/aviso desaparece.
+        self._colocar_no_aniversario()
+        self.assertTrue(self.contrato.precisa_atencao)
+        self.contrato.data_ultimo_reajuste = date.today()
+        self.contrato.save()
+        self.assertFalse(self.contrato.precisa_atencao)
+
+    def test_reajuste_permanece_disponivel_apos_aviso_sumir(self):
+        # Mesmo com o aviso oculto, a opção de reajuste segue disponível dentro da janela.
+        self._colocar_no_aniversario()
+        self.contrato.data_ultimo_reajuste = date.today()
+        self.contrato.save()
+        self.assertFalse(self.contrato.precisa_atencao)
+        self.assertTrue(self.contrato.pode_reajustar)
+        # A view continua permitindo o POST (não redireciona por inelegibilidade).
+        resp = self.client.post(reverse('contrato_reajuste', args=[self.contrato.pk]), {
+            'valor_vigente': '2000,00',
+        })
+        self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
+        self.contrato.refresh_from_db()
+        self.assertEqual(self.contrato.valor_vigente, Decimal('2000.00'))
+
+    def test_reajuste_carimba_data_ultimo_reajuste(self):
+        self._colocar_no_aniversario()
+        self.assertIsNone(self.contrato.data_ultimo_reajuste)
+        self.client.post(reverse('contrato_reajuste', args=[self.contrato.pk]), {
+            'valor_vigente': '2000,00',
+        })
+        self.contrato.refresh_from_db()
+        self.assertEqual(self.contrato.data_ultimo_reajuste, date.today())
+
+    def test_aviso_fim_de_vigencia_nao_some_apos_reajuste(self):
+        # A supressão vale só para o aniversário; fim de vigência segue avisando.
+        hoje = date.today()
+        self.contrato.data_inicio = hoje - timedelta(days=365)
+        self.contrato.data_fim = hoje + timedelta(days=5)
+        self.contrato.data_ultimo_reajuste = hoje
+        self.contrato.save()
+        self.assertTrue(self.contrato.precisa_atencao)
+
+    def test_aviso_aniversario_reaparece_no_proximo_ciclo(self):
+        # Reajuste de um ciclo anterior não esconde o aviso do aniversário atual.
+        self._colocar_no_aniversario()
+        # Reajuste feito ~1 ano atrás (fora da janela do aniversário deste ano).
+        self.contrato.data_ultimo_reajuste = date.today() - timedelta(days=365)
+        self.contrato.save()
+        self.assertTrue(self.contrato.precisa_atencao)
 
     def test_pdf_continua_usando_valor_mensal_apos_reajuste(self):
         self.contrato.valor_vigente = Decimal('1800.00')
