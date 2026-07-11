@@ -43,19 +43,29 @@ Perfis de acesso (Group do Django, atribuídos somente via `/admin/` — ver [do
 
 | Camada | Tecnologia |
 |---|---|
-| Back-end principal | Python + Django |
-| Banco de dados (produção) | PostgreSQL |
+| Back-end principal | Python 3.12 + Django 6.0 |
+| Banco de dados (produção) | PostgreSQL (Render gerenciado) |
 | Banco de dados (desenvolvimento) | SQLite |
-| Storage de uploads (produção) | Cloudflare R2 (compatível S3, via django-storages) |
-| APIs complementares | FastAPI (serviços assíncronos de alta performance) |
-| Arquitetura de API | RESTful (GET, POST, PUT, DELETE) |
-| Infraestrutura | Render (web service + PostgreSQL gerenciado) |
+| Storage de uploads (produção) | Cloudflare R2 (compatível S3, via django-storages/boto3) |
+| Storage de uploads (desenvolvimento) | Disco local (`FileSystemStorage`) |
+| Geração de PDF | xhtml2pdf (+ num2words para valores por extenso) |
+| Frontend | Templates Django + CSS estático (sem build system); Bootstrap 5.3, Flatpickr, IMask, Chart.js via CDN |
+| Infraestrutura | Render (web service + PostgreSQL gerenciado); estáticos via WhiteNoise |
 
 ### Dependências principais
 ```
-django>=5.2,<7.0
+django>=5.2,<7.0        # Django 6.0 em uso
 python-dotenv>=1.0.0
 Pillow>=10.0.0
+xhtml2pdf>=0.2.16
+num2words>=0.5.13
+
+# Produção (Render + Cloudflare R2)
+gunicorn>=21.2.0
+whitenoise>=6.6.0
+psycopg2-binary>=2.9.9
+django-storages>=1.14.2
+boto3>=1.34.0
 ```
 
 ---
@@ -63,9 +73,9 @@ Pillow>=10.0.0
 ## 6. Arquitetura e Integração
 
 - O sistema utiliza recursos nativos do Django: **ORM**, **sistema de autenticação** e **painel administrativo**, com foco na regra de negócio.
-- O **FastAPI** é utilizado para prover serviços adicionais de alta performance e dependências assíncronas quando necessário, integrando-se à base de dados MySQL.
+- É uma aplicação Django monolítica de **app único** (`imoveis`), servindo templates renderizados no servidor — sem SPA, sem API externa e sem serviços auxiliares.
 - A aplicação garante **integridade, qualidade e segurança dos dados**, alinhando-se às diretrizes de governança de dados.
-- O banco de dados relacional MySQL garante **normalização dos dados** e integridade referencial.
+- O banco de dados relacional (**PostgreSQL** em produção, **SQLite** em desenvolvimento) garante **normalização dos dados** e integridade referencial via constraints e `ForeignKey` (`PROTECT`/`CASCADE`/`SET_NULL`).
 
 ---
 

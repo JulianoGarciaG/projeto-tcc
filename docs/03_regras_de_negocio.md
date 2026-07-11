@@ -134,7 +134,7 @@ removido — sem bloquear a exclusão.
   - **Anexos manuais:** `LaudoVistoria.arquivo` (assinado), `Lancamento.comprovante`, `Contrato.recibo_chaves`, `Contrato.comprovante_anual`.
 - Um documento só aparece na central GED se o campo de arquivo **não estiver vazio**.
 - **Sem histórico de versões:** cada geração de PDF (botão "Regerar PDF") sobrescreve o arquivo anterior — tanto o registro no banco quanto o arquivo físico no storage (`imoveis/pdf.py:save_pdf_to_field` apaga o arquivo antigo antes de salvar o novo). Não há como consultar PDFs gerados anteriormente; para "corrigir" um documento, basta gerar de novo.
-- **Storage plugável (`STORAGE_BACKEND`):** o armazenamento de arquivos usa a config `STORAGES` do Django 4.2+ (`core/settings.py`), controlada pela variável de ambiente `STORAGE_BACKEND`, seguindo o mesmo padrão já usado para `DB_ENGINE`: `filesystem` (default) → `FileSystemStorage`; `s3` → preparado, mas não ativado (setar sem as libs instaladas levanta `ImproperlyConfigured`). `boto3`/`django-storages` não foram adicionados ao projeto — apenas a arquitetura está pronta.
+- **Storage plugável (`STORAGE_BACKEND`):** o armazenamento de arquivos usa a config `STORAGES` do Django 4.2+ (`core/settings.py`), controlada pela variável de ambiente `STORAGE_BACKEND`, seguindo o mesmo padrão já usado para `DB_ENGINE`: `filesystem` (default, dev) → `FileSystemStorage`; `s3` (produção) → `storages.backends.s3.S3Storage`, apontando para **Cloudflare R2** (compatível com a API S3) via as credenciais `AWS_*` do `.env`. `boto3` e `django-storages` são dependências do projeto (`requirements.txt`) e o backend S3 está ativo em produção.
 
 ---
 

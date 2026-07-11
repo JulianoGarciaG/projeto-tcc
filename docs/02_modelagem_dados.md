@@ -506,4 +506,4 @@ Histórico persistido, por usuário, das mensagens que o sistema já emite via `
 | Distrato | `recibo_chaves` | `distratos/recibos/` |
 | Recibo | `arquivo` | `recibos/` |
 
-> Todos os `FileField` usam o storage `default` do `STORAGES` (Django 4.2+), plugável via `STORAGE_BACKEND` no `.env` (`filesystem` default; `s3` preparado, mas não ativado). Não há mais versionamento de PDFs gerados: cada geração sobrescreve o arquivo anterior no campo legado (`Contrato.documento_gerado`, `LaudoVistoria.documento_gerado`, `Recibo.arquivo`), tanto no banco quanto no storage físico.
+> Todos os `FileField` usam o storage `default` do `STORAGES` (Django 4.2+), plugável via `STORAGE_BACKEND` no `.env` (`filesystem` default em dev; `s3` em produção, apontando para Cloudflare R2 via `django-storages`/`boto3`). Não há versionamento de PDFs gerados: cada geração sobrescreve o arquivo anterior no campo legado (`Contrato.documento_gerado`, `LaudoVistoria.documento_gerado`, `Recibo.arquivo`), tanto no banco quanto no storage físico.
