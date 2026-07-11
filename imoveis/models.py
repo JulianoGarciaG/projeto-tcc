@@ -329,6 +329,31 @@ class Contrato(IdentificavelMixin, models.Model):
         return [(label, n) for label, n in pares if n > 0]
 
 
+class DocumentoContrato(models.Model):
+    """Anexo pessoal avulso do contrato (documentação diversa do inquilino/fiador).
+
+    Diferente dos 4 campos de documento fixos do Contrato (um FileField cada),
+    este model permite múltiplos arquivos por contrato — uma linha por arquivo,
+    de formatos variados. Anexado/removido individualmente pela tela de detalhe
+    (views contrato_documento_pessoal_upload/_delete), nunca no form.
+    """
+    contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE,
+                                 related_name='documentos_pessoais')
+    arquivo = models.FileField(upload_to='contratos/documentos_pessoais/',
+                               verbose_name='Arquivo')
+    nome_original = models.CharField(max_length=255, blank=True,
+                                     verbose_name='Nome do arquivo')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Documento Pessoal do Contrato'
+        verbose_name_plural = 'Documentos Pessoais do Contrato'
+        ordering = ['criado_em', 'pk']
+
+    def __str__(self):
+        return f'{self.nome_original or self.arquivo.name} (Contrato #{self.contrato_id})'
+
+
 class Fiador(models.Model):
     contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='fiadores')
     nome = models.CharField(max_length=200)

@@ -3,7 +3,7 @@ from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Fiador, Notificacao, RenovacaoContrato, Distrato,
     Recibo, ComodoTemplate, ItemVistoriaTemplate, ItemVistoria, TestemunhaLaudo,
-    NotificacaoUsuario, HistoricoStatusImovel,
+    NotificacaoUsuario, HistoricoStatusImovel, DocumentoContrato,
 )
 
 
@@ -37,12 +37,17 @@ class FiadorInline(admin.TabularInline):
     extra = 0
 
 
+class DocumentoContratoInline(admin.TabularInline):
+    model = DocumentoContrato
+    extra = 0
+
+
 @admin.register(Contrato)
 class ContratoAdmin(admin.ModelAdmin):
     list_display = ['pk', 'inquilino', 'imovel', 'tipo_contrato', 'status', 'data_inicio', 'data_fim', 'valor_mensal']
     list_filter = ['status', 'tipo_contrato']
     search_fields = ['inquilino__nome', 'imovel__endereco']
-    inlines = [FiadorInline]
+    inlines = [FiadorInline, DocumentoContratoInline]
 
 
 @admin.register(Notificacao)

@@ -170,3 +170,15 @@ Reverte o versionamento imutável de PDFs introduzido na **Rodada 4** (`redesign
 - **Fora de escopo:** a arquitetura de storage plugável (`STORAGES`/`STORAGE_BACKEND`, S3 preparado não ativado) não foi tocada — é ortogonal a essa mudança e continua usada pelos anexos manuais. Anexos manuais não-versionados (`comprovante_renda`, `contrato_social`, `recibo_chaves`, `comprovante_anual`, `laudo.arquivo` assinado) também não mudaram.
 
 `docs/05_ged_documentos_versionados.md` foi descontinuado (conteúdo vigente sobre GED e storage plugável passou para `docs/03_regras_de_negocio.md` §8). A entrada da Rodada 4 acima **não foi reescrita** — registra o que foi entregue naquela época; esta entrada documenta a reversão.
+
+## Documentos Pessoais do Contrato (anexo múltiplo)
+
+Os contratos só tinham os quatro campos de documento fixos (`comprovante_renda`/`contrato_social`/`recibo_chaves`/`comprovante_anual`), cada um aceitando **um** arquivo. Faltava espaço para documentação pessoal diversa do inquilino/fiador — vários arquivos, formatos variados. Esta rodada introduz o primeiro padrão **multi-arquivo por linha** do sistema:
+
+- **Model novo `DocumentoContrato`** (migração `0023_documentocontrato`): FK `CASCADE` para `Contrato` (`related_name='documentos_pessoais'`), uma linha por arquivo, com `nome_original` guardando o nome do upload como rótulo. Ver `docs/02_modelagem_dados.md` §2.5.1.
+- **Upload múltiplo sem formset:** input único `type="file" multiple` no detalhe do contrato → `contrato_documento_pessoal_upload` itera `request.FILES.getlist('arquivos')` e cria uma linha por arquivo. Optou-se por iterar o `getlist` em vez de um `FileField` custom multi-arquivo em formset — evita a armadilha do `has_changed` (registrada na memória do projeto) e mantém o mesmo padrão "upload no detail" dos anexos fixos.
+- **Remoção individual:** `contrato_documento_pessoal_delete` apaga só o arquivo físico + registro da linha alvo (`arquivo.delete(save=False)`), validando que o `doc_pk` pertence ao contrato da rota (404 caso contrário) — os demais anexos ficam intactos.
+- **Sem GED:** decidido manter os documentos pessoais apenas no detalhe do contrato (fora da central `/documentos/`), fiel ao escopo pedido. Tolerância de formato idêntica aos demais anexos.
+- Inline `DocumentoContratoInline` no admin do `Contrato`; testes em `ContratoDocumentoTests` (upload múltiplo, upload vazio, delete individual preservando o resto, 404 cross-contrato).
+
+Documentado em `docs/02_modelagem_dados.md` (§2.5.1 e diagrama) e `docs/03_regras_de_negocio.md` §5.1.

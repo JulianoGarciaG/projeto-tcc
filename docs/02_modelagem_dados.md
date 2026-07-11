@@ -11,6 +11,7 @@ Proprietario
             ├── FotoImovel (CASCADE)
             ├── Contrato (PROTECT)
             │       ├── Fiador (CASCADE)
+            │       ├── DocumentoContrato (CASCADE) [FK, N por contrato — anexos pessoais]
             │       ├── Lancamento (SET_NULL) [contrato opcional, origem do ganho/despesa]
             │       ├── LaudoVistoria (PROTECT) [contrato obrigatório]
             │       ├── Recibo (PROTECT)
@@ -153,7 +154,7 @@ Dados cadastrais do locatário.
 ---
 
 ### 2.5 Contrato
-Contrato de locação entre inquilino e imóvel. Campos de documentos são anexados individualmente pela tela de detalhe (ver Regras de Negócio, seção 5).
+Contrato de locação entre inquilino e imóvel. Os quatro campos de documento fixos (`comprovante_renda`/`contrato_social`/`recibo_chaves`/`comprovante_anual`) e os anexos pessoais múltiplos (`DocumentoContrato`, ver 2.5.1) são anexados individualmente pela tela de detalhe (ver Regras de Negócio, seção 5).
 
 | Campo | Tipo | Obrigatório | Observações |
 |---|---|---|---|
@@ -185,6 +186,21 @@ Contrato de locação entre inquilino e imóvel. Campos de documentos são anexa
 `ativo`, `encerrado`, `rescindido`
 
 **Ordenação:** `-data_inicio`
+
+---
+
+### 2.5.1 DocumentoContrato
+Anexo pessoal avulso do contrato — documentação diversa do inquilino/fiador (RG, CPF, comprovantes etc.). Diferente dos quatro campos de documento fixos do `Contrato` (um `FileField` cada), permite **múltiplos arquivos por contrato**: uma linha por arquivo, formatos variados. Anexado (upload múltiplo, input `multiple`) e removido **individualmente** pela tela de detalhe (views `contrato_documento_pessoal_upload` / `contrato_documento_pessoal_delete`) — nunca pelo form de create/edit. Remover uma linha apaga só aquele arquivo (físico + registro), sem afetar os demais.
+
+| Campo | Tipo | Obrigatório | Observações |
+|---|---|---|---|
+| `id` | BigAutoField | — | PK automática |
+| `contrato` | ForeignKey → Contrato | ✓ | CASCADE, `related_name='documentos_pessoais'` |
+| `arquivo` | FileField | ✓ | `contratos/documentos_pessoais/` |
+| `nome_original` | CharField (255) | — | Nome do arquivo enviado (rótulo exibido na lista) |
+| `criado_em` | DateTimeField | — | Auto now add |
+
+**Ordenação:** `criado_em`, `pk`
 
 ---
 
@@ -473,6 +489,7 @@ Histórico persistido, por usuário, das mensagens que o sistema já emite via `
 | Contrato | `recibo_chaves` | `contratos/recibo_chaves/` |
 | Contrato | `comprovante_anual` | `contratos/comprovante_anual/` |
 | Contrato | `documento_gerado` | `contratos/gerados/` |
+| DocumentoContrato | `arquivo` | `contratos/documentos_pessoais/` |
 | Fiador | `certidao_onus` | `certidoes/` |
 | LaudoVistoria | `arquivo` | `laudos/` |
 | LaudoVistoria | `documento_gerado` | `laudos/gerados/` |

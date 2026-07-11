@@ -21,9 +21,9 @@ from .forms import (
 )
 from .identidade import nome_arquivo
 from .models import (
-    Contrato, Fiador, FotoItemVistoria, HistoricoStatusImovel, Imovel, Inquilino,
-    ItemVistoria, Lancamento, LaudoVistoria, Notificacao, NotificacaoUsuario,
-    Proprietario, Recibo, RenovacaoContrato, TestemunhaLaudo,
+    Contrato, DocumentoContrato, Fiador, FotoItemVistoria, HistoricoStatusImovel,
+    Imovel, Inquilino, ItemVistoria, Lancamento, LaudoVistoria, Notificacao,
+    NotificacaoUsuario, Proprietario, Recibo, RenovacaoContrato, TestemunhaLaudo,
 )
 
 
@@ -1015,6 +1015,54 @@ class ContratoDocumentoTests(TestCase):
         self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
         self.contrato.refresh_from_db()
         self.assertFalse(self.contrato.recibo_chaves)
+
+    def test_documentos_pessoais_upload_multiplo(self):
+        a = SimpleUploadedFile('rg.pdf', b'%PDF-1.4 a', 'application/pdf')
+        b = SimpleUploadedFile('cpf.jpg', PNG_1X1, 'image/jpeg')
+        resp = self.client.post(
+            reverse('contrato_documento_pessoal_upload', args=[self.contrato.pk]),
+            {'arquivos': [a, b]})
+        self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
+        docs = self.contrato.documentos_pessoais.all()
+        self.assertEqual(docs.count(), 2)
+        self.assertEqual({d.nome_original for d in docs}, {'rg.pdf', 'cpf.jpg'})
+        for d in docs:
+            d.arquivo.delete(save=False)
+
+    def test_documentos_pessoais_upload_sem_arquivo(self):
+        resp = self.client.post(
+            reverse('contrato_documento_pessoal_upload', args=[self.contrato.pk]), {})
+        self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
+        self.assertEqual(self.contrato.documentos_pessoais.count(), 0)
+
+    def test_documento_pessoal_delete_individual(self):
+        a = SimpleUploadedFile('a.pdf', b'%PDF-1.4 a', 'application/pdf')
+        b = SimpleUploadedFile('b.pdf', b'%PDF-1.4 b', 'application/pdf')
+        self.client.post(
+            reverse('contrato_documento_pessoal_upload', args=[self.contrato.pk]),
+            {'arquivos': [a, b]})
+        alvo, restante = self.contrato.documentos_pessoais.all()
+        resp = self.client.post(
+            reverse('contrato_documento_pessoal_delete', args=[self.contrato.pk, alvo.pk]))
+        self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
+        docs = self.contrato.documentos_pessoais.all()
+        self.assertEqual([d.pk for d in docs], [restante.pk])
+        restante.arquivo.delete(save=False)
+
+    def test_documento_pessoal_delete_de_outro_contrato_404(self):
+        outro = Contrato.objects.create(
+            imovel=self.imovel, inquilino=self.inquilino, tipo_contrato='PF',
+            data_inicio=date(2025, 1, 1), data_fim=date(2026, 1, 1),
+            valor_mensal=Decimal('900.00'), dia_vencimento=5,
+        )
+        doc = DocumentoContrato.objects.create(
+            contrato=outro, arquivo=SimpleUploadedFile('x.pdf', b'%PDF-1.4', 'application/pdf'),
+            nome_original='x.pdf')
+        resp = self.client.post(
+            reverse('contrato_documento_pessoal_delete', args=[self.contrato.pk, doc.pk]))
+        self.assertEqual(resp.status_code, 404)
+        self.assertTrue(DocumentoContrato.objects.filter(pk=doc.pk).exists())
+        doc.arquivo.delete(save=False)
 
 
 class ExtensoTests(TestCase):

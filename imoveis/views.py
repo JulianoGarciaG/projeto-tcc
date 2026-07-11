@@ -13,7 +13,7 @@ from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
     FotoImovel, Notificacao, Distrato,
     Recibo, ItemVistoriaTemplate, ItemVistoria, FotoItemVistoria,
-    HistoricoStatusImovel,
+    HistoricoStatusImovel, DocumentoContrato,
 )
 from .forms import (
     ImovelForm, FotoImovelFormSet, ProprietarioForm, InquilinoForm,
@@ -662,7 +662,9 @@ def contrato_list(request):
 
 @login_required
 def contrato_detail(request, pk):
-    contrato = get_object_or_404(Contrato.objects.select_related('imovel', 'inquilino'), pk=pk)
+    contrato = get_object_or_404(
+        Contrato.objects.select_related('imovel', 'inquilino')
+        .prefetch_related('documentos_pessoais'), pk=pk)
     lancamentos = contrato.lancamentos.order_by('-data_vencimento')
     laudos = contrato.laudos.order_by('-data')
     fiadores = contrato.fiadores.all()
@@ -744,6 +746,38 @@ def contrato_anexar_documento(request, pk, campo):
             messages.success(request, 'Documento anexado ao contrato com sucesso.')
         else:
             messages.error(request, 'Selecione um arquivo para anexar.')
+    return redirect('contrato_detail', pk=pk)
+
+
+@login_required
+def contrato_documento_pessoal_upload(request, pk):
+    """Anexo de múltiplos documentos pessoais avulsos ao contrato, enviados a
+    partir do detail. Uma linha DocumentoContrato por arquivo; aceita vários de
+    uma vez (input multiple) e formatos variados, como os demais anexos."""
+    contrato = get_object_or_404(Contrato, pk=pk)
+    if request.method == 'POST':
+        arquivos = request.FILES.getlist('arquivos')
+        if arquivos:
+            for arquivo in arquivos:
+                DocumentoContrato.objects.create(
+                    contrato=contrato, arquivo=arquivo, nome_original=arquivo.name)
+            plural = 's' if len(arquivos) > 1 else ''
+            messages.success(request,
+                             f'{len(arquivos)} documento{plural} anexado{plural} ao contrato.')
+        else:
+            messages.error(request, 'Selecione ao menos um arquivo para anexar.')
+    return redirect('contrato_detail', pk=pk)
+
+
+@login_required
+def contrato_documento_pessoal_delete(request, pk, doc_pk):
+    """Remove um documento pessoal individual do contrato, sem afetar os demais."""
+    contrato = get_object_or_404(Contrato, pk=pk)
+    documento = get_object_or_404(DocumentoContrato, pk=doc_pk, contrato=contrato)
+    if request.method == 'POST':
+        documento.arquivo.delete(save=False)
+        documento.delete()
+        messages.success(request, 'Documento pessoal removido do contrato.')
     return redirect('contrato_detail', pk=pk)
 
 

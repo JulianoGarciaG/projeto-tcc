@@ -75,6 +75,17 @@ Os documentos do contrato variam conforme o `tipo_contrato`:
 
 ---
 
+## 5.1. Documentos Pessoais do Contrato (anexo múltiplo)
+
+Além dos quatro campos de documento fixos (1 arquivo cada), o contrato aceita anexos pessoais avulsos em quantidade livre (`DocumentoContrato`, ver [modelagem 2.5.1](02_modelagem_dados.md#251-documentocontrato)) — documentação diversa do inquilino/fiador, de formatos variados.
+
+- **Anexar (upload múltiplo):** bloco "Documentos Pessoais" na seção Documentos do detalhe. Um único input `type="file" multiple` envia vários arquivos de uma vez para `contrato_documento_pessoal_upload`, que cria uma linha `DocumentoContrato` por arquivo (guardando o nome original como rótulo). Sem arquivo selecionado → mensagem de erro, nada é criado.
+- **Listar:** cada arquivo aparece como um item da lista, com link "Ver arquivo" e botão "Remover".
+- **Remover (individual):** `contrato_documento_pessoal_delete` apaga o arquivo físico (`arquivo.delete(save=False)`) e o registro daquela linha **apenas** — os demais anexos permanecem. O `doc_pk` é validado como pertencente ao contrato da rota (404 caso contrário).
+- Tolerância de formato idêntica aos demais anexos (`accept="application/pdf,image/*"`, sem validação restritiva no backend). Não integra a central GED — vive só no detalhe do contrato.
+
+---
+
 ## 5a. Recibos Vinculados ao Contrato (card no detalhe)
 
 - O detalhe do contrato (`contrato_detail`) exibe um card "Recibos" com todos os `Recibo` vinculados via `Recibo.contrato` (`related_name='recibos'`), cada linha linkando para `recibo_detail`.
