@@ -183,7 +183,7 @@ class ContratoForm(forms.ModelForm):
             'local_assinatura', 'data_assinatura', 'observacoes',
         ]
         widgets = {
-            'inquilino': forms.Select(attrs=_sel),
+            'inquilino': forms.Select(attrs=_sel_autocomplete),
             'tipo_contrato': forms.Select(attrs=_sel),
             'finalidade': forms.Select(attrs=_sel),
             'status': forms.Select(attrs=_sel),

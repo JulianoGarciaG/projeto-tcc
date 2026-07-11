@@ -235,6 +235,39 @@ detalhe. Datepicker (Flatpickr) e máscaras (IMask) continuam via atributos
 `data-flatpickr`/`data-mask` definidos em `imoveis/forms.py` — o reskin não
 altera o markup do campo em si.
 
+### 8.2. Autocomplete por substring em selects (`data-autocomplete`)
+
+Selects de entidade com muitas opções (imóvel, inquilino) recebem uma casca
+de **busca por texto** sobre o `<select>` nativo, para o usuário filtrar
+digitando parte do nome em vez de rolar a lista inteira. Ativação por
+atributo: o widget é marcado com `data-autocomplete="true"` (helper
+`_sel_autocomplete` em `imoveis/forms.py`) e o enhancement é aplicado
+automaticamente por `static/js/select-autocomplete.js` (carregado no
+`base.html`), sem markup extra no template — o campo continua renderizado como
+`{{ form.campo }}`.
+
+Invariantes do componente:
+
+- **O `<select>` original permanece no DOM (oculto) e continua a fonte de
+  verdade:** submissão, `required` e a dependência Imóvel→Contrato (fetch que
+  repopula as `<option>`) não mudam. A busca é **exclusivamente entre opções
+  já existentes** — não há texto livre nem criação de registro. No `blur` sem
+  seleção, o input reverte para o rótulo da opção atualmente selecionada
+  (evita valor "órfão"); logo, não é possível submeter um valor que não
+  corresponda a um registro.
+- O script lê as `<option>` a cada digitação (nunca as cacheia), por isso
+  funciona tanto em selects estáticos quanto nos repopulados via fetch
+  (`laudo_form.html` / `recibo_form.html`) e observa mudanças de `disabled`
+  para manter o input em sincronia.
+- O rótulo exibido/pesquisável é o `textContent` da `<option>` (ex.:
+  `Imovel.rotulo_curto` via `ImovelChoiceField`; `Inquilino.__str__` = nome).
+
+Campos que usam o padrão hoje: `ContratoForm.imovel`/`inquilino`,
+`ReciboForm.imovel`/`contrato`, `LancamentoForm.imovel`/`contrato`,
+`LaudoVistoriaForm.imovel`/`contrato`. Estilo do dropdown (`.autocomplete-wrap`
+/ `.autocomplete-list` / `.autocomplete-item`) em `static/css/shelter.css`,
+reagindo ao tema.
+
 ---
 
 ## 9. Cards e Superfícies
