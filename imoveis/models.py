@@ -621,6 +621,7 @@ class Notificacao(models.Model):
         ('prefeitura', 'Prefeitura'),
         ('receita_federal', 'Receita Federal'),
         ('bombeiros', 'Corpo de Bombeiros'),
+        ('dmae_dme', 'DMAE/DME'),
         ('outro', 'Outro'),
     ]
     STATUS_CHOICES = [

@@ -384,7 +384,7 @@ Notificação de órgão público vinculada a um imóvel.
 | `criado_em` | DateTimeField | — | Auto now add |
 
 **Choices — tipo:**
-`prefeitura`, `receita_federal`, `bombeiros`, `outro`
+`prefeitura`, `receita_federal`, `bombeiros`, `dmae_dme` (DMAE/DME — órgão municipal de água/esgoto e/ou energia, opção única), `outro`
 
 **Choices — status:**
 `pendente`, `respondida`, `arquivada`
