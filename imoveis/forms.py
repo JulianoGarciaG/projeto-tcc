@@ -337,6 +337,11 @@ class LancamentoForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         natureza = cleaned_data.get('natureza')
+        tipo = cleaned_data.get('tipo')
+        if natureza and tipo:
+            permitidos = Lancamento.TIPOS_POR_NATUREZA.get(natureza, [])
+            if tipo not in permitidos:
+                self.add_error('tipo', 'Tipo incompatível com a natureza selecionada.')
         if natureza == 'despesa':
             cleaned_data['status'] = None
         elif natureza == 'ganho' and not cleaned_data.get('status'):

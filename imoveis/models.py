@@ -559,12 +559,19 @@ class Lancamento(models.Model):
     ]
     TIPO_CHOICES = [
         ('aluguel', 'Aluguel'),
+        ('arrendamento', 'Arrendamento'),
+        ('venda', 'Venda'),
         ('condominio', 'Condomínio'),
         ('iptu', 'IPTU'),
         ('manutencao', 'Manutenção'),
         ('multa', 'Multa'),
         ('outros', 'Outros'),
     ]
+    # Tipos permitidos por natureza (validação só na UI/form — sem CheckConstraint).
+    TIPOS_POR_NATUREZA = {
+        'ganho': ['aluguel', 'arrendamento', 'venda', 'outros'],
+        'despesa': ['condominio', 'iptu', 'manutencao', 'multa', 'outros'],
+    }
     STATUS_CHOICES = [
         ('pendente', 'Pendente'),
         ('efetivado', 'Efetivado'),

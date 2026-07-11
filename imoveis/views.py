@@ -1046,7 +1046,10 @@ def lancamento_create(request):
         form.save()
         messages.success(request, 'Lançamento registrado.')
         return redirect('lancamento_list')
-    return render(request, 'financeiro/lancamento_form.html', {'form': form, 'titulo': 'Novo Lançamento'})
+    return render(request, 'financeiro/lancamento_form.html', {
+        'form': form, 'titulo': 'Novo Lançamento',
+        'tipos_por_natureza': Lancamento.TIPOS_POR_NATUREZA,
+    })
 
 
 @login_required
@@ -1061,7 +1064,10 @@ def lancamento_edit(request, pk):
             return redirect('lancamento_list')
     else:
         form = LancamentoForm(instance=obj)
-    return render(request, 'financeiro/lancamento_form.html', {'form': form, 'titulo': 'Editar Lançamento', 'obj': obj})
+    return render(request, 'financeiro/lancamento_form.html', {
+        'form': form, 'titulo': 'Editar Lançamento', 'obj': obj,
+        'tipos_por_natureza': Lancamento.TIPOS_POR_NATUREZA,
+    })
 
 
 

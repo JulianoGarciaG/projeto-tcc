@@ -1671,6 +1671,41 @@ class LabelSelectTests(TestCase):
         self.assertEqual(campo.label_from_instance(self.laudo), self.laudo.rotulo_curto)
 
 
+class LancamentoTipoNaturezaTests(TestCase):
+    """Tipo do Lançamento é restrito pela natureza (validação de form, sem constraint)."""
+
+    def setUp(self):
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+
+    def _dados(self, natureza, tipo):
+        return {
+            'imovel': self.imovel.pk, 'contrato': '', 'natureza': natureza,
+            'tipo': tipo, 'status': '', 'valor': '1500.00',
+            'data_vencimento': '10/07/2026', 'data_pagamento': '',
+            'observacoes': '',
+        }
+
+    def test_ganho_aceita_tipos_de_ganho(self):
+        for tipo in ('aluguel', 'arrendamento', 'venda', 'outros'):
+            form = LancamentoForm(self._dados('ganho', tipo))
+            self.assertTrue(form.is_valid(), f'{tipo} deveria ser válido para ganho: {form.errors}')
+
+    def test_despesa_aceita_tipos_de_despesa(self):
+        for tipo in ('condominio', 'iptu', 'manutencao', 'multa', 'outros'):
+            form = LancamentoForm(self._dados('despesa', tipo))
+            self.assertTrue(form.is_valid(), f'{tipo} deveria ser válido para despesa: {form.errors}')
+
+    def test_ganho_rejeita_tipo_de_despesa(self):
+        form = LancamentoForm(self._dados('ganho', 'condominio'))
+        self.assertFalse(form.is_valid())
+        self.assertIn('tipo', form.errors)
+
+    def test_despesa_rejeita_tipo_de_ganho(self):
+        form = LancamentoForm(self._dados('despesa', 'aluguel'))
+        self.assertFalse(form.is_valid())
+        self.assertIn('tipo', form.errors)
+
+
 class NotificacaoUsuarioTests(TestCase):
     """Histórico de notificações por usuário: captura, isolamento e limite."""
 

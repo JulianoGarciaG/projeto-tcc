@@ -341,7 +341,7 @@ Testemunha do laudo de vistoria.
 | `contrato` | ForeignKey → Contrato | — | SET_NULL; preenchido quando originado de contrato/recibo |
 | `recibo` | ForeignKey → Recibo | — | CASCADE; só nos ganhos criados automaticamente (ver §3, sinal `recibo_salvo`) |
 | `natureza` | CharField (10) | ✓ | Choices abaixo |
-| `tipo` | CharField (20) | ✓ | Choices abaixo |
+| `tipo` | CharField (20) | ✓ | Choices abaixo; restrito pela `natureza` (ver `TIPOS_POR_NATUREZA`) |
 | `status` | CharField (20) | condicional | Só se aplica a `natureza='ganho'`; `null` em despesas (CheckConstraint) |
 | `valor` | DecimalField (10,2) | ✓ | — |
 | `data_vencimento` | DateField | ✓ | — |
@@ -354,7 +354,13 @@ Testemunha do laudo de vistoria.
 `ganho`, `despesa`
 
 **Choices — tipo:**
-`aluguel`, `condominio`, `iptu`, `manutencao`, `multa`, `outros`
+`aluguel`, `arrendamento`, `venda`, `condominio`, `iptu`, `manutencao`, `multa`, `outros`
+
+**Tipos permitidos por natureza** (`Lancamento.TIPOS_POR_NATUREZA` — validado **só na UI/form**, sem `CheckConstraint`):
+- `ganho`: `aluguel`, `arrendamento`, `venda`, `outros`
+- `despesa`: `condominio`, `iptu`, `manutencao`, `multa`, `outros`
+
+O form (`LancamentoForm.clean`) rejeita combinações fora dessa tabela e o dropdown de tipo no `lancamento_form.html` é filtrado por JS ao trocar a natureza (fonte única: `TIPOS_POR_NATUREZA` serializado via `json_script`).
 
 **Choices — status (apenas ganho):**
 `pendente`, `efetivado`

@@ -208,6 +208,7 @@ Filtros combinados, aplicados sobre `Lancamento.objects`:
 **Lançamento (`imoveis/models.py`) — ganho/despesa por imóvel:**
 - `Lancamento.imovel` é obrigatório; `Lancamento.contrato` é opcional (preenchido só quando o lançamento se origina de um contrato/recibo).
 - `natureza` distingue `ganho` de `despesa`. O ciclo `pendente` → `efetivado` (campo `status`) só existe em ganhos — uma `CheckConstraint` garante que despesa nunca tem `status` preenchido.
+- O `tipo` é **restrito pela `natureza`** (`Lancamento.TIPOS_POR_NATUREZA`): `ganho` → `aluguel`/`arrendamento`/`venda`/`outros`; `despesa` → `condominio`/`iptu`/`manutencao`/`multa`/`outros`. Ao contrário do gate de `status`, essa regra vive **só na UI/form** — `LancamentoForm.clean` rejeita combinações inválidas e o dropdown de tipo é filtrado por JS ao trocar a natureza; **não** há `CheckConstraint` de banco (decisão explícita). Registros legados que não respeitavam a regra foram apagados na introdução dela, sem rota de migração.
 - Criar um `Recibo` dispara um `post_save` (`imoveis/signals.py:recibo_salvo`) que cria automaticamente um `Lancamento` ganho `pendente` apontando pro `imovel` do recibo (preservando `contrato` e a referência `recibo` de origem). Editar o recibo depois sincroniza valor/vencimento do ganho **enquanto ele ainda estiver pendente**; um ganho já `efetivado` não é mais tocado pelo signal.
 - A view `lancamento_efetivar` marca um ganho `pendente` como `efetivado` (preenchendo `data_pagamento` se vazia) — é a única forma de fechar o ciclo, não existe efetivação automática por data.
 

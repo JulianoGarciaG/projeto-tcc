@@ -37,11 +37,31 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ tipos_por_natureza|json_script:"tipos-por-natureza" }}
 <script>
 (function () {
   const naturezaSelect = document.getElementById('{{ form.natureza.id_for_label }}');
   const statusSelect = document.getElementById('{{ form.status.id_for_label }}');
+  const tipoSelect = document.getElementById('{{ form.tipo.id_for_label }}');
   const campoStatus = document.getElementById('campo-status');
+
+  const tiposPorNatureza = JSON.parse(document.getElementById('tipos-por-natureza').textContent);
+  // Guarda todas as <option> originais para poder repovoar ao trocar a natureza.
+  const todasOpcoesTipo = Array.from(tipoSelect.options).map(o => ({ value: o.value, label: o.text }));
+
+  function filtrarTipos() {
+    const permitidos = tiposPorNatureza[naturezaSelect.value] || null;
+    const anterior = tipoSelect.value;
+    tipoSelect.innerHTML = '';
+    todasOpcoesTipo
+      .filter(o => o.value === '' || !permitidos || permitidos.includes(o.value))
+      .forEach(o => {
+        const opt = new Option(o.label, o.value);
+        tipoSelect.add(opt);
+      });
+    // Preserva a seleção anterior se ainda for válida; senão limpa.
+    tipoSelect.value = Array.from(tipoSelect.options).some(o => o.value === anterior) ? anterior : '';
+  }
 
   function toggleStatus() {
     if (naturezaSelect.value === 'ganho') {
@@ -52,8 +72,12 @@
     }
   }
 
+  filtrarTipos();
   toggleStatus();
-  naturezaSelect.addEventListener('change', toggleStatus);
+  naturezaSelect.addEventListener('change', function () {
+    filtrarTipos();
+    toggleStatus();
+  });
 })();
 </script>
 {% endblock %}
