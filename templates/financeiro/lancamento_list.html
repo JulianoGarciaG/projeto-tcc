@@ -22,7 +22,7 @@
           <li>
             <label class="dropdown-item-text d-flex align-items-center gap-2 mb-0 px-2 py-1">
               <input type="checkbox" class="form-check-input m-0 imovel-filtro-check" name="imovel_id" value="{{ im.pk }}" {% if im.pk|stringformat:"s" in dash_filtro_imovel_ids %}checked{% endif %}>
-              <span class="small">{{ im.endereco|truncatechars:40 }}</span>
+              <span class="small">{{ im.endereco_filtro|truncatechars:40 }}</span>
             </label>
           </li>
           {% endfor %}

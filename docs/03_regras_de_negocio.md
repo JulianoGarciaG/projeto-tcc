@@ -160,7 +160,7 @@ Não há filtro de imóvel nem de período na barra superior — a janela usada 
 - Donut de distribuição por situação do imóvel (ocupado/vago/manutenção) e donut de distribuição por tipo de imóvel
 - **Contratos que Precisam de Atenção:** contratos ativos com `precisa_atencao=True`; listados na tabela ao final da página. A elegibilidade depende **somente** do status `ativo` — nenhuma condição de período bloqueia o aviso, então um contrato ativo com fim de vigência **já vencido** aparece normalmente (a estadia pode seguir por renovação sem novo contrato). A janela de disparo vai de **30 dias antes a 7 dias depois** (inclusive) de uma data de referência, para duas âncoras: **fim de vigência** (`data_fim`, motivo "Fim de vigência") e **aniversário anual** de `data_inicio` (motivo "Aniversário de reajuste"). Contratos com renovação registrada continuam usando `data_inicio`/`data_fim` do contrato **original** como referência — a renovação não desloca aniversário nem fim de vigência. Ver [§14 — Indicador de Atenção e Reajuste de Valor](#14-indicador-de-atenção-e-reajuste-de-valor) para a regra completa, incluindo a supressão do aviso de aniversário após o reajuste.
 - **Tempo Médio de Vacância:** média em dias dos períodos de vacância concluídos (`HistoricoStatusImovel` com `status='vago'` e `data_fim` preenchida) iniciados nos últimos 90 dias, respeitando os filtros de tipo/status. Sem períodos concluídos no intervalo, o KPI exibe "—".
-- **Linha do tempo de status:** card sempre visível, com **seletor de imóvel próprio** (`timeline_imovel_id`, independente dos filtros de Tipo/Status — não afeta KPIs/donuts). Sem seleção explícita, mostra o primeiro imóvel cadastrado (ordenado por endereço). Lista o histórico de status (`HistoricoStatusImovel`) do imóvel escolhido dentro da janela de 90 dias, com badges coloridos por status e duração em dias.
+- **Linha do tempo de status:** card sempre visível, com **seletor de imóvel próprio** (`timeline_imovel_id`, independente dos filtros de Tipo/Status — não afeta KPIs/donuts). Sem seleção explícita, mostra o primeiro imóvel cadastrado (ordenado por endereço). O `<select>` exibe `Imovel.endereco_filtro` (endereço + número + complemento) para desambiguar imóveis de endereço parecido. Lista o histórico de status (`HistoricoStatusImovel`) do imóvel escolhido dentro da janela de 90 dias, com badges coloridos por status e duração em dias.
 
 Essas três métricas usam dados reais desde o lançamento da feature de histórico de status — não são mais placeholder.
 
@@ -183,7 +183,7 @@ Filtros combinados, aplicados sobre `Lancamento.objects`:
 
 | Filtro | Campo filtrado |
 |---|---|
-| Imóvel | `imovel_id` |
+| Imóvel | `imovel_id` (dropdown exibe `Imovel.endereco_filtro` — endereço + número + complemento) |
 | Data início | `data_caixa__gte` |
 | Data fim | `data_caixa__lte` |
 

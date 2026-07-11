@@ -82,6 +82,20 @@ class Imovel(IdentificavelMixin, models.Model):
         return f'{self.get_tipo_display()} — {self.endereco}'
 
     @property
+    def endereco_filtro(self):
+        """Endereço + número + complemento para seletores de filtro.
+
+        Número e complemento são opcionais; trechos vazios são omitidos
+        sem separador/espaço sobrando.
+        """
+        partes = [self.endereco]
+        if self.numero:
+            partes.append(self.numero)
+        if self.complemento:
+            partes.append(self.complemento)
+        return ', '.join(p for p in partes if p)
+
+    @property
     def rotulo_curto(self):
         end = self.endereco
         if self.numero:

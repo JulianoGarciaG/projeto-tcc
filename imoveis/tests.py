@@ -1570,6 +1570,22 @@ class IdentidadeRotulosTests(TestCase):
         rotulo = self.imovel.rotulo_curto
         self.assertIn(self.imovel.cidade, rotulo)
 
+    def test_endereco_filtro_com_numero_e_complemento(self):
+        imv = Imovel(endereco='Rua das Flores', numero='134', complemento='Apto 3')
+        self.assertEqual(imv.endereco_filtro, 'Rua das Flores, 134, Apto 3')
+
+    def test_endereco_filtro_omite_numero_e_complemento_vazios(self):
+        imv = Imovel(endereco='Rua das Flores', numero='', complemento='')
+        self.assertEqual(imv.endereco_filtro, 'Rua das Flores')
+
+    def test_endereco_filtro_omite_apenas_complemento_vazio(self):
+        imv = Imovel(endereco='Rua das Flores', numero='134', complemento='')
+        self.assertEqual(imv.endereco_filtro, 'Rua das Flores, 134')
+
+    def test_endereco_filtro_omite_apenas_numero_vazio(self):
+        imv = Imovel(endereco='Rua das Flores', numero='', complemento='Fundos')
+        self.assertEqual(imv.endereco_filtro, 'Rua das Flores, Fundos')
+
 
 class NomeArquivoTests(TestCase):
     """nome_arquivo() — função pura, instâncias em memória (sem .save())."""

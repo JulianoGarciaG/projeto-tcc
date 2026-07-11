@@ -146,7 +146,7 @@
       <select name="timeline_imovel_id" class="dash-timeline-select-input" onchange="this.form.submit()">
         {% for im in imoveis_lista %}
         <option value="{{ im.pk }}" {% if timeline_imovel_id == im.pk|stringformat:"s" %}selected{% endif %}>
-          {{ im.endereco|truncatechars:40 }}
+          {{ im.endereco_filtro|truncatechars:40 }}
         </option>
         {% endfor %}
       </select>
