@@ -14,7 +14,7 @@ Proprietario
             │       ├── Lancamento (SET_NULL) [contrato opcional, origem do ganho/despesa]
             │       ├── LaudoVistoria (PROTECT) [contrato obrigatório]
             │       ├── Recibo (PROTECT)
-            │       ├── RenovacaoContrato (CASCADE) [OneToOne]
+            │       ├── RenovacaoContrato (CASCADE) [FK, N por contrato]
             │       └── Distrato (CASCADE) [OneToOne]
             │               └── LaudoVistoria (SET_NULL) [laudo_saida, opcional]
             ├── LaudoVistoria (CASCADE)
@@ -376,15 +376,14 @@ Notificação de órgão público vinculada a um imóvel.
 ---
 
 ### 2.14 RenovacaoContrato
-Renovação de contrato. Apenas uma por contrato (OneToOne).
+Renovação de contrato. **Múltiplas por contrato** (ForeignKey) — o contrato acumula um histórico de renovações. Registro permitido apenas enquanto o contrato está **ativo** (validado na view). O valor monetário não é campo desta entidade: reajuste de valor é tratado por `Contrato.valor_vigente` (feature de reajuste). Ordenação padrão: mais recente primeiro (`-data_renovacao`).
 
 | Campo | Tipo | Obrigatório | Observações |
 |---|---|---|---|
 | `id` | BigAutoField | — | PK automática |
-| `contrato` | OneToOneField → Contrato | ✓ | CASCADE |
+| `contrato` | ForeignKey → Contrato | ✓ | CASCADE, `related_name='renovacoes'` |
 | `tipo` | CharField (20) | ✓ | Choices abaixo |
 | `data_renovacao` | DateField | ✓ | — |
-| `novo_valor_mensal` | DecimalField (10,2) | — | Deixar em branco mantém valor atual |
 | `observacoes` | TextField | — | — |
 
 **Choices — tipo:**

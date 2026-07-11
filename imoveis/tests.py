@@ -1390,6 +1390,57 @@ class ContratoReajusteTests(TestCase):
         self.assertIn(self.contrato, resp.context['contratos'])
 
 
+class RenovacaoContratoTests(TestCase):
+    """Múltiplas renovações por contrato ativo, sem campo de valor."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester', password='x')
+        self.client.force_login(self.user)
+        _, self.imovel, self.inquilino, self.contrato = criar_base()
+        self.url = reverse('renovacao_create', args=[self.contrato.pk])
+
+    def _dados(self):
+        return {'tipo': '12_12', 'data_renovacao': date.today().strftime('%d/%m/%Y'),
+                'observacoes': ''}
+
+    def test_registra_multiplas_renovacoes_no_mesmo_contrato(self):
+        # Duas renovações no mesmo contrato ativo: acumulam sem erro nem bloqueio.
+        self.client.post(self.url, self._dados())
+        self.client.post(self.url, self._dados())
+        self.assertEqual(self.contrato.renovacoes.count(), 2)
+
+    def test_form_nao_grava_novo_valor_mensal(self):
+        # Ainda que o cliente envie o campo removido, ele é ignorado (não existe no model).
+        dados = self._dados()
+        dados['novo_valor_mensal'] = '9999,00'
+        self.client.post(self.url, dados)
+        renovacao = self.contrato.renovacoes.get()
+        self.assertFalse(hasattr(renovacao, 'novo_valor_mensal'))
+
+    def test_botao_renovar_sempre_visivel_para_contrato_ativo(self):
+        # Mesmo já havendo renovação registrada, a ação continua disponível no detalhe.
+        RenovacaoContrato.objects.create(
+            contrato=self.contrato, tipo='12_12', data_renovacao=date.today())
+        resp = self.client.get(reverse('contrato_detail', args=[self.contrato.pk]))
+        self.assertContains(resp, reverse('renovacao_create', args=[self.contrato.pk]))
+
+    def test_detalhe_lista_todas_as_renovacoes(self):
+        RenovacaoContrato.objects.create(
+            contrato=self.contrato, tipo='12_12', data_renovacao=date.today())
+        RenovacaoContrato.objects.create(
+            contrato=self.contrato, tipo='12_30', data_renovacao=date.today())
+        resp = self.client.get(reverse('contrato_detail', args=[self.contrato.pk]))
+        self.assertEqual(len(resp.context['renovacoes']), 2)
+
+    def test_contrato_nao_ativo_bloqueia_renovacao(self):
+        # Guarda de status na view: contrato encerrado não cria renovação (defesa por URL).
+        self.contrato.status = 'encerrado'
+        self.contrato.save(update_fields=['status'])
+        resp = self.client.post(self.url, self._dados())
+        self.assertEqual(self.contrato.renovacoes.count(), 0)
+        self.assertRedirects(resp, reverse('contrato_detail', args=[self.contrato.pk]))
+
+
 class IdentidadeCodigoTests(TestCase):
     """codigo derivado do PK: PREFIXO-0001 (zero-padded a 4 dígitos)."""
 

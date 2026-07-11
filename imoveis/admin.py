@@ -54,7 +54,7 @@ class NotificacaoAdmin(admin.ModelAdmin):
 
 @admin.register(RenovacaoContrato)
 class RenovacaoContratoAdmin(admin.ModelAdmin):
-    list_display = ['contrato', 'tipo', 'data_renovacao', 'novo_valor_mensal']
+    list_display = ['contrato', 'tipo', 'data_renovacao']
     list_filter = ['tipo']
 
 

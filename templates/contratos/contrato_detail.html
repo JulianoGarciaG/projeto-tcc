@@ -16,9 +16,7 @@
   {% if contrato.pode_reajustar %}
   <a href="{% url 'contrato_reajuste' contrato.pk %}" class="btn btn-outline-warning btn-sm"><i class="bi bi-graph-up-arrow me-1"></i> Reajustar</a>
   {% endif %}
-  {% if not renovacao %}
   <a href="{% url 'renovacao_create' contrato.pk %}" class="btn btn-outline-info btn-sm"><i class="bi bi-arrow-repeat me-1"></i> Renovar</a>
-  {% endif %}
   {% if not distrato %}
   <a href="{% url 'distrato_create' contrato.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-circle me-1"></i> Distrato</a>
   {% endif %}
@@ -154,21 +152,20 @@
     </div>
     {% endif %}
 
-    <!-- Renovação -->
-    {% if renovacao %}
+    <!-- Renovações (histórico) -->
+    {% if renovacoes %}
     <div class="section-card mb-3">
-      <div class="section-card-header"><i class="bi bi-arrow-repeat me-1 text-info"></i> Renovação</div>
+      <div class="section-card-header"><i class="bi bi-arrow-repeat me-1 text-info"></i> Renovações ({{ renovacoes|length }})</div>
       <div class="section-card-body">
-        <dl class="row mb-0 small">
-          <dt class="col-5 text-muted">Tipo</dt><dd class="col-7">{{ renovacao.get_tipo_display }}</dd>
-          <dt class="col-5 text-muted">Data</dt><dd class="col-7">{{ renovacao.data_renovacao|date:"d/m/Y" }}</dd>
-          {% if renovacao.novo_valor_mensal %}
-          <dt class="col-5 text-muted">Novo Valor</dt><dd class="col-7">R$ {{ renovacao.novo_valor_mensal|brl }}</dd>
-          {% endif %}
-          {% if renovacao.observacoes %}
-          <dt class="col-5 text-muted">Obs.</dt><dd class="col-7">{{ renovacao.observacoes }}</dd>
+        {% for r in renovacoes %}
+        <dl class="row mb-0 small {% if not forloop.last %}pb-2 mb-2 border-bottom{% endif %}">
+          <dt class="col-5 text-muted">Tipo</dt><dd class="col-7">{{ r.get_tipo_display }}</dd>
+          <dt class="col-5 text-muted">Data</dt><dd class="col-7">{{ r.data_renovacao|date:"d/m/Y" }}</dd>
+          {% if r.observacoes %}
+          <dt class="col-5 text-muted">Obs.</dt><dd class="col-7">{{ r.observacoes }}</dd>
           {% endif %}
         </dl>
+        {% endfor %}
       </div>
     </div>
     {% endif %}

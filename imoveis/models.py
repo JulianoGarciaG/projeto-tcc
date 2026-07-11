@@ -616,16 +616,15 @@ class RenovacaoContrato(models.Model):
         ('12_indeterminado', '12/Indeterminado'),
     ]
 
-    contrato = models.OneToOneField(Contrato, on_delete=models.CASCADE, related_name='renovacao')
+    contrato = models.ForeignKey(Contrato, on_delete=models.CASCADE, related_name='renovacoes')
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, verbose_name='Tipo de Renovação')
     data_renovacao = models.DateField(verbose_name='Data da Renovação')
-    novo_valor_mensal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
-                                            verbose_name='Novo Valor Mensal')
     observacoes = models.TextField(blank=True, verbose_name='Observações')
 
     class Meta:
         verbose_name = 'Renovação de Contrato'
         verbose_name_plural = 'Renovações de Contrato'
+        ordering = ['-data_renovacao', '-id']
 
     def __str__(self):
         return f'Renovação {self.get_tipo_display()} — Contrato #{self.contrato_id}'

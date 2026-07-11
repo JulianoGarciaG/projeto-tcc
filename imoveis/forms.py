@@ -367,10 +367,9 @@ class NotificacaoForm(forms.ModelForm):
 class RenovacaoContratoForm(forms.ModelForm):
     class Meta:
         model = RenovacaoContrato
-        fields = ['tipo', 'data_renovacao', 'novo_valor_mensal', 'observacoes']
+        fields = ['tipo', 'data_renovacao', 'observacoes']
         widgets = {
             'tipo': forms.Select(attrs=_sel),
-            'novo_valor_mensal': forms.NumberInput(attrs={**_ctrl, 'step': '0.01'}),
             'observacoes': forms.Textarea(attrs={**_ctrl, 'rows': 3}),
         }
 

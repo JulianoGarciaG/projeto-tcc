@@ -33,15 +33,15 @@ distrato.save() → contrato.status = 'encerrado' → contrato.save()
 
 ---
 
-## 3. Unicidade de Renovação e Distrato
+## 3. Renovação e Distrato
 
 | Entidade | Regra |
 |---|---|
-| `RenovacaoContrato` | Apenas **uma** renovação por contrato (OneToOneField) |
+| `RenovacaoContrato` | **Múltiplas** renovações por contrato (ForeignKey), acumuladas como histórico. Registro permitido **somente enquanto o contrato está ativo**. Sem campo de valor — reajuste de valor é feature separada (`Contrato.valor_vigente`). |
 | `Distrato` | Apenas **um** distrato por contrato (OneToOneField) |
 
 **Comportamento na view:**
-- Se o contrato já possui renovação → exibe aviso e redireciona para o detalhe do contrato, sem criar nova.
+- Renovação: o botão "Renovar" fica sempre disponível para contrato **ativo**; a ação `renovacao_create` só cria o registro se `contrato.status == 'ativo'` (contrato não-ativo → aviso e redireciona para o detalhe, defesa contra acesso direto por URL). O detalhe do contrato exibe todas as renovações em formato de histórico.
 - Se o contrato já possui distrato → exibe aviso e redireciona para o detalhe do contrato, sem criar novo.
 
 ---

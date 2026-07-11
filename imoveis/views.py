@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from .models import (
     Imovel, Proprietario, Inquilino, Contrato, LaudoVistoria, Lancamento,
-    FotoImovel, Notificacao, RenovacaoContrato, Distrato,
+    FotoImovel, Notificacao, Distrato,
     Recibo, ItemVistoriaTemplate, ItemVistoria, FotoItemVistoria,
     HistoricoStatusImovel,
 )
@@ -667,10 +667,7 @@ def contrato_detail(request, pk):
     laudos = contrato.laudos.order_by('-data')
     fiadores = contrato.fiadores.all()
     recibos = contrato.recibos.all()
-    try:
-        renovacao = contrato.renovacao
-    except RenovacaoContrato.DoesNotExist:
-        renovacao = None
+    renovacoes = contrato.renovacoes.all()
     try:
         distrato = contrato.distrato
     except Distrato.DoesNotExist:
@@ -681,7 +678,7 @@ def contrato_detail(request, pk):
         'laudos': laudos,
         'fiadores': fiadores,
         'recibos': recibos,
-        'renovacao': renovacao,
+        'renovacoes': renovacoes,
         'distrato': distrato,
     })
 
@@ -793,8 +790,8 @@ def contrato_reajuste(request, pk):
 @login_required
 def renovacao_create(request, contrato_pk):
     contrato = get_object_or_404(Contrato, pk=contrato_pk)
-    if hasattr(contrato, 'renovacao'):
-        messages.warning(request, 'Este contrato já possui uma renovação registrada.')
+    if contrato.status != 'ativo':
+        messages.warning(request, 'Só é possível registrar renovação para contrato ativo.')
         return redirect('contrato_detail', pk=contrato_pk)
     form = RenovacaoContratoForm(request.POST or None)
     if form.is_valid():

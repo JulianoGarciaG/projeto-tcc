@@ -212,13 +212,16 @@ class Command(BaseCommand):
         )
         w('Distrato criado (contrato encerrado)')
 
-        # --- Renovação em um contrato ativo
+        # --- Renovações em um contrato ativo (histórico com múltiplos registros)
+        RenovacaoContrato.objects.create(
+            contrato=contratos[0], tipo='12_12', data_renovacao=hoje - timedelta(days=375),
+            observacoes='Primeira renovação de demonstração.',
+        )
         RenovacaoContrato.objects.create(
             contrato=contratos[0], tipo='12_12', data_renovacao=hoje - timedelta(days=10),
-            novo_valor_mensal=contratos[0].valor_mensal + Decimal('200.00'),
-            observacoes='Renovação de demonstração.',
+            observacoes='Segunda renovação de demonstração.',
         )
-        w('Renovação criada')
+        w('Renovações criadas')
 
         # --- Recibos (cada um gera Lancamento de ganho via signal)
         recibos = 0
