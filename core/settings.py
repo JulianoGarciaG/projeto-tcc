@@ -10,7 +10,10 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-=0ep41=asz_+utd_sy_7g-a_lm
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
+CSRF_TRUSTED_ORIGINS = [
+    origin for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if origin
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -24,6 +27,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -57,19 +61,18 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # toast efêmero (ver imoveis/message_storage.py).
 MESSAGE_STORAGE = 'imoveis.message_storage.PersistentFallbackStorage'
 
-# Banco de dados — usar SQLite em dev, MySQL em prod via .env
+# Banco de dados — usar SQLite em dev, PostgreSQL em prod via .env
 DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.sqlite3')
 
-if DB_ENGINE == 'django.db.backends.mysql':
+if DB_ENGINE == 'django.db.backends.postgresql':
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
+            'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.getenv('DB_NAME', 'gestao_imoveis'),
-            'USER': os.getenv('DB_USER', 'root'),
+            'USER': os.getenv('DB_USER', 'postgres'),
             'PASSWORD': os.getenv('DB_PASSWORD', ''),
             'HOST': os.getenv('DB_HOST', 'localhost'),
-            'PORT': os.getenv('DB_PORT', '3306'),
-            'OPTIONS': {'charset': 'utf8mb4'},
+            'PORT': os.getenv('DB_PORT', '5432'),
         }
     }
 else:
@@ -92,41 +95,48 @@ TIME_ZONE = 'America/Sao_Paulo'
 USE_I18N = True
 USE_TZ = True
 
-# Arquivos estáticos
+# Arquivos estáticos — servidos via Whitenoise em produção (sem Nginx dedicado)
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Arquivos de mídia (uploads: PDFs, imagens)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Armazenamento de arquivos (uploads) — plugável via .env, no mesmo padrão do
-# DB_ENGINE acima: FileSystemStorage em dev, S3 no futuro sem mudar código de
-# aplicação (todos os FileFields usam o storage "default" do STORAGES).
+# DB_ENGINE acima: FileSystemStorage em dev, S3 (Cloudflare R2) em prod, sem
+# mudar código de aplicação (todos os FileFields usam o storage "default").
 #
-# Passo futuro para habilitar S3 (NÃO implementado nesta rodada — boto3 e
-# django-storages NÃO devem ser instalados agora):
-#   1. pip install django-storages boto3 (e adicionar ao requirements.txt)
-#   2. No .env: STORAGE_BACKEND=s3 + AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
-#      AWS_STORAGE_BUCKET_NAME e AWS_S3_REGION_NAME
-#   3. Trocar o backend do ramo 's3' abaixo por
-#      'storages.backends.s3.S3Storage' (lendo as credenciais do .env)
+# Para habilitar R2 (compatível com a API S3), no .env:
+#   STORAGE_BACKEND=s3
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY  (API Token do R2)
+#   AWS_STORAGE_BUCKET_NAME                    (nome do bucket no R2)
+#   AWS_S3_ENDPOINT_URL                        (endpoint da conta no R2)
+#   AWS_S3_CUSTOM_DOMAIN (opcional, se o bucket tiver domínio público)
 STORAGE_BACKEND = os.getenv('STORAGE_BACKEND', 'filesystem')
 
 if STORAGE_BACKEND == 's3':
-    # Placeholder: falha explícita até django-storages/boto3 serem adicionados
-    # (mesmo comportamento do DB_ENGINE=mysql sem mysqlclient instalado).
-    from django.core.exceptions import ImproperlyConfigured
-    raise ImproperlyConfigured(
-        'STORAGE_BACKEND=s3 requer django-storages e boto3 — '
-        'ver o passo a passo comentado em core/settings.py.'
-    )
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN') or None
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'auto')
+    AWS_DEFAULT_ACL = None
+    AWS_S3_FILE_OVERWRITE = True
+    AWS_QUERYSTRING_AUTH = False
 
-STORAGES = {
-    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
-    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
-}
+    STORAGES = {
+        'default': {'BACKEND': 'storages.backends.s3.S3Storage'},
+        'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    }
+else:
+    STORAGES = {
+        'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+        'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

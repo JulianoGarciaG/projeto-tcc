@@ -32,7 +32,7 @@ Ao concluir → rode a skill validate-implementation (roda check/migrations/test
 ## Arquitetura
 
 ### Stack
-- **Backend:** Django 6.0, SQLite (dev) / MySQL (prod) — ver [Configuração](#configuração).
+- **Backend:** Django 6.0, SQLite (dev) / PostgreSQL (prod, Render) — ver [Configuração](#configuração).
 - **Frontend:** Templates Django + CSS estático, **sem build system**. Libs via CDN em `base.html`: Bootstrap 5.3, Bootstrap Icons, **Flatpickr** (datepicker dd/mm/yyyy), **IMask** (máscaras), **Chart.js** (dashboard). Init de máscaras/datepickers em `static/js/masks.js` por atributos `data-flatpickr` / `data-mask="telefone|moeda"`.
 - **PDF:** `xhtml2pdf` renderiza os templates de `templates/documentos/`.
 - **Uploads:** `Pillow` (imagens) + PDFs; storage plugável via `STORAGES` (ver convenções).
@@ -69,7 +69,7 @@ Campos, relacionamentos e caminhos de upload completos em **[docs/02_modelagem_d
 
 - **PDF nunca é gerado ao salvar** — create/edit fazem redirect + toast (PRG); só as views `*_gerar_pdf` geram/baixam PDF.
 - **PDFs gerados não têm histórico de versões** — cada geração sobrescreve o arquivo anterior no campo legado (`Contrato.documento_gerado`/`LaudoVistoria.documento_gerado`/`Recibo.arquivo`), tanto no banco quanto no storage físico. Gerar sempre via `imoveis/pdf.py:gerar_e_anexar(instance, template_name, context, field_name)`; nunca gravar direto no FileField fora dessa função. Para "corrigir" um documento, basta gerar de novo — não há versão anterior para recuperar.
-- **Uploads via storage `default` do `STORAGES`** — plugável por `STORAGE_BACKEND` no `.env`. Não instalar `boto3`/`django-storages` nem ativar o backend `s3` sem seguir o passo a passo comentado em `core/settings.py`.
+- **Uploads via storage `default` do `STORAGES`** — plugável por `STORAGE_BACKEND` no `.env` (`filesystem` em dev, `s3` em prod via Cloudflare R2, ver `core/settings.py`).
 - **Campos de data** usam `_date_widget()` (`imoveis/forms.py`, Flatpickr dd/mm/yyyy); **moeda** usa `_moeda_widget()` + `localized_fields` (aceita "1500,00"; **sem** separador de milhar — `USE_THOUSAND_SEPARATOR` fica desligado).
 - **Validadores** (`imoveis/validators.py`): `validate_cpf`, `validate_cnpj`, `validate_cpf_cnpj`, `validate_rg`, `validate_rg_cpf` (`Fiador.rg_cpf`), `validate_telefone` (`Proprietario`/`Inquilino.telefone`). **Reutilizar, não duplicar.**
 - **Checklist do laudo**: laudo novo exige `item_vistoria_formset_factory(extra=len(catalogo))` — `extra=0` renderiza 0 linhas e o checklist some.
@@ -81,8 +81,9 @@ Campos, relacionamentos e caminhos de upload completos em **[docs/02_modelagem_d
 
 ## Configuração
 
-- **Banco** (`.env`): `DB_ENGINE=django.db.backends.sqlite3` (dev) ou `django.db.backends.mysql` + `DB_NAME`/`DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT` (prod).
-- **Storage** (`.env`): `STORAGE_BACKEND=filesystem` (default) / `s3` (preparado, não ativado).
+- **Banco** (`.env`): `DB_ENGINE=django.db.backends.sqlite3` (dev) ou `django.db.backends.postgresql` + `DB_NAME`/`DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT` (prod, Render Postgres).
+- **Storage** (`.env`): `STORAGE_BACKEND=filesystem` (default) / `s3` (prod, Cloudflare R2 — requer `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_STORAGE_BUCKET_NAME`/`AWS_S3_ENDPOINT_URL`).
+- **Deploy** (Render): `Procfile` roda `migrate` no release e `gunicorn` no web; `runtime.txt` fixa a versão do Python; estáticos servidos via Whitenoise (`collectstatic` no build).
 - **Auth**: padrão Django; todas as views com `@login_required`. Rotas `/login/`, `/logout/`; login redireciona para `/` (landing pós-login, com atalhos de cadastro rápido).
 - **Dashboards (BI)**: rota `/dashboard/` é o Dashboard Imobiliário (ocupação/vacância dos imóveis); indicadores financeiros (`Lancamento`) ficam embutidos na página de Lançamentos (`/financeiro/`). Ambos em Chart.js lendo CSS vars, com redesenho no toggle de tema.
 

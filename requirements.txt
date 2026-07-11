@@ -3,3 +3,10 @@ python-dotenv>=1.0.0
 Pillow>=10.0.0
 xhtml2pdf>=0.2.16
 num2words>=0.5.13
+
+# Produção (Render + Cloudflare R2)
+gunicorn>=21.2.0
+whitenoise>=6.6.0
+psycopg2-binary>=2.9.9
+django-storages>=1.14.2
+boto3>=1.34.0

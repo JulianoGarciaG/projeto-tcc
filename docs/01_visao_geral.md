@@ -44,11 +44,12 @@ Perfis de acesso (Group do Django, atribuídos somente via `/admin/` — ver [do
 | Camada | Tecnologia |
 |---|---|
 | Back-end principal | Python + Django |
-| Banco de dados (produção) | MySQL |
+| Banco de dados (produção) | PostgreSQL |
 | Banco de dados (desenvolvimento) | SQLite |
+| Storage de uploads (produção) | Cloudflare R2 (compatível S3, via django-storages) |
 | APIs complementares | FastAPI (serviços assíncronos de alta performance) |
 | Arquitetura de API | RESTful (GET, POST, PUT, DELETE) |
-| Infraestrutura | Hospedagem em nuvem (acesso remoto seguro) |
+| Infraestrutura | Render (web service + PostgreSQL gerenciado) |
 
 ### Dependências principais
 ```
