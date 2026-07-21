@@ -9,7 +9,6 @@
   ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
   ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-prod-4169E1?logo=postgresql&logoColor=white)
   ![SQLite](https://img.shields.io/badge/SQLite-dev-003B57?logo=sqlite&logoColor=white)
-  ![License](https://img.shields.io/badge/uso-acadêmico%20(TCC)-lightgrey)
 </div>
 
 ---
@@ -23,8 +22,6 @@ análise de dados (**BI**) que hoje vivem em pastas físicas e planilhas manuais
 O objetivo é reduzir erros de processos manuais, dar acesso imediato aos documentos e apoiar a
 tomada de decisão com indicadores em tempo real — tudo em uma aplicação responsiva, utilizável
 inclusive em campo (celular/tablet, no local do imóvel).
-
-> Projeto desenvolvido como **Trabalho de Conclusão de Curso (TCC)**.
 
 ---
 
@@ -96,7 +93,7 @@ venv/Scripts/python manage.py migrate
 venv/Scripts/python manage.py createsuperuser
 ```
 
-> O repositório já inclui um `db.sqlite3` versionado com dados de exemplo para o time do TCC.
+> O repositório já inclui um `db.sqlite3` versionado com dados de exemplo.
 > Ainda assim, rode `migrate` para garantir que o schema está atualizado.
 
 ### 4. Subir o servidor
@@ -214,5 +211,5 @@ Convenções de código e armadilhas do repositório estão em [`CLAUDE.md`](CLA
 ---
 
 <div align="center">
-  <sub>Projeto acadêmico (TCC) — Sistema Integrado de Gestão Imobiliária "Shelter".</sub>
+  <sub>Sistema Integrado de Gestão Imobiliária "Shelter".</sub>
 </div>
